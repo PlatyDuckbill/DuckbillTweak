@@ -35,9 +35,7 @@ internal sealed class MerchantService : IDisposable
     private bool manual;
     private bool refreshRequested;
     private (uint Id, bool Special)? manualRequest;
-    private bool shopWasOpen;
     public MerchantView View { get; private set; } = MerchantView.Empty;
-    public System.Action? OpenWindow { get; set; }
     public bool Visible { get; set; }
 
     public MerchantService(IDataManager data, IUnlockState unlocks, IGameInventory inventory, IClientState client,
@@ -53,6 +51,15 @@ internal sealed class MerchantService : IDisposable
 
     public void RefreshTarget() { manual = false; refreshRequested = true; }
     public void RequestShop(uint id, bool special) => manualRequest = (id, special);
+
+    public string ItemName(uint rawId) => data.GetExcelSheet<Item>().TryGetRow(rawId >= 1_000_000 ? rawId - 1_000_000 : rawId, out var item)
+        ? item.Name.ExtractText() : $"아이템 #{rawId}";
+    public uint Icon(uint rawId) => data.GetExcelSheet<Item>().TryGetRow(rawId >= 1_000_000 ? rawId - 1_000_000 : rawId, out var item) ? item.Icon : 0u;
+    public string NativeCost(byte type, uint id, uint amount)
+    {
+        var item = currencyResolver.Resolve(type, id);
+        return item.HasValue ? $"{ItemName(item.Value)} ×{amount:N0}" : $"미확인 재화 ×{amount:N0}";
+    }
 
     private void Update(IFramework _)
     {
@@ -72,8 +79,6 @@ internal sealed class MerchantService : IDisposable
                 var addon = gameGui.GetAddonByName(name);
                 return !addon.IsNull && addon.IsReady && addon.IsVisible;
             });
-            if (shopOpen && !shopWasOpen && config.AutoOpenShop) OpenWindow?.Invoke();
-            shopWasOpen = shopOpen;
             if (!Visible && !shopOpen && !refreshRequested && manualRequest is null) return;
 
             var currentTarget = target.Target;
@@ -194,7 +199,7 @@ internal sealed class MerchantService : IDisposable
     private void Reset()
     {
         View = MerchantView.Empty; character = 0; territory = 0; lastNpc = 0; manual = false; manualRequest = null;
-        lastRead = 0; shopWasOpen = false;
+        lastRead = 0;
     }
 
     public void Dispose() => framework.Update -= Update;

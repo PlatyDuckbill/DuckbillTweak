@@ -22,8 +22,8 @@ internal sealed class LootService : IDisposable
     public LootLedger Ledger { get; } = new();
     public bool Supported => supportedMessages.Contains(1231);
     public int Unattributed { get; private set; }
-    public System.Action? OpenWindow { get; set; }
     public IReadOnlyList<PlayerKey> PartyMembers { get; private set; } = [];
+    public IReadOnlyList<PlayerKey> OtherMembers { get; private set; } = [];
 
     public LootService(IChatGui chat, IDataManager data, IClientState client, IPlayerState player,
         IPartyList party, IFramework framework, Configuration config)
@@ -59,7 +59,6 @@ internal sealed class LootService : IDisposable
         if (message.LogMessageId == 5183)
         {
             Ledger.Add(rawId, name, party.IsAlliance, now);
-            if (config.AutoOpenLoot) OpenWindow?.Invoke();
             return;
         }
         var awarded = message.LogMessageId is 1232 or 1233 or 5187 or 5188;
@@ -67,6 +66,11 @@ internal sealed class LootService : IDisposable
         var actor = message.SourceEntity;
         if (actor is null || !actor.IsPlayer || actor.Name.IsEmpty) { Unattributed++; return; }
         var key = new PlayerKey(actor.Name.ExtractText(), actor.HomeWorldId);
+        if (key.WorldId == 0)
+        {
+            var matches = PartyMembers.Concat(OtherMembers).Where(p => p.Name == key.Name).Distinct().ToArray();
+            if (matches.Length == 1) key = matches[0];
+        }
         ObservedRoll? roll = null;
         if (message.LogMessageId == 1231)
         {
@@ -77,7 +81,6 @@ internal sealed class LootService : IDisposable
             roll = new(key, kind, kindText, value);
         }
         if (!Ledger.Observe(rawId, name, party.IsAlliance, key, roll, awarded, now)) Unattributed++;
-        else if (!awarded && config.AutoOpenLoot) OpenWindow?.Invoke();
     }
 
     private void Update(IFramework _)
@@ -93,10 +96,25 @@ internal sealed class LootService : IDisposable
         if (lastRead != 0 && Stopwatch.GetElapsedTime(lastRead).TotalSeconds < 1) return;
         lastRead = Stopwatch.GetTimestamp();
         PartyMembers = party.Select(m => new PlayerKey(m.Name.TextValue, m.World.RowId)).ToArray();
+        var others = new List<PlayerKey>();
+        if (party.IsAlliance)
+        {
+            // Public Dalamud alliance accessor checks its own bounds. No GroupManager offsets here.
+            for (var index = 0; index < 20; index++)
+            {
+                var address = party.GetAllianceMemberAddress(index);
+                if (address == 0) continue;
+                var member = party.CreateAllianceMemberReference(address);
+                if (member is null || string.IsNullOrWhiteSpace(member.Name.TextValue)) continue;
+                var key = new PlayerKey(member.Name.TextValue, member.World.RowId);
+                if (!PartyMembers.Contains(key) && !others.Contains(key)) others.Add(key);
+            }
+        }
+        OtherMembers = others;
         Ledger.Prune(DateTimeOffset.UtcNow);
     }
 
-    public void Clear() { Ledger.Clear(); PartyMembers = []; Unattributed = 0; }
+    public void Clear() { Ledger.Clear(); PartyMembers = []; OtherMembers = []; Unattributed = 0; }
 
     public void Dispose()
     {

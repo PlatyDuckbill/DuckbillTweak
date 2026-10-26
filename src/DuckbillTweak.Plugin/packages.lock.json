@@ -16,6 +16,9 @@
       },
       "duckbilltweak.core": {
         "type": "Project"
+      },
+      "kamitoolkit": {
+        "type": "Project"
       }
     }
   }

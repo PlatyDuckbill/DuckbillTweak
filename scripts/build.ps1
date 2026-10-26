@@ -10,6 +10,9 @@ $ErrorActionPreference = 'Stop'
 $duckbillRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 Push-Location -LiteralPath $duckbillRoot
 try {
+    if (!(Test-Path -LiteralPath 'third_party/KamiToolKit/KamiToolKit.csproj')) {
+        throw 'Initialize the pinned UI dependency first: git submodule update --init --recursive'
+    }
     dotnet restore DuckbillTweak.slnx --locked-mode --nologo
     if ($LASTEXITCODE -ne 0) { throw 'Dependency restore failed.' }
     dotnet build DuckbillTweak.slnx -c $Configuration --no-restore --nologo

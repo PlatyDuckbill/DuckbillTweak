@@ -6,6 +6,34 @@ using DuckbillTweak.Core.Shops;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
+using Lumina.Data.Files;
+
+if (args.Length >= 3 && args[0] == "native-contract")
+{
+    const string expectedGame = "DB9824EFAC6D5370AB64B02353E882931DDA447E160EE1A5D9E5DCBA43695728";
+    var exe = File.ReadAllBytes(args[1]);
+    if (Convert.ToHexString(SHA256.HashData(exe)) != expectedGame) throw new InvalidDataException("Game hash mismatch.");
+    using var gamePe = new PEReader(new MemoryStream(exe));
+    foreach (var (rva, bytes) in new (int, byte[])[]
+    {
+        (0xCD5682, [0x40, 0xB6, 0x01]),
+        (0xCD568A, [0xE8, 0xE1, 0xC6, 0xB6, 0xFF]),
+        (0xCD571E, [0x40, 0xB6, 0x01]),
+    })
+    {
+        var section = gamePe.PEHeaders.SectionHeaders.Single(s => rva >= s.VirtualAddress && rva + bytes.Length <= s.VirtualAddress + s.SizeOfRawData);
+        var offset = section.PointerToRawData + rva - section.VirtualAddress;
+        if (!exe.AsSpan(offset, bytes.Length).SequenceEqual(bytes)) throw new InvalidDataException($"Instruction mismatch at {rva:X}.");
+        Console.WriteLine($"RVA={rva:X}; Original={Convert.ToHexString(bytes)}; Match=True");
+    }
+    using var bindings = File.OpenRead(args[2]);
+    using var bindingsPe = new PEReader(bindings);
+    var metadata = bindingsPe.GetMetadataReader();
+    var module = metadata.GetGuid(metadata.GetModuleDefinition().Mvid);
+    if (module != new Guid("93c1ca2b-80f3-43ef-9d58-ab0e99bb8909")) throw new InvalidDataException("Client binding module mismatch.");
+    Console.WriteLine($"GameSHA256={expectedGame}; BindingMVID={module}; Match=True");
+    return 0;
+}
 
 // Inspect the actual artifact without loading the plugin or invoking any game services.
 if (args.Length >= 2 && args[0] == "resources")
@@ -28,6 +56,16 @@ if (args.Length >= 2 && args[0] == "resources")
     using var json = JsonDocument.Parse(payload);
     if (json.RootElement.GetProperty("schemaVersion").GetInt32() != 1)
         throw new InvalidDataException("Unexpected currency schema.");
+    var artifactDirectory = Path.GetDirectoryName(Path.GetFullPath(args[1]))!;
+    foreach (var reference in metadata.AssemblyReferences.Select(metadata.GetAssemblyReference))
+    {
+        var name = metadata.GetString(reference.Name);
+        if (name is not ("DuckbillTweak.Core" or "KamiToolKit")) continue;
+        if (!File.Exists(Path.Combine(artifactDirectory, name + ".dll")))
+            throw new InvalidDataException($"Required plugin dependency missing: {name}.dll");
+        if (name == "KamiToolKit" && !File.Exists(Path.Combine(artifactDirectory, "KamiToolKit.LICENSE.txt")))
+            throw new InvalidDataException("KamiToolKit license notice missing.");
+    }
     Console.WriteLine($"EmbeddedResource=DuckbillTweak.SpecialCurrencies; Bytes={payload.Length}; SourceMatch=True; Tokens={json.RootElement.GetProperty("items").EnumerateObject().Count()}");
     return 0;
 }
@@ -96,6 +134,13 @@ else if (args[1] == "audit")
     }
     Console.WriteLine($"Resolved prices={resolved}; Unknown prices={unknown.Values.Sum()}");
     foreach (var group in unknown.OrderByDescending(p => p.Value).Take(20)) Console.WriteLine($" {group.Key}; Count={group.Value}");
+}
+else if (args[1] == "uld" && args.Length >= 3)
+{
+    var uld = game.GetFile<UldFile>(args[2]) ?? throw new InvalidDataException("ULD not found.");
+    Console.WriteLine($"{args[2]}: Theme={uld.WidgetData.AssetsHaveThemeSupport}; Nodes={uld.WidgetData.NodeCount}");
+    foreach (var node in uld.WidgetData.Nodes)
+        Console.WriteLine($"Node={node.NodeId}; Type={node.NodeType}; Parent={node.ParentId}; X={node.X}; Y={node.Y}; W={node.W}; H={node.H}; Data={node.Node}");
 }
 else return 1;
 return 0;

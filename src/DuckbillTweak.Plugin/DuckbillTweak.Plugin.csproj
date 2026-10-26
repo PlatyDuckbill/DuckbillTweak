@@ -2,19 +2,23 @@
   <PropertyGroup>
     <AssemblyName>DuckbillTweak</AssemblyName>
     <RootNamespace>DuckbillTweak.Plugin</RootNamespace>
-    <Version>0.1.0.0</Version>
+    <Version>0.1.1.0</Version>
     <Author>PlatyDuckbill</Author>
     <Name>DuckbillTweak</Name>
     <Punchline>Small conveniences for FFXIV Korea.</Punchline>
-    <Description>PvP chat bubbles, merchant collection filters and currency planning, and observed loot rolls. Open with /dbtw or /duckbilltweak. Development build; Korean client verification required.</Description>
+    <Description>Native game UI tweaks for FFXIV Korea: PvP chat bubbles following your game settings, merchant collection filters and a currency button, and per-item loot rolls on right-click. Open settings with /dbtw. Development build; representative in-game verification required.</Description>
     <RepoUrl>https://github.com/PlatyDuckbill/DuckbillTweak</RepoUrl>
     <Tags>tweaks;shop;collection;loot;pvp;한국어</Tags>
     <DalamudApiLevel>15</DalamudApiLevel>
     <ApplicableVersion>any</ApplicableVersion>
     <IsPackable>false</IsPackable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <CanUnloadAsync>true</CanUnloadAsync>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../DuckbillTweak.Core/DuckbillTweak.Core.csproj" />
+    <ProjectReference Include="../../third_party/KamiToolKit/KamiToolKit.csproj" />
+    <Content Include="../../third_party/KamiToolKit/LICENSE" Link="KamiToolKit.LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
     <!-- .kr is part of the dataset name, not a satellite resource culture. -->
     <EmbeddedResource Include="../../data/special-currencies.kr.json" LogicalName="DuckbillTweak.SpecialCurrencies" WithCulture="false" />
   </ItemGroup>
