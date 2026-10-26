@@ -14,7 +14,7 @@ internal sealed unsafe class NativeSettingsAddon(Configuration config, Action sa
         AddToggle("상점 품목 필터와 필요 재화", 138, config.MerchantTools, value => config.MerchantTools = value);
         AddText("상점 안의 '없는 것만 보기'와 '필요 재화'를 사용합니다.", 166);
         AddToggle("아이템별 입찰 숫자", 216, config.LootRolls, value => config.LootRolls = value);
-        AddText("입찰 목록의 아이템을 우클릭하면 숫자를 확인할 수 있습니다.", 244);
+        AddText("입찰 목록에서 우클릭 → '입찰 숫자 보기'를 선택합니다.", 244);
     }
 
     private void AddToggle(string text, float y, bool value, Action<bool> changed)

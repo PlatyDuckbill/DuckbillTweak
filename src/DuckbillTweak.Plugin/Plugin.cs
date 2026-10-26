@@ -21,6 +21,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
     private readonly IPartyList party;
     private readonly IAddonEventManager events;
     private readonly IAddonLifecycle addonLifecycle;
+    private readonly IContextMenu contextMenu;
     private readonly IChatGui chat;
     private readonly Configuration config;
     private readonly MerchantService merchants;
@@ -40,11 +41,12 @@ public sealed class Plugin : IAsyncDalamudPlugin
     public Plugin(IDalamudPluginInterface pluginInterface, ICommandManager commands, IDataManager data,
         IUnlockState unlocks, IGameInventory inventory, IClientState client, IPlayerState player,
         ICondition conditions, ITargetManager target, IGameGui gameGui, IFramework framework,
-        IPluginLog log, IChatGui chat, IPartyList party, IAddonEventManager events, IAddonLifecycle addonLifecycle)
+        IPluginLog log, IChatGui chat, IPartyList party, IAddonEventManager events, IAddonLifecycle addonLifecycle, IContextMenu contextMenu)
     {
         this.pluginInterface = pluginInterface; this.commands = commands; this.framework = framework;
         this.client = client; this.log = log; this.gui = gameGui; this.party = party; this.events = events; this.chat = chat;
         this.addonLifecycle = addonLifecycle;
+        this.contextMenu = contextMenu;
         config = pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         if (config.Version is < 1 or > 2) throw new InvalidOperationException("Unsupported configuration version.");
         config.Version = 2;
@@ -73,7 +75,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
                     shop = new(merchants, config, Save, currency, log);
                     exchanges.Add(new("InclusionShop", merchants, config, Save, currency, log));
                     exchanges.Add(new("ShopExchangeItem", merchants, config, Save, currency, log));
-                    lootInteraction = new(events, addonLifecycle, gui, party, config, lootPopup, merchants, log);
+                    lootInteraction = new(events, addonLifecycle, contextMenu, gui, party, config, lootPopup, merchants, log);
                     bubbles = new(framework, client, log, config, compatibility);
                 });
             }

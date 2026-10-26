@@ -3,9 +3,11 @@ using Dalamud.Game.Addon.Events;
 using Dalamud.Game.Addon.Events.EventDataTypes;
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
+using Dalamud.Game.Gui.ContextMenu;
 using Dalamud.Plugin.Services;
 using DuckbillTweak.Plugin.Shops;
 using FFXIVClientStructs.FFXIV.Client.UI;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using KamiToolKit.Controllers;
 using NativeEventType = FFXIVClientStructs.FFXIV.Component.GUI.AtkEventType;
@@ -14,9 +16,10 @@ namespace DuckbillTweak.Plugin.Native;
 
 internal sealed unsafe class NativeLootInteraction : IDisposable
 {
-    private sealed record OpenRequest(ushort AddonId, int Index, uint ItemId, long Received);
+    private sealed record OpenRequest(ushort AddonId, int Index, uint ItemId, long Received, long Generation);
     private readonly IAddonEventManager events;
     private readonly IAddonLifecycle lifecycle;
+    private readonly IContextMenu contextMenu;
     private readonly Configuration config;
     private readonly NativeLootAddon popup;
     private readonly IPartyList party;
@@ -27,19 +30,22 @@ internal sealed unsafe class NativeLootInteraction : IDisposable
     private readonly Dictionary<nint, IAddonEventHandle> handles = [];
     private readonly HashSet<(AddonEventType Type, byte Button)> observedEvents = [];
     private OpenRequest? pending;
-    private OpenRequest? lastAccepted;
+    private OpenRequest? clickedRow;
+    private long generation;
     private (ushort AddonId, int Items, int Rows, int Nodes)? lastShape;
     private bool disposed;
 
-    public NativeLootInteraction(IAddonEventManager events, IAddonLifecycle lifecycle, IGameGui gui, IPartyList party,
+    public NativeLootInteraction(IAddonEventManager events, IAddonLifecycle lifecycle, IContextMenu contextMenu, IGameGui gui, IPartyList party,
         Configuration config, NativeLootAddon popup, MerchantService merchants, IPluginLog log)
     {
         this.events = events; this.lifecycle = lifecycle; this.gui = gui; this.party = party;
+        this.contextMenu = contextMenu;
         this.config = config; this.popup = popup; this.merchants = merchants; this.log = log;
         controller = new AddonController<AddonNeedGreed> { AddonName = "NeedGreed", OnUpdate = Update, OnFinalize = _ => Reset() };
         lifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "NeedGreed", ReceiveListEvent);
+        contextMenu.OnMenuOpened += OnMenuOpened;
         try { controller.Enable(); }
-        catch { lifecycle.UnregisterListener(ReceiveListEvent); throw; }
+        catch { contextMenu.OnMenuOpened -= OnMenuOpened; lifecycle.UnregisterListener(ReceiveListEvent); throw; }
     }
 
     private static AtkComponentList* FindList(AddonNeedGreed* addon)
@@ -84,12 +90,12 @@ internal sealed unsafe class NativeLootInteraction : IDisposable
         var request = pending;
         if (request is null) return;
         pending = null;
-        if (Stopwatch.GetElapsedTime(request.Received).TotalSeconds > 1 || request.AddonId != addon->Id ||
+        if (Stopwatch.GetElapsedTime(request.Received).TotalSeconds > 1 || request.Generation != generation || request.AddonId != addon->Id ||
             request.Index < 0 || request.Index >= addon->NumItems || request.Index >= list->ListLength ||
             addon->Items[request.Index].ItemId != request.ItemId) return;
         try
         {
-            // Open outside the input callback, after revalidating the copied row identity.
+            // Only a selection of our context-menu entry requests this screen.
             popup.ShowItem(request.ItemId, merchants.ItemDisplayName(request.ItemId), party.IsAlliance);
             log.Information("Loot roll popup requested: ItemId={Item}; Index={Index}", request.ItemId, request.Index);
         }
@@ -112,7 +118,7 @@ internal sealed unsafe class NativeLootInteraction : IDisposable
         if (data.MouseButtonId != 1 || data.SelectedIndex < 0 || data.SelectedIndex >= list->ListLength) return;
         var renderer = list->GetItemRenderer(data.SelectedIndex);
         if (renderer is null || renderer != data.ListItemRenderer) return;
-        if (Queue(addon, list, data.SelectedIndex)) args.PreventOriginal();
+        CaptureRow(addon, list, data.SelectedIndex);
     }
 
     private void ReceiveCollisionEvent(AddonEventType type, AddonEventData received)
@@ -132,33 +138,75 @@ internal sealed unsafe class NativeLootInteraction : IDisposable
                 for (var node = 0; node < renderer->CollisionNodeListCount && !matches; node++)
                     matches = (nint)renderer->CollisionNodeList[node] == received.NodeTargetPointer;
             if (!matches) continue;
-            if (Queue(addon, list, i) && received.AtkEventPointer != 0)
-                ((AtkEvent*)received.AtkEventPointer)->SetEventIsHandled();
+            CaptureRow(addon, list, i);
             return;
         }
     }
 
-    private bool Queue(AddonNeedGreed* addon, AtkComponentList* list, int index)
+    private void CaptureRow(AddonNeedGreed* addon, AtkComponentList* list, int index)
     {
-        if (index < 0 || index >= addon->NumItems || index >= list->ListLength || index >= addon->Items.Length) return false;
+        if (index < 0 || index >= addon->NumItems || index >= list->ListLength || index >= addon->Items.Length) return;
         var item = addon->Items[index];
-        if (item.ItemId == 0) return false;
-        // The same physical click can reach both the hit node and the list callback.
-        if (lastAccepted is { } previous && previous.AddonId == addon->Id && previous.Index == index &&
-            previous.ItemId == item.ItemId && Stopwatch.GetElapsedTime(previous.Received).TotalMilliseconds < 300) return true;
-        log.Information("Loot right-click received: ItemId={Item}; Index={Index}", item.ItemId, index);
-        pending = lastAccepted = new(addon->Id, index, item.ItemId, Stopwatch.GetTimestamp());
-        return true;
+        if (item.ItemId == 0) return;
+        // Observe the original input; do not consume it or open a popup here.
+        clickedRow = new(addon->Id, index, item.ItemId, Stopwatch.GetTimestamp(), generation);
     }
+
+    private void OnMenuOpened(IMenuOpenedArgs args)
+    {
+        if (disposed || !config.LootRolls || args.MenuType != ContextMenuType.Default || args.AddonName != "NeedGreed") return;
+        var current = gui.GetAddonByName("NeedGreed");
+        if (current.IsNull) return;
+        var addon = (AddonNeedGreed*)current.Address;
+        var list = FindList(addon);
+        var request = clickedRow;
+        if (list is null) return;
+        if (!MatchesRow(addon, list, request))
+        {
+            // The game may open its menu before our observational mouse receiver runs.
+            // Accept its hovered slot only when both the owning addon and raw item ID agree.
+            var agent = AgentLoot.Instance();
+            if (agent is not null && agent->AddonId == addon->Id && agent->HoveredSlotIndex < addon->NumItems &&
+                agent->HoveredSlotIndex < list->ListLength && agent->HoveredItemId != 0 &&
+                addon->Items[agent->HoveredSlotIndex].ItemId == agent->HoveredItemId)
+            {
+                CaptureRow(addon, list, agent->HoveredSlotIndex);
+                request = clickedRow;
+            }
+        }
+        if (!MatchesRow(addon, list, request))
+        {
+            log.Warning("Loot context menu opened without a validated item row; original menu preserved");
+            return;
+        }
+        var selected = request!;
+        args.AddMenuItem(new MenuItem
+        {
+            Name = "입찰 숫자 보기",
+            OnClicked = _ =>
+            {
+                if (disposed || !config.LootRolls || selected.Generation != generation) return;
+                pending = selected with { Received = Stopwatch.GetTimestamp() };
+                log.Information("Loot roll menu selected: ItemId={Item}; Index={Index}", selected.ItemId, selected.Index);
+            },
+        });
+        log.Information("Loot context menu entry added: ItemId={Item}; Index={Index}", selected.ItemId, selected.Index);
+    }
+
+    private bool MatchesRow(AddonNeedGreed* addon, AtkComponentList* list, OpenRequest? request) =>
+        request is not null && request.Generation == generation && request.AddonId == addon->Id &&
+        Stopwatch.GetElapsedTime(request.Received).TotalSeconds <= 2 && request.Index >= 0 &&
+        request.Index < addon->NumItems && request.Index < list->ListLength && addon->Items[request.Index].ItemId == request.ItemId;
 
     private void Reset()
     {
-        pending = null; lastAccepted = null; lastShape = null; observedEvents.Clear();
+        pending = null; clickedRow = null; generation++; lastShape = null; observedEvents.Clear();
         foreach (var handle in handles.Values) events.RemoveEvent(handle);
         handles.Clear();
     }
     public void Dispose()
     {
-        disposed = true; lifecycle.UnregisterListener(ReceiveListEvent); controller.Dispose(); Reset();
+        disposed = true; contextMenu.OnMenuOpened -= OnMenuOpened;
+        lifecycle.UnregisterListener(ReceiveListEvent); controller.Dispose(); Reset();
     }
 }
