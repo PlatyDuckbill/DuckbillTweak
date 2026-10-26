@@ -28,6 +28,13 @@ internal sealed class MerchantService : IDisposable
     private readonly IPluginLog log;
     private readonly Configuration config;
     private readonly SpecialCurrencyResolver currencyResolver;
+    private readonly NativeOwnership nativeOwnership;
+    private ushort displayedAddon;
+    private IReadOnlyList<Offer> displayedOffers = [];
+    private IReadOnlyDictionary<CurrencyKey, long> displayedBalances = new Dictionary<CurrencyKey, long>();
+    private IReadOnlySet<uint> displayedOwned = new HashSet<uint>();
+    private (ushort Addon, int Offers, int Skipped, int Verified, bool Dresser, bool Cabinet)? lastDisplayed;
+    public int UnreadableDisplayedOffers { get; private set; }
     private long lastRead;
     private ulong character;
     private uint territory;
@@ -37,6 +44,16 @@ internal sealed class MerchantService : IDisposable
     private (uint Id, bool Special)? manualRequest;
     public MerchantView View { get; private set; } = MerchantView.Empty;
     public bool Visible { get; set; }
+    public bool NativeOwnershipEnabled { set => nativeOwnership.Enabled = value; }
+    public bool DresserLoaded => nativeOwnership.DresserLoaded;
+    public bool CabinetLoaded => nativeOwnership.CabinetLoaded;
+    public string OwnershipHelp => "등록한 수집품·소지품·장비함·착용 장비·환상투영함·추억의 보관함을 확인합니다.\n" +
+        $"환상투영함: {(DresserLoaded ? "확인" : "미확인")} / 추억의 보관함: {(CabinetLoaded ? "확인" : "미확인")}\n" +
+        "보관 정보가 미확인이면 이번 접속 중 해당 보관함을 한 번 열어 주세요. 미확인 품목은 숨기지 않습니다.";
+    public MerchantView CalculationView => displayedAddon == 0 ? View : View with { Offers = displayedOffers, Message = "현재 상점 목록 기준" };
+    public string CalculationScope => displayedAddon == 0 ? "NPC 시트 목록" : "현재 상점 목록";
+    public long? CalculationQuantity(CurrencyKey key) => displayedAddon != 0 && displayedBalances.TryGetValue(key, out var count) ? count : View.Inventory.Quantity(key);
+    public Ownership CalculationOwnership(uint id) => displayedAddon != 0 && displayedOwned.Contains(id) ? Ownership.Owned : ItemOwnership(id);
 
     public MerchantService(IDataManager data, IUnlockState unlocks, IGameInventory inventory, IClientState client,
         IPlayerState player, ICondition conditions, ITargetManager target, IGameGui gameGui, IFramework framework,
@@ -46,6 +63,7 @@ internal sealed class MerchantService : IDisposable
         this.player = player; this.conditions = conditions; this.target = target; this.gameGui = gameGui;
         this.framework = framework; this.log = log; this.config = config;
         currencyResolver = CurrencyData.Load(data);
+        nativeOwnership = new(data, unlocks);
         framework.Update += Update;
     }
 
@@ -60,11 +78,65 @@ internal sealed class MerchantService : IDisposable
     {
         var id = rawId >= 1_000_000 ? rawId - 1_000_000 : rawId;
         if (nativeOwned > 0 || View.Inventory.OwnedItems.GetValueOrDefault(id) > 0) return Ownership.Owned;
-        if (View.Ownership.TryGetValue(id, out var known)) return known;
-        if (data.GetExcelSheet<Item>().TryGetRow(id, out var item) && unlocks.IsItemUnlockable(item) && unlocks.IsItemUnlocked(item))
-            return Ownership.Owned;
-        return View.Inventory.OwnershipComplete ? Ownership.Missing : Ownership.Unknown;
+        return ReadOwnership(id, View.Inventory);
     }
+    private Ownership ReadOwnership(uint id, InventorySnapshot stock)
+    {
+        if (stock.OwnedItems.GetValueOrDefault(id) > 0 || nativeOwnership.Contains(id)) return Ownership.Owned;
+        if (!data.GetExcelSheet<Item>().TryGetRow(id, out var item)) return Ownership.Unknown;
+        var registration = nativeOwnership.Registration(item);
+        if (registration == Ownership.Owned) return Ownership.Owned;
+        if (registration == Ownership.Unknown || !nativeOwnership.StorageKnown(item)) return Ownership.Unknown;
+        return stock.OwnershipComplete ? Ownership.Missing : Ownership.Unknown;
+    }
+    public bool IsConsumable(uint rawId) => ItemDetails(rawId)?.Consumable == true;
+    public Reward? NativeReward(uint rawId, uint quantity, IReadOnlyList<Price>? prices = null)
+    {
+        var item = ItemDetails(rawId);
+        if (item is null) return null;
+        var quality = rawId >= 1_000_000 ? ItemQuality.High : ItemQuality.Normal;
+        if (quantity > 0) return new(item, quantity, quality);
+        if (prices is null || prices.Any(p => !p.Resolved)) return null;
+        // A zero native quantity is unknown. Recover it only from a unique, exact sheet offer.
+        var quantities = View.Offers.Where(o => o.Rewards.Count == 1 && o.Rewards[0].Item.Id == item.Id && o.Rewards[0].Quality == quality &&
+            o.Prices.Select(p => (p.Key, p.Quantity, p.Resolved)).SequenceEqual(prices.Select(p => (p.Key, p.Quantity, p.Resolved))))
+            .Select(o => o.Rewards[0].Quantity).Where(q => q > 0).Distinct().ToArray();
+        return quantities is [var known] ? new(item, known, quality) : null;
+    }
+    public Offer DisplayedOffer(string key, IReadOnlyList<Reward> rewards, IReadOnlyList<Price> prices, bool nativeEnabled)
+    {
+        var known = nativeEnabled || View.Offers.Any(o => o.ConditionsKnown &&
+            o.Rewards.Select(r => (r.Item.Id, r.Quantity, r.Quality)).SequenceEqual(rewards.Select(r => (r.Item.Id, r.Quantity, r.Quality))) &&
+            o.Prices.Select(p => (p.Key, p.Quantity)).SequenceEqual(prices.Select(p => (p.Key, p.Quantity))));
+        return new(key, "현재 상점 목록", rewards, prices, known, known ? null : "구매 조건 미확인");
+    }
+    public Price NativePrice(byte type, uint id, uint amount)
+    {
+        var resolved = currencyResolver.Resolve(type, id);
+        var baseId = resolved ?? id;
+        var valid = resolved.HasValue && data.GetExcelSheet<Item>().TryGetRow(baseId, out var item) && !item.Name.IsEmpty;
+        return new(new(baseId, type == 1 ? ItemQuality.High : ItemQuality.Normal, 0),
+            valid ? ItemName(baseId) : $"미확인 재화 #{id}", amount, valid);
+    }
+    public void PublishDisplayedShop(ushort addon, IReadOnlyList<Offer> offers, IReadOnlyDictionary<CurrencyKey, long> balances, IReadOnlySet<uint> owned, int total)
+    {
+        var same = displayedAddon == addon && displayedOffers.Count == offers.Count && displayedOffers.Zip(offers).All(pair =>
+            pair.First.Id == pair.Second.Id && pair.First.ConditionsKnown == pair.Second.ConditionsKnown &&
+            pair.First.Rewards.Select(r => (r.Item, r.Quantity, r.Quality)).SequenceEqual(pair.Second.Rewards.Select(r => (r.Item, r.Quantity, r.Quality))) &&
+            pair.First.Prices.SequenceEqual(pair.Second.Prices));
+        displayedAddon = addon;
+        if (!same) displayedOffers = offers;
+        displayedBalances = balances; displayedOwned = owned; UnreadableDisplayedOffers = total - offers.Count;
+        var state = (addon, offers.Count, UnreadableDisplayedOffers, offers.Count(o => o.ConditionsKnown), DresserLoaded, CabinetLoaded);
+        if (lastDisplayed != state)
+        {
+            log.Information("Shop calculation snapshot: Addon={Addon}; Offers={Offers}; Unreadable={Unreadable}; ConditionsVerified={Verified}; DresserLoaded={Dresser}; CabinetLoaded={Cabinet}",
+                addon, offers.Count, UnreadableDisplayedOffers, state.Item4, DresserLoaded, CabinetLoaded);
+            lastDisplayed = state;
+        }
+    }
+    public void ClearDisplayedShop(ushort addon)
+    { if (displayedAddon == addon) { displayedAddon = 0; displayedOffers = []; displayedBalances = new Dictionary<CurrencyKey, long>(); displayedOwned = new HashSet<uint>(); UnreadableDisplayedOffers = 0; lastDisplayed = null; } }
     public uint Icon(uint rawId) => data.GetExcelSheet<Item>().TryGetRow(rawId >= 1_000_000 ? rawId - 1_000_000 : rawId, out var item) ? item.Icon : 0u;
     public string NativeCost(byte type, uint id, uint amount)
     {
@@ -85,6 +157,7 @@ internal sealed class MerchantService : IDisposable
         lastRead = Stopwatch.GetTimestamp();
         try
         {
+            nativeOwnership.Refresh();
             var shopOpen = new[] { "Shop", "ShopExchangeItem", "InclusionShop" }.Any(name =>
             {
                 var addon = gameGui.GetAddonByName(name);
@@ -122,16 +195,14 @@ internal sealed class MerchantService : IDisposable
             foreach (var reward in View.Offers.SelectMany(o => o.Rewards).DistinctBy(x => x.Item.Id))
             {
                 var id = reward.Item.Id;
-                var registered = data.GetExcelSheet<Item>().TryGetRow(id, out var item) &&
-                    unlocks.IsItemUnlockable(item) && unlocks.IsItemUnlocked(item);
-                owned[id] = registered || stock.OwnedItems.GetValueOrDefault(id) > 0 ? Ownership.Owned :
-                    stock.OwnershipComplete ? Ownership.Missing : Ownership.Unknown;
+                owned[id] = ReadOwnership(id, stock);
             }
             if (!client.IsLoggedIn || player.ContentId != character) { Reset(); return; }
             View = View with { Ownership = owned, Inventory = stock };
         }
         catch (Exception ex)
         {
+            nativeOwnership.Clear(); ClearDisplayedShop(displayedAddon);
             View = MerchantView.Empty with { Message = "상점 데이터를 읽지 못했습니다. 로그와 참조 버전을 확인하십시오." };
             log.Error(ex, "Merchant snapshot failed");
             // Avoid retrying a failing sheet query every half second.
@@ -156,7 +227,8 @@ internal sealed class MerchantService : IDisposable
     }
 
     private ShopItem Describe(Item item) => new(item.RowId, item.Name.ExtractText(), item.ItemUICategory.RowId,
-        item.ItemUICategory.ValueNullable?.Name.ExtractText() ?? "기타", item.IsUntradable);
+        item.ItemUICategory.ValueNullable?.Name.ExtractText() ?? "기타", item.IsUntradable,
+        item.ItemUICategory.RowId is 44 or 46 or 55 or 60 && item.EquipSlotCategory.RowId == 0);
 
     private void AddGil(uint id, List<Offer> offers, HashSet<string> visited)
     {
@@ -167,8 +239,8 @@ internal sealed class MerchantService : IDisposable
         foreach (var row in rows)
         {
             if (!row.Item.IsValid || row.Item.RowId == 0) continue;
-            var conditional = shop.Quest.RowId != 0 || row.QuestRequired.Any(q => q.RowId != 0) ||
-                row.AchievementRequired.RowId != 0 || row.StateRequired != 0 || shop.FestivalId != 0;
+            var conditional = !QuestSatisfied(shop.Quest) || row.QuestRequired.Any(q => !QuestSatisfied(q)) ||
+                !AchievementSatisfied(row.AchievementRequired) || row.StateRequired != 0 || shop.FestivalId != 0;
             var item = row.Item.Value;
             offers.Add(new($"gil:{id}:{row.SubrowId}", shop.Name.ExtractText(),
                 [new(Describe(item), 1, row.IsHQ ? ItemQuality.High : ItemQuality.Normal)],
@@ -200,8 +272,8 @@ internal sealed class MerchantService : IDisposable
                 prices.Add(new(new(itemId, cost.CostType == 1 ? ItemQuality.High : ItemQuality.Normal, cost.CollectabilityCost),
                     priceName, cost.CurrencyCost, resolved));
             }
-            var conditional = shop.Quest.RowId != 0 || shop.RequiredFestival.RowId != 0 ||
-                shop.RequiredContentFinderCondition.RowId != 0 || entry.Quest.RowId != 0 || entry.AchievementUnlock.RowId != 0;
+            var conditional = !QuestSatisfied(shop.Quest) || shop.RequiredFestival.RowId != 0 ||
+                shop.RequiredContentFinderCondition.RowId != 0 || !QuestSatisfied(entry.Quest) || !AchievementSatisfied(entry.AchievementUnlock);
             offers.Add(new($"special:{id}:{entryIndex}", shop.Name.ExtractText(), rewards, prices, !conditional,
                 conditional ? "판매 조건 확인 필요" : null));
         }
@@ -210,8 +282,13 @@ internal sealed class MerchantService : IDisposable
     private void Reset()
     {
         View = MerchantView.Empty; character = 0; territory = 0; lastNpc = 0; manual = false; manualRequest = null;
+        nativeOwnership.Clear(); displayedAddon = 0; displayedOffers = []; displayedBalances = new Dictionary<CurrencyKey, long>(); displayedOwned = new HashSet<uint>(); UnreadableDisplayedOffers = 0; lastDisplayed = null;
         lastRead = 0;
     }
+
+    private bool QuestSatisfied(RowRef<Quest> quest) => quest.RowId == 0 || quest.IsValid && unlocks.IsQuestCompleted(quest.Value);
+    private bool AchievementSatisfied(RowRef<Achievement> achievement) => achievement.RowId == 0 ||
+        unlocks.IsAchievementListLoaded && achievement.IsValid && unlocks.IsAchievementComplete(achievement.Value);
 
     public void Dispose() => framework.Update -= Update;
 }

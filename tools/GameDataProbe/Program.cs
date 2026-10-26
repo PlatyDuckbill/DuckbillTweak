@@ -72,11 +72,35 @@ if (args.Length >= 2 && args[0] == "resources")
 
 if (args.Length < 2)
 {
-    Console.Error.WriteLine("GameDataProbe <sqpack path> logs|shops|audit [currency json path]\nGameDataProbe resources <plugin DLL path> [currency json path]");
+    Console.Error.WriteLine("GameDataProbe <sqpack path> logs|shops|audit|kornago-audit\nGameDataProbe <sqpack path> items|npc <name>\nGameDataProbe resources <plugin DLL path> [currency json path]");
     return 1;
 }
 using var game = new GameData(args[0], new LuminaOptions { DefaultExcelLanguage = Language.Korean });
-if (args[1] == "logs")
+if (args[1] == "items" && args.Length >= 3)
+{
+    foreach (var item in game.GetExcelSheet<Item>()!.Where(i => i.Name.ExtractText().Contains(args[2], StringComparison.Ordinal)))
+        Console.WriteLine($"Item={item.RowId}; Name={item.Name.ExtractText()}; Category={item.ItemUICategory.RowId}/{item.ItemUICategory.ValueNullable?.Name.ExtractText()}; Search={item.ItemSearchCategory.RowId}; Action={item.ItemAction.RowId}/{item.ItemAction.ValueNullable?.Action.RowId}; ActionData={string.Join(',', item.ItemAction.ValueNullable?.Data.ToArray() ?? [])}; Additional={item.AdditionalData.RowType?.Name}/{item.AdditionalData.RowId}; Equip={item.EquipSlotCategory.RowId}");
+}
+else if (args[1] == "npc" && args.Length >= 3)
+{
+    foreach (var npc in game.GetExcelSheet<ENpcResident>()!.Where(n => n.Singular.ExtractText().Contains(args[2], StringComparison.Ordinal)))
+    {
+        var basis = game.GetExcelSheet<ENpcBase>()!.GetRow(npc.RowId);
+        Console.WriteLine($"Npc={npc.RowId}; Name={npc.Singular.ExtractText()}; References={string.Join(',', basis.ENpcData.Select(r => $"{r.RowType?.Name}/{r.RowId}"))}");
+    }
+}
+else if (args[1] == "kornago-audit")
+{
+    foreach (var shop in game.GetExcelSheet<SpecialShop>()!.Where(s => s.RowId is 1771019 or 1771020 or 1771036))
+    {
+        Console.WriteLine($"Shop={shop.RowId}; Name={shop.Name.ExtractText()}; Quest={shop.Quest.RowId}; Festival={shop.RequiredFestival.RowId}; Content={shop.RequiredContentFinderCondition.RowId}");
+        foreach (var row in shop.Item.Where(r => r.ReceiveItems.Any(i => i.Item.RowId != 0)).Take(2))
+            Console.WriteLine($"Reward={string.Join(',', row.ReceiveItems.Where(r => r.Item.RowId != 0).Select(r => $"{r.Item.RowId}/{r.Item.Value.Name.ExtractText()}x{r.ReceiveCount}"))}; Costs={string.Join(',', row.ItemCosts.Where(c => c.ItemCost.RowId != 0).Select(c => $"{c.ItemCost.RowId}x{c.CurrencyCost}/type{c.CostType}"))}; Quest={row.Quest.RowId}; Achievement={row.AchievementUnlock.RowId}");
+    }
+    foreach (var category in game.GetExcelSheet<ItemUICategory>()!.Where(c => c.RowId is >= 42 and <= 60))
+        Console.WriteLine($"Category={category.RowId}/{category.Name.ExtractText()}");
+}
+else if (args[1] == "logs")
 {
     foreach (var row in game.GetExcelSheet<LogMessage>()!)
     {

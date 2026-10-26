@@ -69,6 +69,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
                 await KamiToolKitLibrary.InitializeAsync(pluginInterface);
                 await framework.Run(() =>
                 {
+                    merchants.NativeOwnershipEnabled = true;
                     settings = new NativeSettingsAddon(config, Save) { InternalName = "DuckbillTweakSettings", Title = "DuckbillTweak", Size = new Vector2(580, 302) };
                     currency = new NativeCurrencyAddon(merchants, config, Save) { InternalName = "DuckbillTweakCurrency", Title = "필요 재화", Size = new Vector2(610, 504) };
                     lootPopup = new NativeLootAddon(loot, config) { InternalName = "DuckbillTweakRolls", Title = "입찰 현황", Size = new Vector2(370, 362) };

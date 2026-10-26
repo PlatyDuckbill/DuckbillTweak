@@ -20,7 +20,9 @@ internal sealed unsafe class NativeShopController : IDisposable
     private readonly NativeCurrencyAddon currency;
     private readonly IPluginLog log;
     private readonly AddonController<AddonShop> controller;
+    private readonly NativeListInput originalInput = new();
     private CheckboxNode? missing;
+    private CheckboxNode? consumables;
     private DropDownNode<CategoryOption>? categories;
     private TextButtonNode? calculate;
     private ListNode<NativeShopRow, NativeShopRowNode>? filteredList;
@@ -71,10 +73,16 @@ internal sealed unsafe class NativeShopController : IDisposable
         if (!selling) { if (boundAddon == (nint)addon) Detach(addon); return; }
         if (boundAddon == 0) Attach(addon);
         if (filteredList is null || missing is null || categories is null) return;
-        var requested = config.MerchantCategoryHideOwned.GetValueOrDefault(categoryId, config.MerchantHideOwned) || categoryId != 0;
+        var requested = config.MerchantCategoryHideOwned.GetValueOrDefault(categoryId, config.MerchantHideOwned) || categoryId != 0 || config.MerchantHideConsumables;
         if (!requested || renderFailed) RestoreList(addon);
         if (renderFailed) return;
-        if (usingFilteredList) filteredList.Update();
+        if (usingFilteredList)
+        {
+            if (!originalInput.Suppress(list, out var dirty)) { RestoreList(addon); return; }
+            filteredList.Update();
+            list->OwnerNode->SetAlpha(0); list->IsItemInteractionEnabled = false;
+            if (dirty) addon->UpdateCollisionNodeList(false);
+        }
         if (lastRead != 0 && Stopwatch.GetElapsedTime(lastRead).TotalMilliseconds < 300) return;
         lastRead = Stopwatch.GetTimestamp();
         missing.IsEnabled = false;
@@ -82,23 +90,31 @@ internal sealed unsafe class NativeShopController : IDisposable
         if (agent is null || agent->AddonId != addon->Id || agent->ItemReceive is null ||
             agent->ItemReceiveCount is < 0 or > 1000 || agent->ItemReceiveCount != list->ListLength ||
             agent->ItemCost is null || agent->ItemCostCount != agent->ItemReceiveCount * 3)
-        { RestoreList(addon); return; }
+        { RestoreList(addon); merchants.ClearDisplayedShop(addon->Id); return; }
         var view = merchants.View;
         var next = new List<NativeShopRow>();
+        var offers = new List<Offer>();
+        var balances = new Dictionary<CurrencyKey, long>();
         var itemInfo = view.Offers.SelectMany(o => o.Rewards).Select(r => r.Item).DistinctBy(i => i.Id).ToDictionary(i => i.Id);
         for (var index = 0; index < agent->ItemReceiveCount; index++)
         {
             ref var item = ref agent->ItemReceive[index];
             var baseId = item.ItemId >= 1_000_000 ? item.ItemId - 1_000_000 : item.ItemId;
             var detail = itemInfo.GetValueOrDefault(baseId) ?? merchants.ItemDetails(baseId);
-            if (baseId == 0 || detail is null) { RestoreList(addon); return; }
+            if (baseId == 0 || detail is null) { RestoreList(addon); merchants.ClearDisplayedShop(addon->Id); return; }
             itemInfo[baseId] = detail;
             ref var cost = ref agent->ItemCost[index * 3];
-            if (cost.ItemId != 1) { RestoreList(addon); return; }
+            if (cost.ItemId != 1) { RestoreList(addon); merchants.ClearDisplayedShop(addon->Id); return; }
             next.Add(new(index, item.ItemId, item.ItemIconId, merchants.ItemDisplayName(item.ItemId), cost.ItemCount.ToString("N0"),
                 item.OwnedItemCount.ToString("N0"), detail.CategoryId, !list->GetItemDisabledState(index),
                 merchants.ItemOwnership(item.ItemId, item.OwnedItemCount) == Ownership.Owned));
+            var price = merchants.NativePrice(0, cost.ItemId, cost.ItemCount);
+            balances[price.Key] = cost.OwnedItemCount;
+            if (merchants.NativeReward(item.ItemId, item.ItemCount, [price]) is { } reward)
+                offers.Add(merchants.DisplayedOffer($"gil:{addon->Id}:{index}", [reward], [price], !list->GetItemDisabledState(index)));
         }
+        merchants.PublishDisplayedShop(addon->Id, offers, balances, next.Where(r => r.OwnedAlready)
+            .Select(r => r.RawItemId >= 1_000_000 ? r.RawItemId - 1_000_000 : r.RawItemId).ToHashSet(), next.Count);
         var options = new[] { new CategoryOption(0, "모든 종류") }.Concat(next.Select(r =>
             new CategoryOption(r.CategoryId, itemInfo[r.RawItemId >= 1_000_000 ? r.RawItemId - 1_000_000 : r.RawItemId].Category))
             .DistinctBy(c => c.Id).OrderBy(c => c.Name)).ToList();
@@ -111,17 +127,29 @@ internal sealed unsafe class NativeShopController : IDisposable
         }
         var hide = config.MerchantCategoryHideOwned.GetValueOrDefault(categoryId, config.MerchantHideOwned);
         syncing = true; missing.IsChecked = hide; syncing = false;
+        syncing = true;
+        if (consumables is not null && consumables.IsChecked != config.MerchantHideConsumables) consumables.IsChecked = config.MerchantHideConsumables;
+        syncing = false;
+        missing.TextTooltip = merchants.OwnershipHelp;
         var filtered = next.Where(r => (categoryId == 0 || r.CategoryId == categoryId) &&
-            (!hide || !r.OwnedAlready)).ToArray();
-        if (!hide && categoryId == 0) { RestoreList(addon); return; }
-        if (!rows.SequenceEqual(filtered)) { filteredList.OptionsList = filtered.ToList(); rows = filtered; }
+            (!hide || !r.OwnedAlready) && (!config.MerchantHideConsumables || !merchants.IsConsumable(r.RawItemId))).ToArray();
+        if (!hide && categoryId == 0 && !config.MerchantHideConsumables) { RestoreList(addon); return; }
+        var dataChanged = !rows.SequenceEqual(filtered);
+        if (dataChanged)
+        {
+            if (!rows.Select(r => (r.OriginalIndex, r.RawItemId)).SequenceEqual(filtered.Select(r => (r.OriginalIndex, r.RawItemId)))) filteredList.ResetScroll();
+            filteredList.OptionsList = filtered.ToList(); rows = filtered;
+        }
         filteredList.Update();
-        filteredList.IsVisible = true;
+        var changed = !usingFilteredList || !filteredList.IsVisible || dataChanged;
         // Commit the replacement only after every visible row has rendered successfully.
         if (!usingFilteredList) { originalAlpha = list->OwnerNode->Color.A; originalInteraction = list->IsItemInteractionEnabled; }
+        if (!originalInput.Suppress(list, out var inputChanged)) { RestoreList(addon); missing.IsEnabled = false; return; }
+        filteredList.IsVisible = true;
         usingFilteredList = true;
         list->OwnerNode->SetAlpha(0);
         list->IsItemInteractionEnabled = false;
+        if (changed || inputChanged) addon->UpdateCollisionNodeList(false);
         if (lastApplied != (next.Count, filtered.Length))
         {
             log.Information("Shop filter applied: Rows={Rows}; Visible={Visible}", next.Count, filtered.Length);
@@ -142,7 +170,7 @@ internal sealed unsafe class NativeShopController : IDisposable
         }
         list->OwnerNode->SetYFloat(listY + 28);
         list->SetSize(list->OwnerNode->Width, (ushort)(listHeight - 28));
-        missing = new CheckboxNode { Position = new(28, 84), Size = new(152, 24), String = "없는 것만 보기" };
+        missing = new CheckboxNode { Position = new(28, 84), Size = new(144, 24), String = "없는 것만 보기" };
         missing.OnClick = value =>
         {
             if (syncing) return;
@@ -152,16 +180,20 @@ internal sealed unsafe class NativeShopController : IDisposable
             save(); lastRead = 0;
         };
         missing.AttachNode(&addon->AtkUnitBase);
-        categories = new DropDownNode<CategoryOption> { Position = new(190, 80), Size = new(182, 28),
+        consumables = new CheckboxNode { Position = new(174, 84), Size = new(132, 24), String = "소모품 제외", IsChecked = config.MerchantHideConsumables,
+            TextTooltip = "약품·요리·염료·촉매를 제외합니다. 등록 수집품은 유지합니다." };
+        consumables.OnClick = value => { if (!syncing) { RestoreList(addon); config.MerchantHideConsumables = value; save(); lastRead = 0; } };
+        consumables.AttachNode(&addon->AtkUnitBase);
+        categories = new DropDownNode<CategoryOption> { Position = new(310, 80), Size = new(122, 28),
             GetLabelFunction = c => c.Name, Options = [new(0, "모든 종류")] };
         categories.SelectedOption = categories.Options[0];
-        categories.OnOptionSelected = c => { categoryId = c.Id; lastRead = 0; };
+        categories.OnOptionSelected = c => { categoryId = c.Id; filteredList?.ResetScroll(); lastRead = 0; };
         categories.AttachNode(&addon->AtkUnitBase);
-        calculate = new TextButtonNode { Position = new(390, 80), Size = new(164, 28), String = "필요 재화",
+        calculate = new TextButtonNode { Position = new(444, 80), Size = new(110, 28), String = "필요 재화",
             OnClick = () => currency.Open() };
         calculate.AttachNode(&addon->AtkUnitBase);
         filteredList = new ListNode<NativeShopRow, NativeShopRowNode> { Position = new(list->OwnerNode->X, listY + 28),
-            Size = new(list->OwnerNode->Width, listHeight - 28), OptionsList = [], IsVisible = false, OnItemSelected = Select };
+            Size = new(list->OwnerNode->Width, listHeight - 28), OptionsList = [], IsVisible = false, AutoResetScroll = false, OnItemSelected = Select };
         filteredList.NoResultsTextNode.String = "해당하는 품목이 없습니다.";
         filteredList.AttachNode(&addon->AtkUnitBase);
         rows = []; lastRead = 0;
@@ -190,19 +222,23 @@ internal sealed unsafe class NativeShopController : IDisposable
     private void RestoreList(AddonShop* addon)
     {
         // Restore native input before touching any custom node.
+        var changed = usingFilteredList || filteredList is { IsVisible: true };
+        originalInput.Restore(addon->BuyList);
         if (usingFilteredList && addon->BuyList is not null && addon->BuyList->OwnerNode is not null)
         { addon->BuyList->OwnerNode->SetAlpha(originalAlpha); addon->BuyList->IsItemInteractionEnabled = originalInteraction; }
         usingFilteredList = false;
         lastApplied = null;
         if (filteredList is not null) filteredList.IsVisible = false;
+        if (changed) addon->UpdateCollisionNodeList(false);
     }
 
     private void Detach(AddonShop* addon)
     {
         if (boundAddon != (nint)addon) return;
         RestoreList(addon);
+        merchants.ClearDisplayedShop(addon->Id);
         filteredList?.Dispose(); filteredList = null;
-        missing?.Dispose(); missing = null; categories?.Dispose(); categories = null; calculate?.Dispose(); calculate = null;
+        missing?.Dispose(); missing = null; consumables?.Dispose(); consumables = null; categories?.Dispose(); categories = null; calculate?.Dispose(); calculate = null;
         foreach (var (id, y) in shifted) { var node = addon->GetNodeById(id); if (node is not null) node->SetYFloat(y); }
         shifted.Clear();
         if (addon->BuyList is not null && addon->BuyList->OwnerNode is not null)
