@@ -21,7 +21,7 @@
 | 참고 대상 | 고정 revision | 라이선스/참고 내용 |
 |---|---|---|
 | [VanillaPlus](https://github.com/MidoriKami/VanillaPlus/tree/17bddd82ca73e099f1a7af9b00c4ee13fa8a701c) | 17bddd82ca73e099f1a7af9b00c4ee13fa8a701c | AGPL-3.0. 기능별 설정·시작/종료와 상점/전리품 기능 구분 |
-| [SimpleTweaksPlugin](https://github.com/Caraxi/SimpleTweaksPlugin/tree/c039932e40b0c752c09005cc4fdc362b6b786da4) | c039932e40b0c752c09005cc4fdc362b6b786da4 | AGPL-3.0. 개별 트윅과 일반 전투 말풍선 방식 조사. 글로벌 패치/시그니처 미도입, KR 실행 파일 별도 분석 |
+| [SimpleTweaksPlugin](https://github.com/Caraxi/SimpleTweaksPlugin/tree/c039932e40b0c752c09005cc4fdc362b6b786da4) | c039932e40b0c752c09005cc4fdc362b6b786da4 | AGPL-3.0. 개별 트윅·일반 전투 말풍선·TrackOutfits의 게임 캐시/세트 비트 의미 조사. 구현 복사/글로벌 패치·시그니처 도입 없음, KR 실행 파일 별도 분석 |
 | [LootView](https://github.com/GitHixy/LootView/tree/11032cb108f433406ac0f8ed704f77b530024e19) | 11032cb108f433406ac0f8ed704f77b530024e19 | GPL-3.0. 공개 IChatGui.LogMessage 사용 가능성 조사. 구현은 로컬 KR 매크로 계약을 기준으로 작성 |
 | [CriticalCommonLib](https://github.com/Critical-Impact/CriticalCommonLib/tree/34d364ea938e585b4f7eeab5b36e4261fdd817d0) | 34d364ea938e585b4f7eeab5b36e4261fdd817d0 | 상점 자료 위치 조사만 수행. 코드/의존성 미도입 |
 | [AllaganLib](https://github.com/Critical-Impact/AllaganLib/tree/c34734f75e369777e7ac36dc57c09a8fc3e78fd4) | c34734f75e369777e7ac36dc57c09a8fc3e78fd4 | 조사 시 루트 라이선스 파일 없음. 코드 미도입. 특수 화폐와 아이템 사이 숫자 관계만 자료로 전사 후 로컬 시트에 대조 |
@@ -39,6 +39,10 @@ ID8223은 현재 한국 Item 시트에 이름이 없으므로 비용을 미확�
 수집품 등록은 공개 IUnlockState의 긍정 판정을 우선하고, 검사된 프로필에서 네이티브 IsItemActionUnlocked의1/2/3/4 상태를 구분한다. KR 코르나고 항아리의 Action50454는 공개 IsItemUnlockable 목록에 없음을 설치 DLL IL과 오프라인 Item 시트에서 대조했다. 보관된 외형도 보유로 보겠다는 사용자 요청에 따라 로드된 환상투영함/추억의 보관함을 읽되 재화 수량과 분리한다. 세부 가드와 미확인 처리는 [네이티브 계약](NATIVE-UI.md)에 기록한다.
 
 `GameDataProbe <sqpack> items <이름>`, `npc <이름>`, `kornago-audit`는 로컬 시트의 품목/동작·NPC 연결·퀘스트 조건·소모품 분류를 읽는 오프라인 조사다. 게임 프로세스나 자동 테스트를 실행하지 않는다.
+
+0.1.1.5 교환 필터는 원본 TreeList 항목의 IsHidden/LayoutRefreshPending만 사용한다. AtkValues/ItemIndexMap/수량 컨트롤/구매 경로는 바꾸지 않는다. `uld` 출력에 component 종류를 추가해 InclusionShop1024/ShopExchangeItem1025=TreeList, Shop1014=List를 대조했다. `ownership-audit`는 낡은 악보14273/14274의 완성 악보 연결과 뿔24337의 보관 분류를 확인한다. 뿔은 Cabinet 행이 없어 환상투영함에서 판정한다.
+
+보관함 현재 정보가 미로드이면 ItemFinderModule의 캐릭터 ID/캐시 상태를 확인해 게임 저장 정보를 읽는다. 자체 디스크 캐시를 만들거나 아이템 찾기 검색을 실행하지 않는다. 세트/Cabinet 비트는 설치 바인딩/XML과 KR 실행 파일의 읽기 함수에 대조했다.
 
 ## 전리품 계약
 

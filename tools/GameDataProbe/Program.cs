@@ -100,6 +100,21 @@ else if (args[1] == "kornago-audit")
     foreach (var category in game.GetExcelSheet<ItemUICategory>()!.Where(c => c.RowId is >= 42 and <= 60))
         Console.WriteLine($"Category={category.RowId}/{category.Name.ExtractText()}");
 }
+else if (args[1] == "ownership-audit")
+{
+    foreach (var id in new uint[] { 14273, 14274 })
+    {
+        var faded = game.GetExcelSheet<Item>()!.GetRow(id);
+        var results = game.GetExcelSheet<Recipe>()!.Where(r => r.Ingredient.Any(i => i.RowId == id) &&
+            r.ItemResult.IsValid && r.ItemResult.Value.AdditionalData.Is<Orchestrion>()).Select(r => r.ItemResult.Value).DistinctBy(i => i.RowId).ToArray();
+        Console.WriteLine($"Faded={id}/{faded.Name.ExtractText()}; Results={string.Join(',', results.Select(i => $"{i.RowId}/{i.Name.ExtractText()}/Orchestrion{i.AdditionalData.RowId}"))}");
+        if (results.Length == 0) throw new InvalidDataException("Expected faded-roll recipe connection missing.");
+    }
+    var cabinet = game.GetExcelSheet<Cabinet>()!.Where(c => c.Item.RowId == 24337).ToArray();
+    Console.WriteLine($"Horn=24337; CabinetRows={string.Join(',', cabinet.Select(c => c.RowId))}; MaximumCabinetRow={game.GetExcelSheet<Cabinet>()!.Max(c => c.RowId)}");
+    foreach (var set in game.GetExcelSheet<MirageStoreSetItem>()!.Where(s => s.Head.RowId == 24337))
+        Console.WriteLine($"HornOutfit={set.RowId}; Name={game.GetExcelSheet<Item>()!.GetRow(set.RowId).Name.ExtractText()}");
+}
 else if (args[1] == "logs")
 {
     foreach (var row in game.GetExcelSheet<LogMessage>()!)
@@ -165,6 +180,8 @@ else if (args[1] == "uld" && args.Length >= 3)
     Console.WriteLine($"{args[2]}: Theme={uld.WidgetData.AssetsHaveThemeSupport}; Nodes={uld.WidgetData.NodeCount}");
     foreach (var node in uld.WidgetData.Nodes)
         Console.WriteLine($"Node={node.NodeId}; Type={node.NodeType}; Parent={node.ParentId}; X={node.X}; Y={node.Y}; W={node.W}; H={node.H}; Data={node.Node}");
+    foreach (var component in uld.Components)
+        Console.WriteLine($"Component={component.Id}; Type={component.Type}; Nodes={component.NodeCount}");
 }
 else return 1;
 return 0;

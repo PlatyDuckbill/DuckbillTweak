@@ -1,6 +1,6 @@
 # 네이티브 UI 계약
 
-0.1.1.4의 UI는 KamiToolKit의 게임 컴포넌트를 사용한다. 보조 ImGui 목록은 없다. 라이브 native pointer는 각 UI lifecycle/Framework 콜백 안에서만 읽는다. 최종 화면·입력 동작의 실기 확인은 별도다.
+0.1.1.5의 UI는 KamiToolKit의 게임 컴포넌트를 사용한다. 보조 ImGui 목록은 없다. 라이브 native pointer는 각 UI lifecycle/Framework 콜백 안에서만 읽는다. 최종 화면·입력 동작의 실기 확인은 별도다.
 
 ## 고정 환경
 
@@ -10,6 +10,16 @@
 - SDK/API 버전은 변경하지 않았다. NativeCompatibility가 게임 해시·바인딩 모듈 ID를 확인한다. 틀리면 사용자 명령에 미지원 사유만 출력한다.
 
 ## 상점
+
+### 0.1.1.5 교환 상점의 원본 행 필터
+
+InclusionShop/ShopExchangeItem의 단순화한 대체 ListNode를 제거했다. ULD의 component1024/1025가 TreeList임을 확인하고, 원본 AtkComponentTreeListItem.IsHidden만 바꿔 LayoutRefreshPending으로 게임의 레이아웃/스크롤 갱신을 요청한다. 원본의 묶음 수량/보유 수/교환 입력/± 버튼/재화 아이콘/색과 입력 처리는 재구성하지 않는다. 구매 콜백 전달과 인덱스 재매핑도 하지 않는다.
+
+원본 Items 벡터 수를 agent 전체 표시 행 수와 대조한다. 필터 후 Base.ListLength가 변해도 원본 벡터 순서와 ItemIndexMap은 유지한다. refresh 이전/체크 해제/finalize/해제에서 살아 있는 항목의 숨김 상태만 복원하고, 원래 숨겨진 행은 노출하지 않는다. 레이아웃 완료 뒤 충돌 목록을 갱신한다. 구조가 다르면 원본을 복원하고 필터를 비활성화한다. 일반 길 Shop의 component1014는 List이므로 기존 구현을 유지한다.
+
+### 기본 계약과 이전 구현
+
+아래 대체 목록/입력 차단 설명은0.1.1.4의 방식이며0.1.1.5에서는 일반 길 Shop에만 적용된다. 교환 상점에는 위 원본 행 필터를 사용한다.
 
 로컬 ULD에서 확인한 루트/노드를 사용한다.
 
@@ -34,6 +44,18 @@ InclusionShop은 CategoryIndexMap으로 화면 선택→실제 Category를 매�
 소모품 제외는 로컬 ItemUICategory44(약품),46(요리),55(염료),60(촉매)에 한정한다. 식재료나 일반 기타/수집품을 광범위하게 소비형으로 추측하지 않는다. 이 체크 상태는 상점/재화 화면에서 공유하며 기본은 꺼짐이다.
 
 ## 등록과 외형 보관
+
+0.1.1.5는 현재 보관함 정보가 미로드이면 ItemFinderModule의 CharacterContentId가 현재 플레이어와 같은지 확인하고 IsGlamourDresserCached/CabinetState.Loaded를 대조해 게임 캐시를 읽는다. 현재 MirageManager/UIState.Cabinet 정보가 있으면 우선한다. 검색·파일 읽기/쓰기·캐시 적재 요청은 호출하지 않는다. Cabinet 캐시의 비트 범위 밖 행은 미확인으로 남긴다.
+
+환상투영 세트는 MirageStoreSetItem의11개 부위를 확인한다. 현재 정보에서는 IsSetSlotUnlocked를 사용하고, 캐시에서는 missing bit가0인 부위만 포함한다. KR 실행 파일의 IsSetSlotUnlocked RVA892460과 Cabinet.IsItemInCabinet RVAC1BAE0를 오프라인으로 읽어 각각0=보유/1=보유 비트 의미와 Cabinet 행 ID 기준을 대조했다. 런타임에 글로벌 주소를 도입하지 않았다.
+
+낡은 악보는 ItemUICategory94/ItemAction0 재료를 Recipe의 Orchestrion 결과 품목에 연결한다. 이름 문자열로 추측하지 않는다. 결과가 여러 곡이면 모두 등록된 경우만 원본 재료를 보유로 친다. 일부 미등록/미확인은 남긴다. 로컬 시트에서 Blood for Blood14273→14239/Orchestrion18, Starved14274→14240/Orchestrion19를 확인했다.
+
+현재/게임 저장/미확인 상태를 체크박스 툴팁에서 안내한다. 게임 캐시도 없으면 사용자가 보관함을 한 번 열어야 할 수 있다. 자체 기록은 캐릭터/지역/해제 시 계속 비우며 새 스냅샷에서 현재 캐릭터의 게임 캐시를 다시 확인한다.
+
+참고: [ItemFinderModule 필드 계약](https://github.com/aers/FFXIVClientStructs/blob/b72bc1f73e5f2b09ba460a9238fbf3b9a5bbeb3c/FFXIVClientStructs/FFXIV/Client/UI/Misc/ItemFinderModule.cs). 로컬 MVID의 타입/배열/상태를 대조했다. SimpleTweaks 고정 revision의 TrackOutfits는 캐시/세트 비트 의미 조사에 참고했으며 구현 소스를 복사하지 않았다.
+
+이하 기본 등록 API와 현재 정보 읽기 계약은 계속 적용된다. 이전에 미지원으로 남겼던 세트는 위 부위 검사로 보완한다.
 
 공개 IUnlockState의 긍정 등록 판정을 우선한다. ItemAction이 있는 품목은 검사된 네이티브 프로필에서 ExdModule.GetItemRowById → UIState.IsItemActionUnlocked를 읽기 전용으로 사용한다. 설치된 바인딩 XML의 반환 계약은1=등록,2=미등록,3=미확인,4=등록 상태 없음이다.3/기타 실패를 미등록으로 바꾸지 않는다. 코르나고 항아리49805–49820은 KR ItemAction.Action50454를 쓰며 현재 Dalamud IsItemUnlockable의 화이트리스트에 없어 이 경로가 필요하다. XBＭPet 시트를 추정해 매핑하지 않는다.
 
