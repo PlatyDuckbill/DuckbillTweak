@@ -54,6 +54,17 @@ internal sealed class MerchantService : IDisposable
 
     public string ItemName(uint rawId) => data.GetExcelSheet<Item>().TryGetRow(rawId >= 1_000_000 ? rawId - 1_000_000 : rawId, out var item)
         ? item.Name.ExtractText() : $"아이템 #{rawId}";
+    public string ItemDisplayName(uint rawId) => ItemName(rawId) + (rawId >= 1_000_000 ? " HQ" : "");
+    public ShopItem? ItemDetails(uint rawId) => data.GetExcelSheet<Item>().TryGetRow(rawId >= 1_000_000 ? rawId - 1_000_000 : rawId, out var item) ? Describe(item) : null;
+    public Ownership ItemOwnership(uint rawId, uint nativeOwned = 0)
+    {
+        var id = rawId >= 1_000_000 ? rawId - 1_000_000 : rawId;
+        if (nativeOwned > 0 || View.Inventory.OwnedItems.GetValueOrDefault(id) > 0) return Ownership.Owned;
+        if (View.Ownership.TryGetValue(id, out var known)) return known;
+        if (data.GetExcelSheet<Item>().TryGetRow(id, out var item) && unlocks.IsItemUnlockable(item) && unlocks.IsItemUnlocked(item))
+            return Ownership.Owned;
+        return View.Inventory.OwnershipComplete ? Ownership.Missing : Ownership.Unknown;
+    }
     public uint Icon(uint rawId) => data.GetExcelSheet<Item>().TryGetRow(rawId >= 1_000_000 ? rawId - 1_000_000 : rawId, out var item) ? item.Icon : 0u;
     public string NativeCost(byte type, uint id, uint amount)
     {

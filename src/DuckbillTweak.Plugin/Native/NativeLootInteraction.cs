@@ -1,6 +1,7 @@
 using Dalamud.Game.Addon.Events;
 using Dalamud.Game.Addon.Events.EventDataTypes;
 using Dalamud.Plugin.Services;
+using DuckbillTweak.Plugin.Shops;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using KamiToolKit.Controllers;
 
@@ -13,13 +14,14 @@ internal sealed unsafe class NativeLootInteraction : IDisposable
     private readonly NativeLootAddon popup;
     private readonly IPartyList party;
     private readonly IGameGui gui;
+    private readonly MerchantService merchants;
     private readonly AddonController<AddonNeedGreed> controller;
     private readonly Dictionary<nint, IAddonEventHandle> handles = [];
 
     public NativeLootInteraction(IAddonEventManager events, IGameGui gui, IPartyList party,
-        Configuration config, NativeLootAddon popup)
+        Configuration config, NativeLootAddon popup, MerchantService merchants)
     {
-        this.events = events; this.gui = gui; this.party = party; this.config = config; this.popup = popup;
+        this.events = events; this.gui = gui; this.party = party; this.config = config; this.popup = popup; this.merchants = merchants;
         controller = new AddonController<AddonNeedGreed> { AddonName = "NeedGreed", OnUpdate = Update,
             OnFinalize = _ => RemoveEvents() };
         controller.Enable();
@@ -61,7 +63,7 @@ internal sealed unsafe class NativeLootInteraction : IDisposable
         var hovered = (uint)gui.HoveredItem;
         if (hovered != 0 && hovered != item.ItemId) return;
         // Values are copied while the event's addon is alive. No pointer is passed into the popup.
-        popup.ShowItem(item.ItemId, item.ItemName.ToString(), party.IsAlliance);
+        popup.ShowItem(item.ItemId, merchants.ItemDisplayName(item.ItemId), party.IsAlliance);
     }
 
     private void RemoveEvents() { foreach (var handle in handles.Values) events.RemoveEvent(handle); handles.Clear(); }

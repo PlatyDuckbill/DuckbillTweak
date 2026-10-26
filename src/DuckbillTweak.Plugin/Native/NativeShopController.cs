@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Dalamud.Plugin.Services;
 using DuckbillTweak.Core.Shops;
 using DuckbillTweak.Plugin.Shops;
 using FFXIVClientStructs.FFXIV.Client.UI;
@@ -17,6 +18,7 @@ internal sealed unsafe class NativeShopController : IDisposable
     private readonly Configuration config;
     private readonly Action save;
     private readonly NativeCurrencyAddon currency;
+    private readonly IPluginLog log;
     private readonly AddonController<AddonShop> controller;
     private CheckboxNode? missing;
     private DropDownNode<CategoryOption>? categories;
@@ -33,10 +35,12 @@ internal sealed unsafe class NativeShopController : IDisposable
     private bool originalInteraction;
     private bool usingFilteredList;
     private bool syncing;
+    private bool renderFailed;
+    private (int Total, int Visible)? lastApplied;
 
-    public NativeShopController(MerchantService merchants, Configuration config, Action save, NativeCurrencyAddon currency)
+    public NativeShopController(MerchantService merchants, Configuration config, Action save, NativeCurrencyAddon currency, IPluginLog log)
     {
-        this.merchants = merchants; this.config = config; this.save = save; this.currency = currency;
+        this.merchants = merchants; this.config = config; this.save = save; this.currency = currency; this.log = log;
         controller = new AddonController<AddonShop> { AddonName = "Shop", OnUpdate = Update, OnFinalize = Detach };
         controller.Enable();
     }
@@ -49,13 +53,28 @@ internal sealed unsafe class NativeShopController : IDisposable
 
     private void Update(AddonShop* addon)
     {
+        try { UpdateCore(addon); }
+        catch (Exception ex)
+        {
+            // Managed rendering failures must not leave the game's input disabled.
+            if (boundAddon == (nint)addon) RestoreList(addon);
+            if (!renderFailed) log.Error(ex, "Shop filter rendering failed; original list input restored. Reopen the shop to retry.");
+            renderFailed = true;
+        }
+    }
+
+    private void UpdateCore(AddonShop* addon)
+    {
         if (!config.MerchantTools || !Shape(addon)) { if (boundAddon == (nint)addon) Detach(addon); return; }
         var list = addon->BuyList;
         var selling = (list->OwnerNode->NodeFlags & NodeFlags.Visible) != 0;
         if (!selling) { if (boundAddon == (nint)addon) Detach(addon); return; }
         if (boundAddon == 0) Attach(addon);
         if (filteredList is null || missing is null || categories is null) return;
-        filteredList.Update();
+        var requested = config.MerchantCategoryHideOwned.GetValueOrDefault(categoryId, config.MerchantHideOwned) || categoryId != 0;
+        if (!requested || renderFailed) RestoreList(addon);
+        if (renderFailed) return;
+        if (usingFilteredList) filteredList.Update();
         if (lastRead != 0 && Stopwatch.GetElapsedTime(lastRead).TotalMilliseconds < 300) return;
         lastRead = Stopwatch.GetTimestamp();
         missing.IsEnabled = false;
@@ -71,11 +90,14 @@ internal sealed unsafe class NativeShopController : IDisposable
         {
             ref var item = ref agent->ItemReceive[index];
             var baseId = item.ItemId >= 1_000_000 ? item.ItemId - 1_000_000 : item.ItemId;
-            if (baseId == 0 || !itemInfo.TryGetValue(baseId, out var detail)) { RestoreList(addon); return; }
+            var detail = itemInfo.GetValueOrDefault(baseId) ?? merchants.ItemDetails(baseId);
+            if (baseId == 0 || detail is null) { RestoreList(addon); return; }
+            itemInfo[baseId] = detail;
             ref var cost = ref agent->ItemCost[index * 3];
             if (cost.ItemId != 1) { RestoreList(addon); return; }
-            next.Add(new(index, item.ItemId, item.ItemIconId, item.ItemName.ToString(), cost.ItemCount.ToString("N0"),
-                item.OwnedItemCount.ToString("N0"), detail.CategoryId, !list->GetItemDisabledState(index)));
+            next.Add(new(index, item.ItemId, item.ItemIconId, merchants.ItemDisplayName(item.ItemId), cost.ItemCount.ToString("N0"),
+                item.OwnedItemCount.ToString("N0"), detail.CategoryId, !list->GetItemDisabledState(index),
+                merchants.ItemOwnership(item.ItemId, item.OwnedItemCount) == Ownership.Owned));
         }
         var options = new[] { new CategoryOption(0, "모든 종류") }.Concat(next.Select(r =>
             new CategoryOption(r.CategoryId, itemInfo[r.RawItemId >= 1_000_000 ? r.RawItemId - 1_000_000 : r.RawItemId].Category))
@@ -90,13 +112,21 @@ internal sealed unsafe class NativeShopController : IDisposable
         var hide = config.MerchantCategoryHideOwned.GetValueOrDefault(categoryId, config.MerchantHideOwned);
         syncing = true; missing.IsChecked = hide; syncing = false;
         var filtered = next.Where(r => (categoryId == 0 || r.CategoryId == categoryId) &&
-            (!hide || view.Ownership.GetValueOrDefault(r.RawItemId >= 1_000_000 ? r.RawItemId - 1_000_000 : r.RawItemId) != Ownership.Owned)).ToArray();
+            (!hide || !r.OwnedAlready)).ToArray();
         if (!hide && categoryId == 0) { RestoreList(addon); return; }
-        if (!rows.SequenceEqual(filtered)) { rows = filtered; filteredList.OptionsList = filtered.ToList(); }
+        if (!rows.SequenceEqual(filtered)) { filteredList.OptionsList = filtered.ToList(); rows = filtered; }
+        filteredList.Update();
+        filteredList.IsVisible = true;
+        // Commit the replacement only after every visible row has rendered successfully.
+        if (!usingFilteredList) { originalAlpha = list->OwnerNode->Color.A; originalInteraction = list->IsItemInteractionEnabled; }
+        usingFilteredList = true;
         list->OwnerNode->SetAlpha(0);
         list->IsItemInteractionEnabled = false;
-        filteredList.IsVisible = true;
-        usingFilteredList = true;
+        if (lastApplied != (next.Count, filtered.Length))
+        {
+            log.Information("Shop filter applied: Rows={Rows}; Visible={Visible}", next.Count, filtered.Length);
+            lastApplied = (next.Count, filtered.Length);
+        }
     }
 
     private void Attach(AddonShop* addon)
@@ -116,6 +146,7 @@ internal sealed unsafe class NativeShopController : IDisposable
         missing.OnClick = value =>
         {
             if (syncing) return;
+            RestoreList(addon);
             if (categoryId == 0) { config.MerchantHideOwned = value; config.MerchantCategoryHideOwned.Clear(); }
             else config.MerchantCategoryHideOwned[categoryId] = value;
             save(); lastRead = 0;
@@ -158,10 +189,12 @@ internal sealed unsafe class NativeShopController : IDisposable
 
     private void RestoreList(AddonShop* addon)
     {
-        if (filteredList is not null) filteredList.IsVisible = false;
+        // Restore native input before touching any custom node.
         if (usingFilteredList && addon->BuyList is not null && addon->BuyList->OwnerNode is not null)
         { addon->BuyList->OwnerNode->SetAlpha(originalAlpha); addon->BuyList->IsItemInteractionEnabled = originalInteraction; }
         usingFilteredList = false;
+        lastApplied = null;
+        if (filteredList is not null) filteredList.IsVisible = false;
     }
 
     private void Detach(AddonShop* addon)
@@ -174,7 +207,7 @@ internal sealed unsafe class NativeShopController : IDisposable
         shifted.Clear();
         if (addon->BuyList is not null && addon->BuyList->OwnerNode is not null)
         { addon->BuyList->OwnerNode->SetYFloat(listY); addon->BuyList->SetSize(addon->BuyList->OwnerNode->Width, listHeight); }
-        boundAddon = 0; rows = []; lastRead = 0;
+        boundAddon = 0; rows = []; lastRead = 0; renderFailed = false;
     }
 
     public void Dispose() { controller.Dispose(); if (boundAddon != 0) Detach((AddonShop*)boundAddon); }
