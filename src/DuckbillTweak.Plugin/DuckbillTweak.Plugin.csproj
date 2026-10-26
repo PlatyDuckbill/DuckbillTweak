@@ -1,0 +1,31 @@
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+  <PropertyGroup>
+    <AssemblyName>DuckbillTweak</AssemblyName>
+    <RootNamespace>DuckbillTweak.Plugin</RootNamespace>
+    <Version>0.1.0.0</Version>
+    <Author>PlatyDuckbill</Author>
+    <Name>DuckbillTweak</Name>
+    <Punchline>Small conveniences for FFXIV Korea.</Punchline>
+    <Description>PvP chat bubbles, merchant collection filters and currency planning, and observed loot rolls. Open with /dbtw or /duckbilltweak. Development build; Korean client verification required.</Description>
+    <RepoUrl>https://github.com/PlatyDuckbill/DuckbillTweak</RepoUrl>
+    <Tags>tweaks;shop;collection;loot;pvp;한국어</Tags>
+    <DalamudApiLevel>15</DalamudApiLevel>
+    <ApplicableVersion>any</ApplicableVersion>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../DuckbillTweak.Core/DuckbillTweak.Core.csproj" />
+    <EmbeddedResource Include="../../data/special-currencies.kr.json" LogicalName="DuckbillTweak.SpecialCurrencies" />
+  </ItemGroup>
+  <Target Name="ValidateDalamudReference" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(DalamudLibPath)/Dalamud.dll')" Text="Set DALAMUD_HOME to a complete KR Dalamud API 15 reference directory. See scripts/enter-dev.ps1." />
+    <GetAssemblyIdentity AssemblyFiles="$(DalamudLibPath)/Dalamud.dll">
+      <Output TaskParameter="Assemblies" ItemName="DalamudReferenceIdentity" />
+    </GetAssemblyIdentity>
+    <PropertyGroup>
+      <DalamudReferenceVersion>@(DalamudReferenceIdentity->'%(Version)')</DalamudReferenceVersion>
+      <DalamudReferenceApi>$([System.Version]::Parse('$(DalamudReferenceVersion)').Major)</DalamudReferenceApi>
+    </PropertyGroup>
+    <Error Condition="'$(DalamudReferenceApi)' != '15'" Text="This project requires Dalamud API 15." />
+  </Target>
+</Project>
