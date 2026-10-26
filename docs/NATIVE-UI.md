@@ -1,6 +1,6 @@
 # 네이티브 UI 계약
 
-0.1.1.5의 UI는 KamiToolKit의 게임 컴포넌트를 사용한다. 보조 ImGui 목록은 없다. 라이브 native pointer는 각 UI lifecycle/Framework 콜백 안에서만 읽는다. 최종 화면·입력 동작의 실기 확인은 별도다.
+0.1.1.6의 UI는 KamiToolKit의 게임 컴포넌트를 사용한다. 보조 ImGui 목록은 없다. 라이브 native pointer는 각 UI lifecycle/Framework 콜백 안에서만 읽는다. 최종 화면·입력 동작의 실기 확인은 별도다.
 
 ## 고정 환경
 
@@ -11,11 +11,15 @@
 
 ## 상점
 
-### 0.1.1.5 교환 상점의 원본 행 필터
+### 0.1.1.6 교환 상점의 원본 행 필터
 
-InclusionShop/ShopExchangeItem의 단순화한 대체 ListNode를 제거했다. ULD의 component1024/1025가 TreeList임을 확인하고, 원본 AtkComponentTreeListItem.IsHidden만 바꿔 LayoutRefreshPending으로 게임의 레이아웃/스크롤 갱신을 요청한다. 원본의 묶음 수량/보유 수/교환 입력/± 버튼/재화 아이콘/색과 입력 처리는 재구성하지 않는다. 구매 콜백 전달과 인덱스 재매핑도 하지 않는다.
+InclusionShop/ShopExchangeItem의 단순화한 대체 ListNode는 제거된 상태를 유지한다. ULD의 component1024/1025는 TreeList다. 0.1.1.5의 IsHidden/LayoutRefreshPending만으로는 충분하지 않았다. KR CalculateVisibleItemHeightAndCount RVA6A5BB0은 IsHidden을 읽지 않고 Height/Depth/Type으로 높이와 개수를 계산한다. UpdateListItems RVA6A4F70과 Draw RVA6A3840도 Height만큼 위치를 진행시킨다. 해당 원본 실행 파일의 정적 분석으로 확인했다.
 
-원본 Items 벡터 수를 agent 전체 표시 행 수와 대조한다. 필터 후 Base.ListLength가 변해도 원본 벡터 순서와 ItemIndexMap은 유지한다. refresh 이전/체크 해제/finalize/해제에서 살아 있는 항목의 숨김 상태만 복원하고, 원래 숨겨진 행은 노출하지 않는다. 레이아웃 완료 뒤 충돌 목록을 갱신한다. 구조가 다르면 원본을 복원하고 필터를 비활성화한다. 일반 길 Shop의 component1014는 List이므로 기존 구현을 유지한다.
+0.1.1.6은 평면 목록(Depth0, Group/SectionHeader 없음, 항목·렌더러 중복 없음)만 처리한다. 숨길 항목의 Height를0, IsHidden을true, Disabled 비트를true로 두고 원본 렌더러 OwnerNode의 표시를 끈다. 원래 높이/숨김/비활성 비트/표시 상태는 관리 값으로 저장한다. CalculateVisibleItemHeightAndCount 후 RecalculateVisibleItems(false)를 호출해 전체 높이·스크롤 한계·원본 행 위치를 다시 계산하고 충돌 목록을 갱신한다. 후자는 로컬 vtable 슬롯38/RVA6A5A40에서 스크롤 보정→위치 갱신→행 갱신을 호출함을 대조했다. 새 주소나 후크를 런타임에 추가하지 않았다.
+
+표시되는 원본의 묶음 수량/보유 수/교환 입력/± 버튼/재화 아이콘/색은 재구성하지 않는다. 구매 콜백 전달과 인덱스 재매핑도 하지 않는다. 계산에 사용하는 활성 상태는 필터가 임시로 설정한 Disabled 비트가 아닌 저장된 원래 값을 반환한다.
+
+원본 Items 벡터 수를 agent 전체 표시 행 수와 대조한다. 원본 벡터 순서와 ItemIndexMap은 유지한다. refresh 이전/체크 해제/finalize/해제에서 살아 있는 항목의 저장 상태를 복원한다. 이전 렌더러 주소는 현재 항목의 렌더러와 일치할 때만 사용한다. 구조가 다르면 원본을 복원하고 필터를 비활성화한다. 일반 길 Shop의 component1014는 List이므로 기존 구현을 유지하되 refresh 이전에도 원본 입력을 복원한다. 추가 컨트롤 제거·원래 위치/크기 복원 이후 충돌 목록도 다시 생성한다.
 
 ### 기본 계약과 이전 구현
 
@@ -81,7 +85,7 @@ InclusionShop은 CategoryIndexMap으로 화면 선택→실제 Category를 매�
 
 NeedGreed ULD의 목록6과 현재 바인딩의 AddonNeedGreed.Items를 대조한다. 원래 입찰/포기 버튼과 콜백은 변경하지 않는다. 공개 IAddonEventManager로 렌더러 EventNode/CollisionNodeList의 MouseDown을 구독하고, IAddonLifecycle PreReceiveEvent의 ListItemClick/DoubleClick도 받는다. 마우스 이벤트는 클릭 대상 노드를 현재 렌더러와 대조하고, 목록 이벤트는 오른쪽 버튼과 SelectedIndex/ListItemRenderer를 대조한다. hovered item/툴팁 ID에 의존하지 않는다.
 
-우클릭은 행을 관측할 뿐 소비하지 않는다. PreventOriginal/SetEventIsHandled를 호출하지 않고 기본 메뉴를 그대로 연다. addon ID/원본 행/아이템 ID/시각/화면 세대를 관리 값으로 복사한다. 공개 IContextMenu.OnMenuOpened의 NeedGreed 기본 메뉴에서2초 이내의 행을 재검증하고 '입찰 숫자 보기'를 추가한다. 메뉴가 관측 이벤트보다 먼저 열리면 설치 바인딩의 AgentLoot.HoveredSlotIndex를 사용하되 addon ID·행 범위·HoveredItemId와 원본 행의 raw ID가 모두 일치할 때만 허용한다. 미리보기 등 기존 항목을 재구성하거나 제거하지 않는다.
+우클릭은 행을 관측할 뿐 소비하지 않는다. PreventOriginal/SetEventIsHandled를 호출하지 않고 기본 메뉴를 그대로 연다. addon ID/원본 행/아이템 ID/시각/화면 세대를 관리 값으로 복사한다. 공개 IContextMenu.OnMenuOpened의 NeedGreed 기본 메뉴에 '입찰 숫자 보기'를 추가한다. 0.1.1.6은 설치 바인딩의 AgentLoot.HoveredSlotIndex를 먼저 확인하되 addon ID·행 범위·HoveredItemId와 원본 행의 raw ID가 모두 일치할 때만 허용한다. 현재 네이티브 컨텍스트를 확인할 수 없을 때만2초 이내 관측을 재검증한다. 관측은 메뉴마다 비워 빠른 연속 우클릭에서 이전 항목이 우선하지 않도록 한다. 미리보기 등 기존 항목을 재구성하거나 제거하지 않는다.
 
 추가 항목을 선택할 때만 화면 요청을 만든다. 메뉴를 고르는 동안의 시간은 제한하지 않지만, 다음 addon update에서 화면 세대/ID/행/아이템이 그대로인지 재검증하며1초가 지난 미처리 요청은 버린다. addon finalize/기능 해제/플러그인 dispose에서 구독과 대기 요청을 제거한다. 바인딩/메뉴 항목 추가/선택/화면 요청을 각각 기록한다. 로그 수신 형식/숫자 기록 시작/귀속 실패 사유도 구분하며 원문·이름·실제 숫자는 기록하지 않는다.
 

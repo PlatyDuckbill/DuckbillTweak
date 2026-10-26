@@ -26,6 +26,11 @@ public sealed class LootLedger
 
     public void Clear() => entries.Clear();
 
+    public void MarkAmbiguous(uint rawItemId)
+    {
+        foreach (var entry in entries.Where(e => e.RawItemId == rawItemId && e.Winner is null)) entry.Ambiguous = true;
+    }
+
     public LootEntry Add(uint rawItemId, string name, bool alliance, DateTimeOffset now)
     {
         var duplicates = entries.Where(x => x.RawItemId == rawItemId && x.Winner is null).ToArray();

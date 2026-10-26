@@ -44,7 +44,7 @@ internal sealed unsafe class NativeExchangeController : IDisposable
     {
         this.name = name; this.merchants = merchants; this.config = config; this.save = save; this.currency = currency; this.log = log;
         controller = new AddonController { AddonName = name, OnUpdate = Update, OnFinalize = Detach,
-            OnPreRefresh = addon => { Restore(addon); lastRead = 0; } };
+            OnPreRefresh = addon => { if (boundAddon == (nint)addon) Restore(addon); lastRead = 0; } };
         controller.Enable();
     }
 
@@ -142,9 +142,9 @@ internal sealed unsafe class NativeExchangeController : IDisposable
                 var owned = merchants.ItemOwnership(item.ItemId, nativeOwned) == Ownership.Owned;
                 if (owned) ownedItems.Add(id);
                 rows.Add(new(i, item.ItemId, item.ItemIconId, merchants.ItemDisplayName(item.ItemId),
-                    string.Join(" / ", costs), item.OwnedItemCount.ToString("N0"), owned, key, NativeTreeFilter.IsEnabled(list, i), merchants.IsConsumable(item.ItemId)));
+                    string.Join(" / ", costs), item.OwnedItemCount.ToString("N0"), owned, key, nativeFilter.IsEnabled(list, i), merchants.IsConsumable(item.ItemId)));
                 if (merchants.NativeReward(item.ItemId, item.ItemCount, prices) is { } reward)
-                    offers.Add(merchants.DisplayedOffer($"{key}:{i}", [reward], prices, NativeTreeFilter.IsEnabled(list, i)));
+                    offers.Add(merchants.DisplayedOffer($"{key}:{i}", [reward], prices, nativeFilter.IsEnabled(list, i)));
             }
             merchants.PublishDisplayedShop(addon->Id, offers, balances, ownedItems, rows.Count);
             return true;
@@ -188,12 +188,12 @@ internal sealed unsafe class NativeExchangeController : IDisposable
                     if (price.Resolved) inclusionBalances[price.Key] = item.CostOwnedCount[cost];
                 }
             rows.Add(new(i, ids[0], merchants.Icon(ids[0]), string.Join(" / ", ids.Select(merchants.ItemName)),
-                string.Join(" / ", costs), item.GiveItemOwnedCount[0].ToString("N0"), allOwned, key, NativeTreeFilter.IsEnabled(list, i), ids.All(merchants.IsConsumable)));
+                string.Join(" / ", costs), item.GiveItemOwnedCount[0].ToString("N0"), allOwned, key, nativeFilter.IsEnabled(list, i), ids.All(merchants.IsConsumable)));
             var rewards = new List<Reward>();
             for (var reward = 0; reward < item.GiveItemId.Length; reward++)
                 if (item.GiveItemId[reward] != 0 && merchants.NativeReward(item.GiveItemId[reward] + (item.GiveItemHq[reward] != 0 ? 1_000_000u : 0), item.GiveAmount[reward]) is { } received)
                     rewards.Add(received);
-            if (rewards.Count == ids.Length) inclusionOffers.Add(merchants.DisplayedOffer($"{key}:{i}", rewards, prices, NativeTreeFilter.IsEnabled(list, i)));
+            if (rewards.Count == ids.Length) inclusionOffers.Add(merchants.DisplayedOffer($"{key}:{i}", rewards, prices, nativeFilter.IsEnabled(list, i)));
         }
         merchants.PublishDisplayedShop(addon->Id, inclusionOffers, inclusionBalances, inclusionOwned, rows.Count);
         return true;
@@ -236,6 +236,7 @@ internal sealed unsafe class NativeExchangeController : IDisposable
         missing?.Dispose(); missing = null; consumables?.Dispose(); consumables = null; calculate?.Dispose(); calculate = null;
         foreach (var (id, y) in positions) { var node = addon->GetNodeById(id); if (node is not null) node->SetYFloat(y); }
         var list = addon->GetComponentListById(ListId); if (list is not null && list->OwnerNode is not null) list->SetSize(list->OwnerNode->Width, listHeight);
+        addon->UpdateCollisionNodeList(false);
         positions.Clear(); boundAddon = 0; context = ""; renderFailed = false; lastShape = null;
     }
     public void Dispose() { controller.Dispose(); if (boundAddon != 0) Detach((AtkUnitBase*)boundAddon); }

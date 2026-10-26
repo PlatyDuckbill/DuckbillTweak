@@ -157,13 +157,13 @@ internal sealed class MerchantService : IDisposable
         lastRead = Stopwatch.GetTimestamp();
         try
         {
-            nativeOwnership.Refresh(player.ContentId);
             var shopOpen = new[] { "Shop", "ShopExchangeItem", "InclusionShop" }.Any(name =>
             {
                 var addon = gameGui.GetAddonByName(name);
                 return !addon.IsNull && addon.IsReady && addon.IsVisible;
             });
             if (!Visible && !shopOpen && !refreshRequested && manualRequest is null) return;
+            nativeOwnership.Refresh(player.ContentId);
 
             var currentTarget = target.Target;
             var npc = currentTarget?.ObjectKind == ObjectKind.EventNpc ? currentTarget.BaseId : 0;

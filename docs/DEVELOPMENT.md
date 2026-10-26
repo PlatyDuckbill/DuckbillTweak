@@ -40,7 +40,9 @@ ID8223은 현재 한국 Item 시트에 이름이 없으므로 비용을 미확�
 
 `GameDataProbe <sqpack> items <이름>`, `npc <이름>`, `kornago-audit`는 로컬 시트의 품목/동작·NPC 연결·퀘스트 조건·소모품 분류를 읽는 오프라인 조사다. 게임 프로세스나 자동 테스트를 실행하지 않는다.
 
-0.1.1.5 교환 필터는 원본 TreeList 항목의 IsHidden/LayoutRefreshPending만 사용한다. AtkValues/ItemIndexMap/수량 컨트롤/구매 경로는 바꾸지 않는다. `uld` 출력에 component 종류를 추가해 InclusionShop1024/ShopExchangeItem1025=TreeList, Shop1014=List를 대조했다. `ownership-audit`는 낡은 악보14273/14274의 완성 악보 연결과 뿔24337의 보관 분류를 확인한다. 뿔은 Cabinet 행이 없어 환상투영함에서 판정한다.
+0.1.1.5 교환 필터는 IsHidden/LayoutRefreshPending만 사용했으나, 0.1.1.6의 KR 실행 코드 정적 점검에서 높이 계산/배치가 IsHidden을 참조하지 않음을 발견했다. 원본 항목의 Height/IsHidden/Disabled/렌더러 표시를 저장·조정·복원하고, 네이티브 높이·스크롤 재계산을 수행하도록 보완했다. AtkValues/ItemIndexMap/수량 컨트롤/구매 경로는 바꾸지 않는다. 근거 RVA와 함수 관계는 [네이티브 계약](NATIVE-UI.md)에 기록했다. `uld` 출력은 InclusionShop1024/ShopExchangeItem1025=TreeList, Shop1014=List를 대조한다. `ownership-audit`는 낡은 악보14273/14274의 완성 악보 연결과 뿔24337의 보관 분류를 확인한다. 뿔은 Cabinet 행이 없어 환상투영함에서 판정한다.
+
+0.1.1.6 자체 점검에서 위 고정 revision의 VanillaPlus `Features/StickyShopCategories/StickyShopCategories.cs`와 `Utilities/Inventory.cs`, SimpleTweaks `Tweaks/Tooltips/TrackOutfits.cs`, LootView README의 Need/Greed 공개 시점을 재참고했다. 개념/수명/데이터 의미만 대조했고 구현을 복사하지 않았다. [FFCS TreeList 구조](https://github.com/aers/FFXIVClientStructs/blob/b72bc1f73e5f2b09ba460a9238fbf3b9a5bbeb3c/FFXIVClientStructs/FFXIV/Component/GUI/AtkComponentTreeList.cs)와 설치 DLL/로컬 실행 파일을 함께 사용했다. 새 서드파티 코드나 종속성은 도입하지 않았다.
 
 보관함 현재 정보가 미로드이면 ItemFinderModule의 캐릭터 ID/캐시 상태를 확인해 게임 저장 정보를 읽는다. 자체 디스크 캐시를 만들거나 아이템 찾기 검색을 실행하지 않는다. 세트/Cabinet 비트는 설치 바인딩/XML과 KR 실행 파일의 읽기 함수에 대조했다.
 

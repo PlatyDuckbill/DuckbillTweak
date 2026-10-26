@@ -46,10 +46,10 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
             missing.IsChecked = false; trade.SelectedOption = trade.Options[0];
             categories.SelectedOption = categories.Options.FirstOrDefault(); save(); lastRead = 0;
         } }.AttachNode(this);
-        summary = new TextNode { Position = new(28, 124), Size = new(548, 62), FontSize = 13,
+        summary = new TextNode { Position = new(28, 124), Size = new(548, 94), FontSize = 13,
             TextFlags = TextFlags.MultiLine | TextFlags.WordWrap };
         summary.AttachNode(this);
-        totals = new ListNode<TotalRow, TotalRowNode> { Position = new(28, 194), Size = new(548, 280), OptionsList = [], AutoResetScroll = false };
+        totals = new ListNode<TotalRow, TotalRowNode> { Position = new(28, 226), Size = new(548, 248), OptionsList = [], AutoResetScroll = false };
         totals.NoResultsTextNode.String = "계산할 품목이 없습니다.";
         totals.AttachNode(this);
         previousOffers = null; lastRead = 0;
@@ -83,10 +83,16 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
         var selected = offers.Where(o => ids.Contains(o.Id)).ToArray();
         var unknown = selected.Count(o => o.Prices.Any(p => !p.Resolved));
         var conditions = offers.Count(o => !o.ConditionsKnown);
+        var uncertainOwnership = filter.HideOwned ? selected.SelectMany(o => o.Rewards).Select(r => r.Item.Id).Distinct()
+            .Count(id => merchants.CalculationOwnership(id) == Ownership.Unknown) : 0;
         summary.String = $"{view.Name} · {merchants.CalculationScope} / 교환식 {selected.Length}개를 한 번씩 구매\n" +
             (unknown > 0 ? $"미확인 비용 {unknown}건 · 아래는 부분 합계입니다." : "게임 상점의 판매 조건과 할인은 별도 확인이 필요합니다.") +
             (conditions > 0 ? $" 판매 조건 미확인 {conditions}건 제외." : "") +
-            (merchants.UnreadableDisplayedOffers > 0 ? $" 품목 수량 미확인 {merchants.UnreadableDisplayedOffers}건 제외." : "");
+            (merchants.UnreadableDisplayedOffers > 0 ? $" 품목 수량 미확인 {merchants.UnreadableDisplayedOffers}건 제외." : "") +
+            (uncertainOwnership > 0 ? $"\n보유 미확인 {uncertainOwnership}종 포함 · 보관함 정보에 따라 합계가 줄어들 수 있습니다." : "");
+        totals.NoResultsTextNode.String = view.Offers.Count == 0 ? "현재 상점의 계산 가능한 품목 정보를 확인하지 못했습니다." :
+            offers.Length == 0 ? "선택한 필터에 해당하는 품목이 없습니다." :
+            selected.Length == 0 ? "구매 조건을 확인한 교환식이 없습니다." : "계산할 재화가 없습니다.";
         var next = PurchasePlanner.Calculate(selected, merchants.CalculationQuantity).Select(t => new TotalRow(
             t.Name + (t.Key.Quality == ItemQuality.High ? " HQ" : "") + (t.Key.Collectability > 0 ? $" (소장가치 {t.Key.Collectability} 이상)" : ""),
             $"필요 {t.Required:N0}   보유 {Count(t.Owned)}   부족 {Count(t.Shortfall)}")).ToList();

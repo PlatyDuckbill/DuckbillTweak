@@ -43,7 +43,8 @@ internal sealed unsafe class NativeShopController : IDisposable
     public NativeShopController(MerchantService merchants, Configuration config, Action save, NativeCurrencyAddon currency, IPluginLog log)
     {
         this.merchants = merchants; this.config = config; this.save = save; this.currency = currency; this.log = log;
-        controller = new AddonController<AddonShop> { AddonName = "Shop", OnUpdate = Update, OnFinalize = Detach };
+        controller = new AddonController<AddonShop> { AddonName = "Shop", OnUpdate = Update, OnFinalize = Detach,
+            OnPreRefresh = addon => { if (boundAddon == (nint)addon) RestoreList(addon); lastRead = 0; } };
         controller.Enable();
     }
 
@@ -243,6 +244,7 @@ internal sealed unsafe class NativeShopController : IDisposable
         shifted.Clear();
         if (addon->BuyList is not null && addon->BuyList->OwnerNode is not null)
         { addon->BuyList->OwnerNode->SetYFloat(listY); addon->BuyList->SetSize(addon->BuyList->OwnerNode->Width, listHeight); }
+        addon->UpdateCollisionNodeList(false);
         boundAddon = 0; rows = []; lastRead = 0; renderFailed = false;
     }
 

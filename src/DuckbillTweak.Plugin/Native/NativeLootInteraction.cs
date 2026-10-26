@@ -96,7 +96,10 @@ internal sealed unsafe class NativeLootInteraction : IDisposable
         try
         {
             // Only a selection of our context-menu entry requests this screen.
-            popup.ShowItem(request.ItemId, merchants.ItemDisplayName(request.ItemId), party.IsAlliance);
+            var copies = 0;
+            for (var index = 0; index < addon->NumItems; index++)
+                if (addon->Items[index].ItemId == request.ItemId) copies++;
+            popup.ShowItem(request.ItemId, merchants.ItemDisplayName(request.ItemId), party.IsAlliance, copies > 1);
             log.Information("Loot roll popup requested: ItemId={Item}; Index={Index}", request.ItemId, request.Index);
         }
         catch (Exception ex) { log.Error(ex, "Loot roll popup could not open for item {Item}", request.ItemId); }
@@ -159,21 +162,20 @@ internal sealed unsafe class NativeLootInteraction : IDisposable
         if (current.IsNull) return;
         var addon = (AddonNeedGreed*)current.Address;
         var list = FindList(addon);
-        var request = clickedRow;
+        OpenRequest? request = null;
         if (list is null) return;
-        if (!MatchesRow(addon, list, request))
+        // The menu can open before this click's observer runs. Prefer the current native
+        // context over a still-fresh observation of a different row from the previous menu.
+        var agent = AgentLoot.Instance();
+        if (agent is not null && agent->AddonId == addon->Id && agent->HoveredSlotIndex < addon->NumItems &&
+            agent->HoveredSlotIndex < list->ListLength && agent->HoveredItemId != 0 &&
+            addon->Items[agent->HoveredSlotIndex].ItemId == agent->HoveredItemId)
         {
-            // The game may open its menu before our observational mouse receiver runs.
-            // Accept its hovered slot only when both the owning addon and raw item ID agree.
-            var agent = AgentLoot.Instance();
-            if (agent is not null && agent->AddonId == addon->Id && agent->HoveredSlotIndex < addon->NumItems &&
-                agent->HoveredSlotIndex < list->ListLength && agent->HoveredItemId != 0 &&
-                addon->Items[agent->HoveredSlotIndex].ItemId == agent->HoveredItemId)
-            {
-                CaptureRow(addon, list, agent->HoveredSlotIndex);
-                request = clickedRow;
-            }
+            CaptureRow(addon, list, agent->HoveredSlotIndex);
+            request = clickedRow;
         }
+        else if (MatchesRow(addon, list, clickedRow)) request = clickedRow;
+        clickedRow = null;
         if (!MatchesRow(addon, list, request))
         {
             log.Warning("Loot context menu opened without a validated item row; original menu preserved");

@@ -15,11 +15,12 @@ internal sealed unsafe class NativeLootAddon(LootService loot, Configuration con
     private readonly List<TextNode> names = [];
     private readonly List<TextNode> rolls = [];
 
-    public void ShowItem(uint rawItemId, string name, bool alliance)
+    public void ShowItem(uint rawItemId, string name, bool alliance, bool duplicate)
     {
         var entries = loot.Ledger.Entries.Where(e => e.RawItemId == rawItemId).ToArray();
-        var entry = entries.LastOrDefault(e => e.Winner is null) ?? entries.LastOrDefault()
+        var entry = entries.LastOrDefault(e => e.Winner is null)
             ?? loot.Ledger.Add(rawItemId, name, alliance, DateTimeOffset.UtcNow);
+        if (duplicate) loot.Ledger.MarkAmbiguous(rawItemId);
         entryId = entry.Id;
         Size = new(alliance ? 854 : 370, 362);
         Open();
@@ -51,7 +52,7 @@ internal sealed unsafe class NativeLootAddon(LootService loot, Configuration con
         status.Size = new(Size.X - 56, 38); itemName.Size = new(Size.X - 56, 30);
         status.String = !loot.Supported ? "현재 게임의 입찰 숫자 로그 형식을 지원하지 않습니다." :
             entry.Ambiguous ? "같은 아이템이 동시에 나와 보상별 숫자를 구분할 수 없습니다." :
-            entry.Winner is { } won ? $"획득: {won.Name}   ·   — 숫자 미수신" : "— 숫자 미수신   ·   게임에서 받은 숫자만 표시합니다.";
+            entry.Winner is { } won ? $"획득: {won.Name}   ·   — 숫자 미수신" : "입찰 종료 후 공개된 숫자만 표시합니다.   ·   — 미수신";
         var known = entry.Rolls.Keys.Concat(entry.Decided).Distinct().ToArray();
         var own = loot.PartyMembers.ToArray();
         var other = loot.OtherMembers.Concat(known.Where(k => !own.Contains(k))).Distinct().Take(16).ToArray();
