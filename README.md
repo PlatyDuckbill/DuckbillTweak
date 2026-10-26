@@ -48,12 +48,18 @@ src/DuckbillTweak.Plugin/bin/Debug/DuckbillTweak.dll
 DuckbillFisher와 같은 Windows/.NET SDK **10.0.402**, Dalamud SDK **15.0.0**·API **15**를 사용합니다. 이 PC에서 사용한 KR 참조는 **15.0.3.9**입니다.
 
 ```powershell
-. ./scripts/enter-dev.ps1
-dotnet restore DuckbillTweak.slnx --locked-mode
-dotnet build DuckbillTweak.slnx -c Debug --no-restore
+./scripts/build.ps1
 ```
 
-다른 위치의 KR 참조는 `. ./scripts/enter-dev.ps1 -DalamudPath '참조 폴더'`로 지정합니다. 게임이나 SDK 파일은 Git에 포함하지 않습니다.
+스크립트는 잠금 파일 복원, 빌드, DLL 내부 재화 리소스와 원본 JSON의 일치 검사를 순서대로 실행합니다. 자동 테스트나 게임 조작은 실행하지 않습니다.
+
+다른 위치의 KR 참조는 `./scripts/build.ps1 -DalamudPath '참조 폴더'`로 지정합니다. 수동 명령은 `. ./scripts/enter-dev.ps1`로 참조를 설정한 후 실행합니다. 게임이나 SDK 파일은 Git에 포함하지 않습니다.
+
+이미 빌드한 DLL의 리소스만 확인할 수도 있습니다.
+
+```powershell
+dotnet run --project tools/GameDataProbe -- resources src/DuckbillTweak.Plugin/bin/Debug/DuckbillTweak.dll
+```
 
 오프라인 자료 검사는 설치된 게임의 sqpack 경로를 사용합니다.
 

@@ -5,6 +5,7 @@
 - `src/DuckbillTweak.Core`: 보유 상태, 품목 필터, 교환식 선택과 재화 합계, 전리품 관측 기록. 게임 의존성 없음.
 - `src/DuckbillTweak.Plugin`: Dalamud 서비스 수명, 설정/명령, Framework에서 관리 값으로 복사하는 관측기와 ImGui 화면.
 - `tools/GameDataProbe`: 설치된 게임 데이터를 오프라인으로 읽는 도구. 전리품 로그 매크로와 재화 참조를 검사.
+- `scripts/build.ps1`: 잠금 파일 복원/빌드 후 GameDataProbe resources로 실제 DLL의 내장 자료를 검사. 리소스 검사는 PE 메타데이터/바이트만 읽으며 게임 서비스나 플러그인 생성자를 실행하지 않음.
 - `data`: 버전을 지정한 특수 화폐 ID 관계. 런타임 원격 요청 없음.
 
 각 기능은 설정값에 따라 독립적으로 동작하며, Plugin.Dispose가 구독과 명령을 해제한다. 설정은 Dalamud 플러그인 설정에 저장한다. 채팅/입찰/보유량 관측은 파일로 저장하지 않는다.

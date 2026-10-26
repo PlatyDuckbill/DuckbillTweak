@@ -3,10 +3,38 @@ using Lumina.Data;
 using Lumina.Excel.Sheets;
 using System.Text.Json;
 using DuckbillTweak.Core.Shops;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
+using System.Security.Cryptography;
+
+// Inspect the actual artifact without loading the plugin or invoking any game services.
+if (args.Length >= 2 && args[0] == "resources")
+{
+    var expectedPath = args.Length > 2 ? args[2] : "data/special-currencies.kr.json";
+    using var assembly = File.OpenRead(args[1]);
+    using var pe = new PEReader(assembly);
+    var metadata = pe.GetMetadataReader();
+    var matches = metadata.ManifestResources.Select(metadata.GetManifestResource)
+        .Where(r => metadata.GetString(r.Name) == "DuckbillTweak.SpecialCurrencies").ToArray();
+    if (matches.Length != 1 || !matches[0].Implementation.IsNil)
+        throw new InvalidDataException("Currency data must be embedded in the main plugin DLL exactly once.");
+    var resource = matches[0];
+    var rva = checked(pe.PEHeaders.CorHeader!.ResourcesDirectory.RelativeVirtualAddress + (int)resource.Offset);
+    var reader = pe.GetSectionData(rva).GetReader();
+    var payload = reader.ReadBytes(reader.ReadInt32());
+    var expected = File.ReadAllBytes(expectedPath);
+    if (!SHA256.HashData(payload).AsSpan().SequenceEqual(SHA256.HashData(expected)))
+        throw new InvalidDataException("Embedded currency data differs from the source JSON.");
+    using var json = JsonDocument.Parse(payload);
+    if (json.RootElement.GetProperty("schemaVersion").GetInt32() != 1)
+        throw new InvalidDataException("Unexpected currency schema.");
+    Console.WriteLine($"EmbeddedResource=DuckbillTweak.SpecialCurrencies; Bytes={payload.Length}; SourceMatch=True; Tokens={json.RootElement.GetProperty("items").EnumerateObject().Count()}");
+    return 0;
+}
 
 if (args.Length < 2)
 {
-    Console.Error.WriteLine("GameDataProbe <sqpack path> logs|shops|audit [currency json path]");
+    Console.Error.WriteLine("GameDataProbe <sqpack path> logs|shops|audit [currency json path]\nGameDataProbe resources <plugin DLL path> [currency json path]");
     return 1;
 }
 using var game = new GameData(args[0], new LuminaOptions { DefaultExcelLanguage = Language.Korean });

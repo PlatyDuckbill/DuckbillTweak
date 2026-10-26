@@ -4,6 +4,8 @@
 
 - 작업 폴더: Downloads/DuckbillTweak. 원격 저장소: PlatyDuckbill/DuckbillTweak, main.
 - SDK10.0.402 / Dalamud.NET.Sdk15.0.0 / KR Dalamud15.0.3.9로 Debug 빌드, 경고/오류0.
+- 첫 인게임 로드에서 Currency mapping resource missing 예외 확인. .kr.json의 언어 리소스 자동 분리를 WithCulture=false로 수정.
+- 수정 전 DLL에서 리소스 검사 실패를 재현하고, 별도/정규 Debug DLL 모두 내장 자료708바이트·원본 해시 일치·28매핑 확인. 수정 후 로컬 Dalamud 로그16:34:09의 Finished loading DuckbillTweak 확인.
 - 기능별 기본 비활성 설정, /dbtw·/duckbilltweak, 이벤트/명령 해제 구현.
 - PvP 전용 말풍선: 수신 채팅과 공개 오브젝트/화면 좌표 API를 사용하는 오버레이 구현.
 - 상인: 직접/중간 연결된 GilShop·SpecialShop·InclusionShop 탐색, 보유/수집 등록 제외, 종류/거래 필터 구현.
@@ -13,7 +15,7 @@
 - 상인/입찰은 별도 보조 화면이며 원본 게임 UI 삽입 방식은 미구현.
 - 한국 게임2026.10.06.0000.0000의 SpecialShop 비용26,090건 중26,087건 ID/이름 해석,3건 아이템8223의 이름이 비어 미확인 유지.
 - 위 자료 검사는 가격/매핑의 실기 검증을 뜻하지 않음. 자동 테스트는 추가/실행하지 않음.
-- 인게임 플러그인 로드·PvP 말풍선·상인 보유/화폐량·8인/24인 입찰은 모두 확인 대기.
+- 플러그인 로드 성공은 로컬 로그로 확인. /dbtw 화면·PvP 말풍선·상인 보유/화폐량·8인/24인 입찰 동작은 확인 대기.
 - 공개 Release, 설치 ZIP, 커스텀 저장소 설치 JSON은 게시하지 않음.
 
-다음 작업: [확인 절차](VERIFICATION.md)에 따라 실제 NPC 한 곳과 PvP 채팅/전리품 로그를 대표 확인하고 관측 계약을 조정한다.
+다음 작업: /dbtw 화면이 열리는지 확인한 뒤 [확인 절차](VERIFICATION.md)의 기능별 대표 확인을 진행한다.

@@ -15,7 +15,8 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../DuckbillTweak.Core/DuckbillTweak.Core.csproj" />
-    <EmbeddedResource Include="../../data/special-currencies.kr.json" LogicalName="DuckbillTweak.SpecialCurrencies" />
+    <!-- .kr is part of the dataset name, not a satellite resource culture. -->
+    <EmbeddedResource Include="../../data/special-currencies.kr.json" LogicalName="DuckbillTweak.SpecialCurrencies" WithCulture="false" />
   </ItemGroup>
   <Target Name="ValidateDalamudReference" BeforeTargets="ResolveAssemblyReferences">
     <Error Condition="!Exists('$(DalamudLibPath)/Dalamud.dll')" Text="Set DALAMUD_HOME to a complete KR Dalamud API 15 reference directory. See scripts/enter-dev.ps1." />

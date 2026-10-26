@@ -1,6 +1,6 @@
 # 확인 절차
 
-현재 모든 인게임 단계는 미확인이다. 빌드/오프라인 검사는 런타임 검증을 대신하지 않는다.
+수정본의 플러그인 로드는 로컬 Dalamud 로그로 확인했다. 화면/기능 동작은 아직 미확인이다. 빌드/오프라인 검사는 런타임 검증을 대신하지 않는다.
 
 ## 완료한 정적 확인
 
@@ -8,7 +8,16 @@
 - 로컬 게임 버전2026.10.06.0000.0000의 LogMessage 매크로와 SpecialShop 비용 관계 검사.
 - SpecialShop 가격26,090건 중26,087건의 참조 아이템/이름 해석. Item8223을 참조하는3건은 이름이 없어 미확인.
 - 특수 화폐28개 관계 중Item21173은 이름이 비어 런타임 매핑에서 제외. 현재 검사 대상 가격에는 해당 미확인 매핑 사용 없음.
-- 자동 테스트/게임 프로세스 조작/플러그인 로드/공개 배포는 수행하지 않음.
+- 자동 테스트/게임 프로세스 조작/공개 배포는 수행하지 않음. 플러그인 로드 상태는 아래 로컬 로그로 확인.
+
+## 최초 로드 실패와 수정
+
+- 사용자 로드 시도와 로컬 Dalamud 로그(2026-10-26 16:32:58)에서 `Currency mapping resource missing` 예외 확인. CurrencyData.Load에서 생성자가 중단됐다.
+- 원인: MSBuild가 `special-currencies.kr.json`의 kr을 culture로 추론해 `kr/DuckbillTweak.resources.dll`로 분리했다. 기본 DLL의 GetManifestResourceStream에는 자료가 없었다.
+- EmbeddedResource에 WithCulture=false를 지정해 자료를 기본 DLL에 넣었다.
+- GameDataProbe resources 검사로 수정 전 DLL의 누락을 재현했다. 별도 `.cache/resource-fix-build/`와 정규 Debug 빌드 후 기본 DLL에 동일 이름 리소스가 한 번 포함되고708바이트가 원본 JSON의 SHA-256과 일치함을 확인했다.
+- scripts/build.ps1에 빌드 후 리소스 검사를 포함했다. 이는 게임을 실행하거나 플러그인을 로드하지 않는 산출물 검사다.
+- 수정 후 로컬 Dalamud 로그2026-10-26 16:34:09.562의 `Finished loading DuckbillTweak` 확인. /dbtw 화면과 기능별 동작 확인은 남아 있다.
 
 ## 대표 확인
 
