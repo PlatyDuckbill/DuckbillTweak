@@ -53,7 +53,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
         config.ShopFilter ??= new(); config.ShopFilter.Categories ??= []; config.ShopFilter.CategoryHideOwned ??= [];
         config.ShopFilter.Search ??= ""; config.MerchantCategoryHideOwned ??= []; config.ExchangeCategoryHideOwned ??= [];
         if (!Enum.IsDefined(config.ShopFilter.Trade)) config.ShopFilter.Trade = Core.Shops.TradeFilter.All;
-        merchants = new(data, unlocks, inventory, client, player, conditions, target, gameGui, framework, log, config);
+        merchants = new(data, unlocks, inventory, client, player, conditions, target, gameGui, framework, log, config, pluginInterface);
         try { loot = new(chat, data, client, player, party, framework, config, log); }
         catch { merchants.Dispose(); throw; }
     }
@@ -71,7 +71,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
                 {
                     merchants.NativeOwnershipEnabled = true;
                     settings = new NativeSettingsAddon(config, Save) { InternalName = "DuckbillTweakSettings", Title = "DuckbillTweak", Size = new Vector2(580, 302) };
-                    currency = new NativeCurrencyAddon(merchants, config, Save) { InternalName = "DuckbillTweakCurrency", Title = "필요 재화", Size = new Vector2(610, 504) };
+                    currency = new NativeCurrencyAddon(merchants, config, Save) { InternalName = "DuckbillTweakCurrency", Title = "필요 재화", Size = new Vector2(760, 586) };
                     lootPopup = new NativeLootAddon(loot, config) { InternalName = "DuckbillTweakRolls", Title = "입찰 현황", Size = new Vector2(370, 362) };
                     shop = new(merchants, config, Save, currency, log);
                     exchanges.Add(new("InclusionShop", merchants, config, Save, currency, log));

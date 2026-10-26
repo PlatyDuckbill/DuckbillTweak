@@ -6,14 +6,46 @@ using KamiToolKit.Nodes;
 namespace DuckbillTweak.Plugin.Native;
 
 internal sealed record CategoryOption(uint Id, string Name);
-internal sealed record TotalRow(string Name, string Value);
+internal sealed record TotalRow(uint Icon, string Name, string Required, string Owned, string Shortfall);
 internal sealed class TotalRowNode : ListItemNode<TotalRow>, IListItemNode
 {
-    public static float ItemHeight => 48;
-    private readonly TextNode name = new() { Position = new(4, 0), Size = new(540, 20), FontSize = 14 };
-    private readonly TextNode value = new() { Position = new(4, 22), Size = new(540, 22), FontSize = 13 };
-    public TotalRowNode() { name.AttachNode(this); value.AttachNode(this); DisableInteractions(); }
-    protected override void SetNodeData(TotalRow row) { name.String = row.Name; value.String = row.Value; }
+    public static float ItemHeight => 30;
+    private readonly IconImageNode icon = new() { Position = new(2, 3), Size = new(24, 24), FitTexture = true };
+    private readonly TextNode name = new() { Position = new(32, 2), Size = new(284, 26), FontSize = 14, TextFlags = TextFlags.Ellipsis };
+    private readonly TextNode required = new() { Position = new(322, 2), Size = new(112, 26), FontSize = 14, AlignmentType = AlignmentType.Right };
+    private readonly TextNode owned = new() { Position = new(444, 2), Size = new(112, 26), FontSize = 14, AlignmentType = AlignmentType.Right };
+    private readonly TextNode shortfall = new() { Position = new(566, 2), Size = new(112, 26), FontSize = 14, AlignmentType = AlignmentType.Right };
+    public TotalRowNode()
+    {
+        icon.AttachNode(this); name.AttachNode(this); required.AttachNode(this); owned.AttachNode(this); shortfall.AttachNode(this);
+        DisableInteractions();
+    }
+    protected override void SetNodeData(TotalRow row)
+    { icon.IconId = row.Icon; name.String = row.Name; required.String = row.Required; owned.String = row.Owned; shortfall.String = row.Shortfall; }
+}
+
+internal sealed record CalculationRow(uint ItemId, uint Icon, string Name, string Quantity, string Cost, string Ownership);
+internal sealed class CalculationRowNode : ListItemNode<CalculationRow>, IListItemNode
+{
+    public static float ItemHeight => 28;
+    private readonly IconImageNode icon = new() { Position = new(2, 3), Size = new(22, 22), FitTexture = true };
+    private readonly TextNode name = new() { Position = new(30, 1), Size = new(280, 26), FontSize = 14, TextFlags = TextFlags.Ellipsis };
+    private readonly TextNode quantity = new() { Position = new(316, 1), Size = new(52, 26), FontSize = 14, AlignmentType = AlignmentType.Right };
+    private readonly TextNode cost = new() { Position = new(384, 1), Size = new(206, 26), FontSize = 13, TextFlags = TextFlags.Ellipsis };
+    private readonly TextNode ownership = new() { Position = new(596, 1), Size = new(82, 26), FontSize = 13, AlignmentType = AlignmentType.Right };
+    public CalculationRowNode()
+    {
+        icon.AttachNode(this); name.AttachNode(this); quantity.AttachNode(this); cost.AttachNode(this); ownership.AttachNode(this);
+        EnableSelection = false;
+        RemoveEvent(AtkEventType.MouseDown);
+    }
+    protected override void SetNodeData(CalculationRow row)
+    {
+        icon.IconId = row.Icon; name.String = row.Name; quantity.String = row.Quantity; cost.String = row.Cost; ownership.String = row.Ownership;
+        ItemTooltip = row.ItemId;
+        cost.TextTooltip = row.Cost;
+        name.TextTooltip = row.Name;
+    }
 }
 
 internal sealed record NativeShopRow(int OriginalIndex, uint RawItemId, uint IconId, string Name,

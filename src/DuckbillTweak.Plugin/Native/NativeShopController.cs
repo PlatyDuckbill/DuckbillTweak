@@ -187,7 +187,7 @@ internal sealed unsafe class NativeShopController : IDisposable
         };
         missing.AttachNode(&addon->AtkUnitBase);
         consumables = new CheckboxNode { Position = new(174, 84), Size = new(132, 24), String = "소모품 제외", IsChecked = config.MerchantHideConsumables,
-            TextTooltip = "약품·요리·염료·촉매를 제외합니다. 등록 수집품은 유지합니다." };
+            TextTooltip = "약품·요리·염료·촉매·효과 설명서·PvP 소모품·폭죽을 제외합니다. 등록 수집품은 유지합니다." };
         consumables.OnClick = value => { if (!syncing) { RestoreList(addon); config.MerchantHideConsumables = value; save(); lastRead = 0; } };
         consumables.AttachNode(&addon->AtkUnitBase);
         categories = new DropDownNode<CategoryOption> { Position = new(310, 80), Size = new(122, 28),

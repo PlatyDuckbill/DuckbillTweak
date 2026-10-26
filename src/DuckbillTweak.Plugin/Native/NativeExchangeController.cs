@@ -248,7 +248,7 @@ internal sealed unsafe class NativeExchangeController : IDisposable
         };
         missing.AttachNode(addon);
         consumables = new CheckboxNode { Position = new(244, y), Size = new(190, 24), String = "소모품 제외", IsChecked = config.MerchantHideConsumables,
-            TextTooltip = "약품·요리·염료·촉매를 제외합니다. 등록 수집품은 유지합니다." };
+            TextTooltip = "약품·요리·염료·촉매·효과 설명서·PvP 소모품·폭죽을 제외합니다. 등록 수집품은 유지합니다." };
         consumables.OnClick = value => { if (!sync) { Restore(addon); config.MerchantHideConsumables = value; save(); lastRead = 0; } };
         consumables.AttachNode(addon);
         calculate = new TextButtonNode { Position = new(CurrencyShop ? 476 : 556, y - 3), Size = new(176, 28), String = "필요 재화", OnClick = () => currency.OpenForShop(addon->Id) };

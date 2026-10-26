@@ -81,6 +81,15 @@ if (args[1] == "items" && args.Length >= 3)
     foreach (var item in game.GetExcelSheet<Item>()!.Where(i => i.Name.ExtractText().Contains(args[2], StringComparison.Ordinal)))
         Console.WriteLine($"Item={item.RowId}; Name={item.Name.ExtractText()}; Category={item.ItemUICategory.RowId}/{item.ItemUICategory.ValueNullable?.Name.ExtractText()}; Search={item.ItemSearchCategory.RowId}; Action={item.ItemAction.RowId}/{item.ItemAction.ValueNullable?.Action.RowId}; ActionData={string.Join(',', item.ItemAction.ValueNullable?.Data.ToArray() ?? [])}; Additional={item.AdditionalData.RowType?.Name}/{item.AdditionalData.RowId}; Equip={item.EquipSlotCategory.RowId}");
 }
+else if (args[1] == "consumables-audit")
+{
+    foreach (var group in game.GetExcelSheet<Item>()!.Where(i => !i.Name.IsEmpty && i.ItemAction.ValueNullable?.Action.RowId is 816 or 944)
+                 .GroupBy(i => i.ItemAction.Value.Action.RowId))
+    {
+        Console.WriteLine($"Action={group.Key}; Items={group.Count()}; Equipped={group.Count(i => i.EquipSlotCategory.RowId != 0)}");
+        foreach (var item in group) Console.WriteLine($"Item={item.RowId}; Category={item.ItemUICategory.RowId}; Name={item.Name.ExtractText()}");
+    }
+}
 else if (args[1] == "npc" && args.Length >= 3)
 {
     foreach (var npc in game.GetExcelSheet<ENpcResident>()!.Where(n => n.Singular.ExtractText().Contains(args[2], StringComparison.Ordinal)))

@@ -119,3 +119,11 @@ dotnet run --project tools/GameDataProbe -- '게임 경로/sqpack' uld ui/uld/Sh
 재화 화면은 OpenForShop으로 원본 addon ID와 관리 세션 세대를 저장한다. 공개 addon의 ID/ready/visible 및 로그인/캐릭터/지역 상태가 일치할 때만 현재 표시 스냅샷을 사용한다. 읽기 실패에서 카탈로그로 대체하지 않으며, 원본 detach 또는 세션 변경에서 닫는다. 카탈로그는 정확히 일치하는 판매 조건/보상 수량 보완용으로만 남는다. 프레임/refresh 경계에서는 이전 계산 스냅샷을 비운다.
 
 일반 길 상점의 전체 목록은 각 품목 종류의 제외 설정을 개별 적용한다. 제외 결과가 원본 전체와 같으면 원본 행을 유지한다. 필터 행 클릭은 현재 소속·보상 수량·실제 길 가격도 다시 대조한다. ShopExchangeItem 체크 설정은 NPC ID와 수신 품목/비용 품목 구성의 SHA-256 키로 구분한다. 문자열 이름·보유량·선택 수량·가격을 키에 넣지 않는다. 이전 NPC-only 키는 기본값으로만 읽고 새 선택은 개별 키에 저장한다.
+
+## 0.1.1.9 보유 보완과 계산 명세
+
+선택적 AllaganTools.ItemCount IPC는 (uint itemId, ulong characterId, int inventoryType)→uint다. 설치된InventoryTools1.15.0.13의provider와CriticalCommonLib에서 캐릭터 필터/SortedContainer2501(GlamourChest),2500(Armoire)를 대조했다. 게임 보관함 정보가 미확인인 표시 장비만 조회하며 양수만 보유 근거다. 캐릭터/지역 전환·비활성화에서 관리 캐시를 비우고, 미설치/언로드/오류/0은 기존Unknown 판정을 유지한다. IPC나 외부 캐시를 실제 교환 재화 잔액으로 쓰지 않는다. 게임의 현재 정보가 있으면 우선한다.
+
+소모품 분류는 기존ItemUICategory44/46/55/60에 KR ItemAction.Action816(설명서/우대권),944(PvP 소모품/폭죽)를 추가했다. 전체82개 이름/분류와 장비0개를 감사했으며 기타/잡화 전체로 확대하지 않았다.
+
+재화 창은760×586에서 필터y50/84, 계산 기준y118, 예외 안내y146, 재화 헤더y180/표y206–296, 품목 헤더y338/표y364–546, 계산 단위 안내y552를 사용한다. 안내는한 줄/Ellipsis/툴팁으로 분리하여 LineSpacing12에FontSize13인 이전 다중행 겹침을 제거했다. 원본 교환별1회 비용과 보상 수량을 보여 주며 묶음 보상도 비용은1회만 합산한다. 전체 보기/옵션 갱신 중 선택 콜백은 억제한다.

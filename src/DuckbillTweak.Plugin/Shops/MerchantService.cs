@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Plugin.Services;
+using Dalamud.Plugin;
 using DuckbillTweak.Core.Shops;
 using Lumina.Excel;
 using Lumina.Excel.Sheets;
@@ -29,6 +30,7 @@ internal sealed class MerchantService : IDisposable
     private readonly Configuration config;
     private readonly SpecialCurrencyResolver currencyResolver;
     private readonly NativeOwnership nativeOwnership;
+    private readonly StoredInventoryBridge storedInventory;
     private ushort displayedAddon;
     private string displayedContext = "";
     private IReadOnlyList<Offer> displayedOffers = [];
@@ -54,7 +56,8 @@ internal sealed class MerchantService : IDisposable
     public bool CabinetLoaded => nativeOwnership.CabinetLoaded;
     public string OwnershipHelp => "등록한 수집품·소지품·장비함·착용 장비·환상투영함·추억의 보관함을 확인합니다.\n" +
         $"환상투영함: {nativeOwnership.DresserSource} / 추억의 보관함: {nativeOwnership.CabinetSource}\n" +
-        "현재 캐릭터의 게임 저장 정보도 사용합니다. 미확인이면 보관함을 한 번 열어 주세요.\n낡은 악보는 제작 결과 악보가 모두 등록됐으면 제외합니다.";
+        (storedInventory.Available ? "Allagan Tools: 현재 캐릭터의 보관함 저장 기록도 확인합니다.\n" : "게임 저장 정보가 없으면 보관함을 한 번 열어 주세요.\n") +
+        "낡은 악보는 제작 결과 악보가 모두 등록됐으면 제외합니다.";
     public bool IsShopOpen(ushort id) => id != 0 && SessionReady && new[] { "Shop", "ShopExchangeItem", "ShopExchangeCurrency", "InclusionShop" }.Any(name =>
     {
         var addon = gameGui.GetAddonByName(name);
@@ -73,13 +76,14 @@ internal sealed class MerchantService : IDisposable
 
     public MerchantService(IDataManager data, IUnlockState unlocks, IGameInventory inventory, IClientState client,
         IPlayerState player, ICondition conditions, ITargetManager target, IGameGui gameGui, IFramework framework,
-        IPluginLog log, Configuration config)
+        IPluginLog log, Configuration config, IDalamudPluginInterface pluginInterface)
     {
         this.data = data; this.unlocks = unlocks; this.inventory = inventory; this.client = client;
         this.player = player; this.conditions = conditions; this.target = target; this.gameGui = gameGui;
         this.framework = framework; this.log = log; this.config = config;
         currencyResolver = CurrencyData.Load(data);
         nativeOwnership = new(data, unlocks);
+        storedInventory = new(pluginInterface, log);
         framework.Update += Update;
     }
 
@@ -94,6 +98,10 @@ internal sealed class MerchantService : IDisposable
     {
         var id = rawId >= 1_000_000 ? rawId - 1_000_000 : rawId;
         if (nativeOwned > 0 || View.Inventory.OwnedItems.GetValueOrDefault(id) > 0) return Ownership.Owned;
+        // Query optional storage only for requested/displayed items, not the NPC's
+        // entire catalog while refreshing its metadata.
+        if (!nativeOwnership.Contains(id) && data.GetExcelSheet<Item>().TryGetRow(id, out var item) &&
+            item.EquipSlotCategory.RowId != 0 && !nativeOwnership.StorageKnown(item) && storedInventory.Contains(id)) return Ownership.Owned;
         return ReadOwnership(id, View.Inventory);
     }
     private Ownership ReadOwnership(uint id, InventorySnapshot stock)
@@ -181,6 +189,7 @@ internal sealed class MerchantService : IDisposable
             });
             if (!Visible && !shopOpen && !refreshRequested && manualRequest is null) return;
             nativeOwnership.Refresh(player.ContentId);
+            storedInventory.Refresh(player.ContentId);
 
             var currentTarget = target.Target;
             var npc = currentTarget?.ObjectKind == ObjectKind.EventNpc ? currentTarget.BaseId : 0;
@@ -219,7 +228,7 @@ internal sealed class MerchantService : IDisposable
         }
         catch (Exception ex)
         {
-            nativeOwnership.Clear(); ClearDisplayedShop(displayedAddon);
+            nativeOwnership.Clear(); storedInventory.Clear(); ClearDisplayedShop(displayedAddon);
             View = MerchantView.Empty with { Message = "상점 데이터를 읽지 못했습니다. 로그와 참조 버전을 확인하십시오." };
             log.Error(ex, "Merchant snapshot failed");
             // Avoid retrying a failing sheet query every half second.
@@ -245,7 +254,13 @@ internal sealed class MerchantService : IDisposable
 
     private ShopItem Describe(Item item) => new(item.RowId, item.Name.ExtractText(), item.ItemUICategory.RowId,
         item.ItemUICategory.ValueNullable?.Name.ExtractText() ?? "기타", item.IsUntradable,
-        item.ItemUICategory.RowId is 44 or 46 or 55 or 60 && item.EquipSlotCategory.RowId == 0);
+        IsConsumableItem(item));
+
+    private static bool IsConsumableItem(Item item) => item.EquipSlotCategory.RowId == 0 &&
+        (item.ItemUICategory.RowId is 44 or 46 or 55 or 60 ||
+         // KR manuals and PvP supplies are classified as Other/Miscellany, not Medicine.
+         // Do not exclude all Miscellany: it also contains permanent collectibles.
+         item.ItemAction.ValueNullable?.Action.RowId is 816 or 944);
 
     private void AddGil(uint id, List<Offer> offers, HashSet<string> visited)
     {
@@ -300,7 +315,7 @@ internal sealed class MerchantService : IDisposable
     {
         SessionGeneration++;
         View = MerchantView.Empty; character = 0; territory = 0; lastNpc = 0; manual = false; manualRequest = null;
-        nativeOwnership.Clear(); displayedAddon = 0; displayedContext = ""; displayedOffers = []; displayedBalances = new Dictionary<CurrencyKey, long>(); displayedOwned = new HashSet<uint>(); UnreadableDisplayedOffers = 0; lastDisplayed = null;
+        nativeOwnership.Clear(); storedInventory.Clear(); displayedAddon = 0; displayedContext = ""; displayedOffers = []; displayedBalances = new Dictionary<CurrencyKey, long>(); displayedOwned = new HashSet<uint>(); UnreadableDisplayedOffers = 0; lastDisplayed = null;
         lastRead = 0;
     }
 
