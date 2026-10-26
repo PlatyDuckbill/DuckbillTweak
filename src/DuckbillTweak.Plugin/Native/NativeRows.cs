@@ -17,7 +17,7 @@ internal sealed class TotalRowNode : ListItemNode<TotalRow>, IListItemNode
 }
 
 internal sealed record NativeShopRow(int OriginalIndex, uint RawItemId, uint IconId, string Name,
-    string Price, string Owned, uint CategoryId, bool Enabled = true, bool OwnedAlready = false);
+    string Price, string Owned, uint CategoryId, bool Enabled, bool OwnedAlready, uint UnitPrice, uint Quantity);
 internal sealed unsafe class NativeShopRowNode : ListItemNode<NativeShopRow>, IListItemNode
 {
     public static float ItemHeight => 26;

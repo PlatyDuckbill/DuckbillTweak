@@ -30,6 +30,7 @@ internal sealed class MerchantService : IDisposable
     private readonly SpecialCurrencyResolver currencyResolver;
     private readonly NativeOwnership nativeOwnership;
     private ushort displayedAddon;
+    private string displayedContext = "";
     private IReadOnlyList<Offer> displayedOffers = [];
     private IReadOnlyDictionary<CurrencyKey, long> displayedBalances = new Dictionary<CurrencyKey, long>();
     private IReadOnlySet<uint> displayedOwned = new HashSet<uint>();
@@ -44,14 +45,29 @@ internal sealed class MerchantService : IDisposable
     private (uint Id, bool Special)? manualRequest;
     public MerchantView View { get; private set; } = MerchantView.Empty;
     public bool Visible { get; set; }
+    public long SessionGeneration { get; private set; }
+    public bool SessionReady => config.MerchantTools && client.IsLoggedIn && player.IsLoaded &&
+        character != 0 && character == player.ContentId && territory == client.TerritoryType &&
+        !conditions[ConditionFlag.BetweenAreas] && !conditions[ConditionFlag.BetweenAreas51];
     public bool NativeOwnershipEnabled { set => nativeOwnership.Enabled = value; }
     public bool DresserLoaded => nativeOwnership.DresserLoaded;
     public bool CabinetLoaded => nativeOwnership.CabinetLoaded;
     public string OwnershipHelp => "등록한 수집품·소지품·장비함·착용 장비·환상투영함·추억의 보관함을 확인합니다.\n" +
         $"환상투영함: {nativeOwnership.DresserSource} / 추억의 보관함: {nativeOwnership.CabinetSource}\n" +
         "현재 캐릭터의 게임 저장 정보도 사용합니다. 미확인이면 보관함을 한 번 열어 주세요.\n낡은 악보는 제작 결과 악보가 모두 등록됐으면 제외합니다.";
-    public MerchantView CalculationView => displayedAddon == 0 ? View : View with { Offers = displayedOffers, Message = "현재 상점 목록 기준" };
-    public string CalculationScope => displayedAddon == 0 ? "NPC 시트 목록" : "현재 상점 목록";
+    public bool IsShopOpen(ushort id) => id != 0 && SessionReady && new[] { "Shop", "ShopExchangeItem", "InclusionShop" }.Any(name =>
+    {
+        var addon = gameGui.GetAddonByName(name);
+        return !addon.IsNull && addon.Id == id && addon.IsReady && addon.IsVisible;
+    });
+    public bool TryGetCalculation(ushort id, out MerchantView view, out string context)
+    {
+        view = MerchantView.Empty; context = "";
+        if (!IsShopOpen(id) || displayedAddon != id) return false;
+        context = displayedContext;
+        view = View with { Name = "현재 상점 목록", Offers = displayedOffers, Message = null };
+        return true;
+    }
     public long? CalculationQuantity(CurrencyKey key) => displayedAddon != 0 && displayedBalances.TryGetValue(key, out var count) ? count : View.Inventory.Quantity(key);
     public Ownership CalculationOwnership(uint id) => displayedAddon != 0 && displayedOwned.Contains(id) ? Ownership.Owned : ItemOwnership(id);
 
@@ -118,13 +134,14 @@ internal sealed class MerchantService : IDisposable
         return new(new(baseId, type == 1 ? ItemQuality.High : ItemQuality.Normal, 0),
             valid ? ItemName(baseId) : $"미확인 재화 #{id}", amount, valid);
     }
-    public void PublishDisplayedShop(ushort addon, IReadOnlyList<Offer> offers, IReadOnlyDictionary<CurrencyKey, long> balances, IReadOnlySet<uint> owned, int total)
+    public void PublishDisplayedShop(ushort addon, string context, IReadOnlyList<Offer> offers, IReadOnlyDictionary<CurrencyKey, long> balances, IReadOnlySet<uint> owned, int total)
     {
-        var same = displayedAddon == addon && displayedOffers.Count == offers.Count && displayedOffers.Zip(offers).All(pair =>
+        if (!SessionReady) return;
+        var same = displayedAddon == addon && displayedContext == context && displayedOffers.Count == offers.Count && displayedOffers.Zip(offers).All(pair =>
             pair.First.Id == pair.Second.Id && pair.First.ConditionsKnown == pair.Second.ConditionsKnown &&
             pair.First.Rewards.Select(r => (r.Item, r.Quantity, r.Quality)).SequenceEqual(pair.Second.Rewards.Select(r => (r.Item, r.Quantity, r.Quality))) &&
             pair.First.Prices.SequenceEqual(pair.Second.Prices));
-        displayedAddon = addon;
+        displayedAddon = addon; displayedContext = context;
         if (!same) displayedOffers = offers;
         displayedBalances = balances; displayedOwned = owned; UnreadableDisplayedOffers = total - offers.Count;
         var state = (addon, offers.Count, UnreadableDisplayedOffers, offers.Count(o => o.ConditionsKnown), DresserLoaded, CabinetLoaded);
@@ -136,7 +153,7 @@ internal sealed class MerchantService : IDisposable
         }
     }
     public void ClearDisplayedShop(ushort addon)
-    { if (displayedAddon == addon) { displayedAddon = 0; displayedOffers = []; displayedBalances = new Dictionary<CurrencyKey, long>(); displayedOwned = new HashSet<uint>(); UnreadableDisplayedOffers = 0; lastDisplayed = null; } }
+    { if (displayedAddon == addon) { displayedAddon = 0; displayedContext = ""; displayedOffers = []; displayedBalances = new Dictionary<CurrencyKey, long>(); displayedOwned = new HashSet<uint>(); UnreadableDisplayedOffers = 0; lastDisplayed = null; } }
     public uint Icon(uint rawId) => data.GetExcelSheet<Item>().TryGetRow(rawId >= 1_000_000 ? rawId - 1_000_000 : rawId, out var item) ? item.Icon : 0u;
     public string NativeCost(byte type, uint id, uint amount)
     {
@@ -281,8 +298,9 @@ internal sealed class MerchantService : IDisposable
 
     private void Reset()
     {
+        SessionGeneration++;
         View = MerchantView.Empty; character = 0; territory = 0; lastNpc = 0; manual = false; manualRequest = null;
-        nativeOwnership.Clear(); displayedAddon = 0; displayedOffers = []; displayedBalances = new Dictionary<CurrencyKey, long>(); displayedOwned = new HashSet<uint>(); UnreadableDisplayedOffers = 0; lastDisplayed = null;
+        nativeOwnership.Clear(); displayedAddon = 0; displayedContext = ""; displayedOffers = []; displayedBalances = new Dictionary<CurrencyKey, long>(); displayedOwned = new HashSet<uint>(); UnreadableDisplayedOffers = 0; lastDisplayed = null;
         lastRead = 0;
     }
 

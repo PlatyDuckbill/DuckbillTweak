@@ -15,4 +15,8 @@ public sealed class Configuration : IPluginConfiguration
     public Dictionary<uint, bool> MerchantCategoryHideOwned { get; set; } = [];
     public Dictionary<string, bool> ExchangeCategoryHideOwned { get; set; } = [];
     public ShopFilter ShopFilter { get; set; } = new();
+
+    public bool HideOwnedInCategory(uint category) => MerchantCategoryHideOwned.GetValueOrDefault(category, MerchantHideOwned);
+    public bool HasOwnedFilter(uint category) => category != 0 ? HideOwnedInCategory(category) :
+        MerchantHideOwned || MerchantCategoryHideOwned.Values.Any(value => value);
 }

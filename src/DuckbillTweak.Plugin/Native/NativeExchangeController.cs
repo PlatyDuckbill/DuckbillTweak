@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text;
 using Dalamud.Plugin.Services;
 using DuckbillTweak.Core.Shops;
 using DuckbillTweak.Plugin.Shops;
@@ -44,7 +46,11 @@ internal sealed unsafe class NativeExchangeController : IDisposable
     {
         this.name = name; this.merchants = merchants; this.config = config; this.save = save; this.currency = currency; this.log = log;
         controller = new AddonController { AddonName = name, OnUpdate = Update, OnFinalize = Detach,
-            OnPreRefresh = addon => { if (boundAddon == (nint)addon) Restore(addon); lastRead = 0; } };
+            OnPreRefresh = addon =>
+            {
+                if (boundAddon == (nint)addon) { Restore(addon); merchants.ClearDisplayedShop(addon->Id); }
+                lastRead = 0;
+            } };
         controller.Enable();
     }
 
@@ -54,7 +60,7 @@ internal sealed unsafe class NativeExchangeController : IDisposable
         catch (Exception ex)
         {
             // Only managed render errors are handled here; native pointers still require the inspected shape/lifetime.
-            if (boundAddon == (nint)addon) Restore(addon);
+            if (boundAddon == (nint)addon) { Restore(addon); merchants.ClearDisplayedShop(addon->Id); }
             if (!renderFailed) log.Error(ex, "{Shop} native filtering failed; original hidden flags restored. Reopen the shop to retry.", name);
             renderFailed = true;
         }
@@ -62,7 +68,7 @@ internal sealed unsafe class NativeExchangeController : IDisposable
 
     private void UpdateCore(AtkUnitBase* addon)
     {
-        if (!config.MerchantTools || !Shape(addon)) { if (boundAddon == (nint)addon) Detach(addon); return; }
+        if (!merchants.SessionReady || !addon->IsVisible || !Shape(addon)) { if (boundAddon == (nint)addon) Detach(addon); return; }
         if (boundAddon == 0) Attach(addon);
         if (missing is null) return;
         var list = addon->GetComponentListById(ListId);
@@ -86,7 +92,10 @@ internal sealed unsafe class NativeExchangeController : IDisposable
         if (consumables is not null) consumables.IsEnabled = true;
         if (context != key) Restore(addon);
         context = key;
-        var hide = config.ExchangeCategoryHideOwned.GetValueOrDefault(key, config.MerchantHideOwned);
+        var defaultHide = name == "ShopExchangeItem"
+            ? config.ExchangeCategoryHideOwned.GetValueOrDefault($"exchange:{merchants.View.NpcId}", config.MerchantHideOwned)
+            : config.MerchantHideOwned;
+        var hide = config.ExchangeCategoryHideOwned.GetValueOrDefault(key, defaultHide);
         sync = true; missing.IsChecked = hide; sync = false;
         sync = true;
         if (consumables is not null && consumables.IsChecked != config.MerchantHideConsumables) consumables.IsChecked = config.MerchantHideConsumables;
@@ -115,7 +124,13 @@ internal sealed unsafe class NativeExchangeController : IDisposable
             if (shop is null || shop->AddonId != addon->Id || shop->ItemReceive is null ||
                 shop->ItemReceiveCount != sourceCount || shop->ItemReceiveCount is < 0 or > 1000 ||
                 shop->ItemCost is null || shop->ItemCostCount != shop->ItemReceiveCount * 3) return false;
-            key = $"exchange:{merchants.View.NpcId}";
+            // One NPC can open several exchange lists. Membership/currency IDs distinguish
+            // them without depending on changing stock, selected quantity or translated names.
+            var membership = new List<string>();
+            for (var i = 0; i < shop->ItemReceiveCount; i++)
+                membership.Add($"{shop->ItemReceive[i].ItemId}:{shop->ItemCost[i * 3].ItemId}:{shop->ItemCost[i * 3 + 1].ItemId}:{shop->ItemCost[i * 3 + 2].ItemId}");
+            var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join(";", membership.Order(StringComparer.Ordinal)))));
+            key = $"exchange:{merchants.View.NpcId}:{digest}";
             var offers = new List<Offer>();
             var balances = new Dictionary<CurrencyKey, long>();
             var ownedItems = new HashSet<uint>();
@@ -146,7 +161,7 @@ internal sealed unsafe class NativeExchangeController : IDisposable
                 if (merchants.NativeReward(item.ItemId, item.ItemCount, prices) is { } reward)
                     offers.Add(merchants.DisplayedOffer($"{key}:{i}", [reward], prices, nativeFilter.IsEnabled(list, i)));
             }
-            merchants.PublishDisplayedShop(addon->Id, offers, balances, ownedItems, rows.Count);
+            merchants.PublishDisplayedShop(addon->Id, key, offers, balances, ownedItems, rows.Count);
             return true;
         }
         var agent = AgentInclusionShop.Instance();
@@ -195,7 +210,7 @@ internal sealed unsafe class NativeExchangeController : IDisposable
                     rewards.Add(received);
             if (rewards.Count == ids.Length) inclusionOffers.Add(merchants.DisplayedOffer($"{key}:{i}", rewards, prices, nativeFilter.IsEnabled(list, i)));
         }
-        merchants.PublishDisplayedShop(addon->Id, inclusionOffers, inclusionBalances, inclusionOwned, rows.Count);
+        merchants.PublishDisplayedShop(addon->Id, key, inclusionOffers, inclusionBalances, inclusionOwned, rows.Count);
         return true;
     }
 
@@ -219,7 +234,7 @@ internal sealed unsafe class NativeExchangeController : IDisposable
             TextTooltip = "약품·요리·염료·촉매를 제외합니다. 등록 수집품은 유지합니다." };
         consumables.OnClick = value => { if (!sync) { Restore(addon); config.MerchantHideConsumables = value; save(); lastRead = 0; } };
         consumables.AttachNode(addon);
-        calculate = new TextButtonNode { Position = new(556, y - 3), Size = new(176, 28), String = "필요 재화", OnClick = () => currency.Open() };
+        calculate = new TextButtonNode { Position = new(556, y - 3), Size = new(176, 28), String = "필요 재화", OnClick = () => currency.OpenForShop(addon->Id) };
         calculate.AttachNode(addon);
         lastRead = 0;
     }
@@ -233,6 +248,7 @@ internal sealed unsafe class NativeExchangeController : IDisposable
     {
         if (boundAddon != (nint)addon) return;
         Restore(addon); merchants.ClearDisplayedShop(addon->Id);
+        currency.CloseForShop(addon->Id);
         missing?.Dispose(); missing = null; consumables?.Dispose(); consumables = null; calculate?.Dispose(); calculate = null;
         foreach (var (id, y) in positions) { var node = addon->GetNodeById(id); if (node is not null) node->SetYFloat(y); }
         var list = addon->GetComponentListById(ListId); if (list is not null && list->OwnerNode is not null) list->SetSize(list->OwnerNode->Width, listHeight);

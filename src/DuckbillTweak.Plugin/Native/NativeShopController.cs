@@ -44,7 +44,11 @@ internal sealed unsafe class NativeShopController : IDisposable
     {
         this.merchants = merchants; this.config = config; this.save = save; this.currency = currency; this.log = log;
         controller = new AddonController<AddonShop> { AddonName = "Shop", OnUpdate = Update, OnFinalize = Detach,
-            OnPreRefresh = addon => { if (boundAddon == (nint)addon) RestoreList(addon); lastRead = 0; } };
+            OnPreRefresh = addon =>
+            {
+                if (boundAddon == (nint)addon) { RestoreList(addon); merchants.ClearDisplayedShop(addon->Id); }
+                lastRead = 0;
+            } };
         controller.Enable();
     }
 
@@ -60,7 +64,7 @@ internal sealed unsafe class NativeShopController : IDisposable
         catch (Exception ex)
         {
             // Managed rendering failures must not leave the game's input disabled.
-            if (boundAddon == (nint)addon) RestoreList(addon);
+            if (boundAddon == (nint)addon) { RestoreList(addon); merchants.ClearDisplayedShop(addon->Id); }
             if (!renderFailed) log.Error(ex, "Shop filter rendering failed; original list input restored. Reopen the shop to retry.");
             renderFailed = true;
         }
@@ -68,13 +72,13 @@ internal sealed unsafe class NativeShopController : IDisposable
 
     private void UpdateCore(AddonShop* addon)
     {
-        if (!config.MerchantTools || !Shape(addon)) { if (boundAddon == (nint)addon) Detach(addon); return; }
+        if (!merchants.SessionReady || !addon->IsVisible || !Shape(addon)) { if (boundAddon == (nint)addon) Detach(addon); return; }
         var list = addon->BuyList;
         var selling = (list->OwnerNode->NodeFlags & NodeFlags.Visible) != 0;
         if (!selling) { if (boundAddon == (nint)addon) Detach(addon); return; }
         if (boundAddon == 0) Attach(addon);
         if (filteredList is null || missing is null || categories is null) return;
-        var requested = config.MerchantCategoryHideOwned.GetValueOrDefault(categoryId, config.MerchantHideOwned) || categoryId != 0 || config.MerchantHideConsumables;
+        var requested = config.HasOwnedFilter(categoryId) || categoryId != 0 || config.MerchantHideConsumables;
         if (!requested || renderFailed) RestoreList(addon);
         if (renderFailed) return;
         if (usingFilteredList)
@@ -108,13 +112,13 @@ internal sealed unsafe class NativeShopController : IDisposable
             if (cost.ItemId != 1) { RestoreList(addon); merchants.ClearDisplayedShop(addon->Id); return; }
             next.Add(new(index, item.ItemId, item.ItemIconId, merchants.ItemDisplayName(item.ItemId), cost.ItemCount.ToString("N0"),
                 item.OwnedItemCount.ToString("N0"), detail.CategoryId, !list->GetItemDisabledState(index),
-                merchants.ItemOwnership(item.ItemId, item.OwnedItemCount) == Ownership.Owned));
+                merchants.ItemOwnership(item.ItemId, item.OwnedItemCount) == Ownership.Owned, cost.ItemCount, item.ItemCount));
             var price = merchants.NativePrice(0, cost.ItemId, cost.ItemCount);
             balances[price.Key] = cost.OwnedItemCount;
             if (merchants.NativeReward(item.ItemId, item.ItemCount, [price]) is { } reward)
                 offers.Add(merchants.DisplayedOffer($"gil:{addon->Id}:{index}", [reward], [price], !list->GetItemDisabledState(index)));
         }
-        merchants.PublishDisplayedShop(addon->Id, offers, balances, next.Where(r => r.OwnedAlready)
+        merchants.PublishDisplayedShop(addon->Id, $"gil:{merchants.View.NpcId}", offers, balances, next.Where(r => r.OwnedAlready)
             .Select(r => r.RawItemId >= 1_000_000 ? r.RawItemId - 1_000_000 : r.RawItemId).ToHashSet(), next.Count);
         var options = new[] { new CategoryOption(0, "모든 종류") }.Concat(next.Select(r =>
             new CategoryOption(r.CategoryId, itemInfo[r.RawItemId >= 1_000_000 ? r.RawItemId - 1_000_000 : r.RawItemId].Category))
@@ -126,15 +130,16 @@ internal sealed unsafe class NativeShopController : IDisposable
             categories.SelectedOption = options.FirstOrDefault(o => o.Id == categoryId) ?? options[0];
             categoryId = categories.SelectedOption.Id;
         }
-        var hide = config.MerchantCategoryHideOwned.GetValueOrDefault(categoryId, config.MerchantHideOwned);
+        var hide = config.HideOwnedInCategory(categoryId);
         syncing = true; missing.IsChecked = hide; syncing = false;
         syncing = true;
         if (consumables is not null && consumables.IsChecked != config.MerchantHideConsumables) consumables.IsChecked = config.MerchantHideConsumables;
         syncing = false;
-        missing.TextTooltip = merchants.OwnershipHelp;
+        missing.TextTooltip = (categoryId == 0 ? "모든 종류에서는 종류별 제외 설정이 우선합니다. 이 체크를 변경하면 종류별 설정을 초기화합니다.\n" : "") + merchants.OwnershipHelp;
         var filtered = next.Where(r => (categoryId == 0 || r.CategoryId == categoryId) &&
-            (!hide || !r.OwnedAlready) && (!config.MerchantHideConsumables || !merchants.IsConsumable(r.RawItemId))).ToArray();
-        if (!hide && categoryId == 0 && !config.MerchantHideConsumables) { RestoreList(addon); return; }
+            (!config.HideOwnedInCategory(r.CategoryId) || !r.OwnedAlready) && (!config.MerchantHideConsumables || !merchants.IsConsumable(r.RawItemId))).ToArray();
+        // A filter setting alone must not replace the native list when it removes no rows.
+        if (filtered.Length == next.Count) { RestoreList(addon); return; }
         var dataChanged = !rows.SequenceEqual(filtered);
         if (dataChanged)
         {
@@ -191,7 +196,7 @@ internal sealed unsafe class NativeShopController : IDisposable
         categories.OnOptionSelected = c => { categoryId = c.Id; filteredList?.ResetScroll(); lastRead = 0; };
         categories.AttachNode(&addon->AtkUnitBase);
         calculate = new TextButtonNode { Position = new(444, 80), Size = new(110, 28), String = "필요 재화",
-            OnClick = () => currency.Open() };
+            OnClick = () => currency.OpenForShop(addon->Id) };
         calculate.AttachNode(&addon->AtkUnitBase);
         filteredList = new ListNode<NativeShopRow, NativeShopRowNode> { Position = new(list->OwnerNode->X, listY + 28),
             Size = new(list->OwnerNode->Width, listHeight - 28), OptionsList = [], IsVisible = false, AutoResetScroll = false, OnItemSelected = Select };
@@ -202,12 +207,16 @@ internal sealed unsafe class NativeShopController : IDisposable
 
     private void Select(NativeShopRow? row)
     {
-        if (row is null || !config.MerchantTools || boundAddon == 0 || !usingFilteredList) return;
+        if (row is null || !merchants.SessionReady || boundAddon == 0 || !usingFilteredList || !rows.Contains(row)) return;
         var addon = (AddonShop*)boundAddon;
         var agent = AgentShop.Instance();
-        if (!Shape(addon) || agent is null || agent->AddonId != addon->Id || agent->ItemReceive is null ||
+        if (!addon->IsVisible || !Shape(addon) || agent is null || agent->AddonId != addon->Id || agent->ItemReceive is null ||
+            agent->ItemCost is null || agent->ItemReceiveCount is < 0 or > 1000 || agent->ItemCostCount != agent->ItemReceiveCount * 3 ||
+            (addon->BuyList->OwnerNode->NodeFlags & NodeFlags.Visible) == 0 ||
             row.OriginalIndex < 0 || row.OriginalIndex >= agent->ItemReceiveCount ||
-            row.OriginalIndex >= addon->BuyList->ListLength || agent->ItemReceive[row.OriginalIndex].ItemId != row.RawItemId) return;
+            row.OriginalIndex >= addon->BuyList->ListLength || agent->ItemReceive[row.OriginalIndex].ItemId != row.RawItemId ||
+            agent->ItemReceive[row.OriginalIndex].ItemCount != row.Quantity ||
+            agent->ItemCost[row.OriginalIndex * 3].ItemId != 1 || agent->ItemCost[row.OriginalIndex * 3].ItemCount != row.UnitPrice) return;
         // Only a real left-click reaches here. Forward its original index, never a filtered row number.
         var list = addon->BuyList;
         if (list->GetItemDisabledState(row.OriginalIndex)) return;
@@ -238,6 +247,7 @@ internal sealed unsafe class NativeShopController : IDisposable
         if (boundAddon != (nint)addon) return;
         RestoreList(addon);
         merchants.ClearDisplayedShop(addon->Id);
+        currency.CloseForShop(addon->Id);
         filteredList?.Dispose(); filteredList = null;
         missing?.Dispose(); missing = null; consumables?.Dispose(); consumables = null; categories?.Dispose(); categories = null; calculate?.Dispose(); calculate = null;
         foreach (var (id, y) in shifted) { var node = addon->GetNodeById(id); if (node is not null) node->SetYFloat(y); }

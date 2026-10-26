@@ -59,7 +59,8 @@ public static class PurchasePlanner
         var selected = new HashSet<string>();
         foreach (var offer in offers)
         {
-            if (offer.Rewards.Any(r => rewards.Contains((r.Item.Id, r.Quality)))) continue;
+            // A partially overlapping bundle can still contain a reward not covered yet.
+            if (offer.Rewards.Count == 0 || offer.Rewards.All(r => rewards.Contains((r.Item.Id, r.Quality)))) continue;
             selected.Add(offer.Id);
             foreach (var reward in offer.Rewards) rewards.Add((reward.Item.Id, reward.Quality));
         }

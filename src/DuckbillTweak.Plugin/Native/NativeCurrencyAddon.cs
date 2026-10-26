@@ -19,6 +19,25 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
     private long lastRead;
     private uint categoryId;
     private bool syncing;
+    private ushort sourceAddon;
+    private long sourceSession;
+    private string sourceContext = "";
+
+    public void OpenForShop(ushort addon)
+    {
+        if (!merchants.IsShopOpen(addon)) return;
+        if (sourceAddon != addon || sourceSession != merchants.SessionGeneration)
+        { categoryId = 0; sourceContext = ""; previousOffers = null; }
+        sourceAddon = addon; sourceSession = merchants.SessionGeneration; lastRead = 0;
+        Open();
+    }
+
+    public void CloseForShop(ushort addon)
+    {
+        if (sourceAddon != addon) return;
+        sourceAddon = 0;
+        Close();
+    }
 
     protected override void OnSetup(AtkUnitBase* addon, Span<AtkValue> values)
     {
@@ -58,11 +77,18 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
     protected override void OnUpdate(AtkUnitBase* addon)
     {
         if (totals is null || categories is null || summary is null) return;
-        if (!config.MerchantTools) { Close(); return; }
+        if (sourceSession != merchants.SessionGeneration || !merchants.IsShopOpen(sourceAddon)) { Close(); return; }
         totals.Update();
         if (lastRead != 0 && Stopwatch.GetElapsedTime(lastRead).TotalMilliseconds < 500) return;
         lastRead = Stopwatch.GetTimestamp();
-        var view = merchants.CalculationView;
+        if (!merchants.TryGetCalculation(sourceAddon, out var view, out var context))
+        {
+            summary.String = "현재 상점의 품목 정보를 확인하는 중입니다.\n상점 목록을 다시 확인하면 계산을 갱신합니다.";
+            totals.NoResultsTextNode.String = "상점 정보 확인 대기";
+            if (totals.OptionsList.Count > 0) { totals.OptionsList = []; addon->UpdateCollisionNodeList(false); }
+            return;
+        }
+        if (sourceContext != context) { sourceContext = context; categoryId = 0; previousOffers = null; totals.ResetScroll(); }
         syncing = true;
         if (consumables is not null && consumables.IsChecked != config.MerchantHideConsumables) consumables.IsChecked = config.MerchantHideConsumables;
         syncing = false;
@@ -70,8 +96,9 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
         if (!ReferenceEquals(previousOffers, view.Offers))
         {
             previousOffers = view.Offers;
-            categories.Options = new[] { new CategoryOption(0, "모든 품목 종류") }.Concat(view.Offers.SelectMany(o => o.Rewards)
+            var options = new[] { new CategoryOption(0, "모든 품목 종류") }.Concat(view.Offers.SelectMany(o => o.Rewards)
                 .Select(r => new CategoryOption(r.Item.CategoryId, r.Item.Category)).DistinctBy(c => c.Id).OrderBy(c => c.Name)).ToList();
+            if (!categories.Options.SequenceEqual(options)) categories.Options = options;
             categories.SelectedOption = categories.Options.FirstOrDefault(c => c.Id == categoryId) ?? categories.Options[0];
             categoryId = categories.SelectedOption.Id;
         }
@@ -85,7 +112,7 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
         var conditions = offers.Count(o => !o.ConditionsKnown);
         var uncertainOwnership = filter.HideOwned ? selected.SelectMany(o => o.Rewards).Select(r => r.Item.Id).Distinct()
             .Count(id => merchants.CalculationOwnership(id) == Ownership.Unknown) : 0;
-        summary.String = $"{view.Name} · {merchants.CalculationScope} / 교환식 {selected.Length}개를 한 번씩 구매\n" +
+        summary.String = $"{view.Name} / 교환식 {selected.Length}개를 한 번씩 구매\n" +
             (unknown > 0 ? $"미확인 비용 {unknown}건 · 아래는 부분 합계입니다." : "게임 상점의 판매 조건과 할인은 별도 확인이 필요합니다.") +
             (conditions > 0 ? $" 판매 조건 미확인 {conditions}건 제외." : "") +
             (merchants.UnreadableDisplayedOffers > 0 ? $" 품목 수량 미확인 {merchants.UnreadableDisplayedOffers}건 제외." : "") +
@@ -107,6 +134,7 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
     private static string Count(long? value) => value?.ToString("N0") ?? "미확인";
     protected override void OnFinalize(AtkUnitBase* addon)
     {
+        sourceAddon = 0; sourceContext = ""; previousOffers = null;
         merchants.Visible = false; missing = null; consumables = null; categories = null; trade = null; summary = null; totals = null;
     }
 }
