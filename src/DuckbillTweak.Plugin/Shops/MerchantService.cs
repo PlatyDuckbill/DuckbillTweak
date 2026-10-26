@@ -55,7 +55,7 @@ internal sealed class MerchantService : IDisposable
     public string OwnershipHelp => "등록한 수집품·소지품·장비함·착용 장비·환상투영함·추억의 보관함을 확인합니다.\n" +
         $"환상투영함: {nativeOwnership.DresserSource} / 추억의 보관함: {nativeOwnership.CabinetSource}\n" +
         "현재 캐릭터의 게임 저장 정보도 사용합니다. 미확인이면 보관함을 한 번 열어 주세요.\n낡은 악보는 제작 결과 악보가 모두 등록됐으면 제외합니다.";
-    public bool IsShopOpen(ushort id) => id != 0 && SessionReady && new[] { "Shop", "ShopExchangeItem", "InclusionShop" }.Any(name =>
+    public bool IsShopOpen(ushort id) => id != 0 && SessionReady && new[] { "Shop", "ShopExchangeItem", "ShopExchangeCurrency", "InclusionShop" }.Any(name =>
     {
         var addon = gameGui.GetAddonByName(name);
         return !addon.IsNull && addon.Id == id && addon.IsReady && addon.IsVisible;
@@ -174,7 +174,7 @@ internal sealed class MerchantService : IDisposable
         lastRead = Stopwatch.GetTimestamp();
         try
         {
-            var shopOpen = new[] { "Shop", "ShopExchangeItem", "InclusionShop" }.Any(name =>
+            var shopOpen = new[] { "Shop", "ShopExchangeItem", "ShopExchangeCurrency", "InclusionShop" }.Any(name =>
             {
                 var addon = gameGui.GetAddonByName(name);
                 return !addon.IsNull && addon.IsReady && addon.IsVisible;

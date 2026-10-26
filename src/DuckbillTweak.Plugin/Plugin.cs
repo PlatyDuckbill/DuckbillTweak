@@ -76,6 +76,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
                     shop = new(merchants, config, Save, currency, log);
                     exchanges.Add(new("InclusionShop", merchants, config, Save, currency, log));
                     exchanges.Add(new("ShopExchangeItem", merchants, config, Save, currency, log));
+                    exchanges.Add(new("ShopExchangeCurrency", merchants, config, Save, currency, log));
                     lootInteraction = new(events, addonLifecycle, contextMenu, gui, party, config, lootPopup, merchants, log);
                     bubbles = new(framework, client, log, config, compatibility);
                 });

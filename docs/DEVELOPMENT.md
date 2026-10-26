@@ -55,3 +55,5 @@ KR LogMessage1231은 lnum1=아이템, lstr2=입찰 종류, lnum3=숫자다. Dala
 공개 로그에는 보상 슬롯 키가 없으므로 같은 raw item ID의 동시 드롭을 구분하지 않는다. SourceEntity의 이름과 HomeWorldId를 키로 사용하고 이름만 같은 플레이어를 합치지 않는다. 전리품에 없는 일반 획득 로그는 입찰 관측에 연결하지 않는다. 기능 활성화 이전이나 접속/지역 전환 이전의 기록은 복원하지 않는다.
 
 0.1.1.7에서는 SimpleTweaks 고정 c039932e40b0c752c09005cc4fdc362b6b786da4의 `Tweaks/UiAdjustment/LootWindowDuplicateUniqueItemIndicator.cs`(Enhanced Loot Window), VanillaPlus 고정17bddd82ca73e099f1a7af9b00c4ee13fa8a701c의 `Features/StickyShopCategories/StickyShopCategories.cs`와 `Features/ArmourySearchBar/ArmourySearchBar.cs`를 참고했다. 등록과 물리적 보유 구분, 목록별 상태, 탭·갱신·해제 흐름을 검토했으며 AGPL 구현을 복사하지 않았다. 공개 API/설치된 KR 바인딩을 사용해 별도로 작성했고 새 네이티브 주소·후크는 추가하지 않았다.
+
+0.1.1.8은 위 고정 KamiToolKit의 ComponentNode 생성/해제와 NativeListController의 원본 populator 수명을 참고했다. VanillaPlus StickyShopCategories와 AllaganLib ShopMonitorService의 addon 분류도 로컬 고정 소스에서 재확인했다. AGPL/라이선스 미명시 코드의 구현 복사나 새로운 의존성은 없다. 필터의 렌더러 풀/원본 인덱스 의미는 한국 실행 파일과 설치된 바인딩을 직접 대조하여 작성했다. 당시의 잘못된 중복 렌더러 가정과 교정한 계약은 NATIVE-UI.md에 기록했다.

@@ -14,7 +14,7 @@ namespace DuckbillTweak.Plugin.Native;
 internal sealed record ExchangeRow(int OriginalIndex, uint ItemId, uint Icon, string Name, string Cost, string Owned,
     bool AllOwned, string Context, bool Enabled = true, bool AllConsumable = false);
 
-/// <summary>Native integration for the inspected InclusionShop and ShopExchangeItem layouts.</summary>
+/// <summary>Native integration for the inspected inclusion, item and currency exchange layouts.</summary>
 internal sealed unsafe class NativeExchangeController : IDisposable
 {
     private readonly string name;
@@ -35,12 +35,15 @@ internal sealed unsafe class NativeExchangeController : IDisposable
     private bool renderFailed;
     private (int Total, int Visible)? lastApplied;
     private (int SourceRows, int ListRows)? lastShape;
+    private string? lastFailure;
+    private string? lastReadFailure;
     private readonly Dictionary<uint, float> positions = [];
     private ushort listHeight;
     private uint ListId => name == "InclusionShop" ? 19u : 20u;
-    private uint[] ShiftIds => name == "InclusionShop" ? [11, 17] : [12, 18];
-    private bool Shape(AtkUnitBase* addon) => addon->RootNode is not null && addon->RootNode->Width == 760 &&
-        addon->RootNode->Height == (name == "InclusionShop" ? 586 : 556) && addon->GetNodeById(ListId) is not null;
+    private bool CurrencyShop => name == "ShopExchangeCurrency";
+    private uint[] ShiftIds => name == "InclusionShop" ? [11, 17] : CurrencyShop ? [13, 19] : [12, 18];
+    private bool Shape(AtkUnitBase* addon) => addon->RootNode is not null && addon->RootNode->Width == (CurrencyShop ? 680 : 760) &&
+        addon->RootNode->Height == (name == "InclusionShop" ? 586 : CurrencyShop ? 528 : 556) && addon->GetNodeById(ListId) is not null;
 
     public NativeExchangeController(string name, MerchantService merchants, Configuration config, Action save, NativeCurrencyAddon currency, IPluginLog log)
     {
@@ -104,11 +107,18 @@ internal sealed unsafe class NativeExchangeController : IDisposable
         if (!hide && !config.MerchantHideConsumables) { Restore(addon); return; }
         var hidden = rows.Select(r => hide && r.AllOwned || config.MerchantHideConsumables && r.AllConsumable).ToArray();
         if (!nativeFilter.Apply(addon, list, hidden, out var visible))
-        { Restore(addon); missing.IsEnabled = false; if (consumables is not null) consumables.IsEnabled = false; return; }
+        {
+            if (lastFailure != nativeFilter.Failure) log.Warning("{Shop} filter contract: {Reason}", name, nativeFilter.Failure);
+            lastFailure = nativeFilter.Failure;
+            Restore(addon);
+            missing.TextTooltip = "현재 목록에 필터를 적용하지 못했습니다. 체크를 해제하면 원래 목록을 사용합니다.\n" + nativeFilter.Failure;
+            return;
+        }
+        lastFailure = null;
         if (consumables is not null) consumables.IsEnabled = true;
         if (lastApplied != (rows.Count, visible))
         {
-            log.Information("{Shop} original-row filter applied: Rows={Rows}; Visible={Visible}", name, rows.Count, visible);
+            log.Information("{Shop} original-row filter applied: Rows={Rows}; Visible={Visible}; PooledRenderers={Renderers}", name, rows.Count, visible, nativeFilter.RendererCount);
             lastApplied = (rows.Count, visible);
         }
     }
@@ -123,7 +133,14 @@ internal sealed unsafe class NativeExchangeController : IDisposable
             var shop = AgentShop.Instance();
             if (shop is null || shop->AddonId != addon->Id || shop->ItemReceive is null ||
                 shop->ItemReceiveCount != sourceCount || shop->ItemReceiveCount is < 0 or > 1000 ||
-                shop->ItemCost is null || shop->ItemCostCount != shop->ItemReceiveCount * 3) return false;
+                shop->ItemCost is null || shop->ItemCostCount != shop->ItemReceiveCount * 3)
+            {
+                var reason = shop is null ? "agent unavailable" : $"agentMatch={shop->AddonId == addon->Id}; source={sourceCount}; receive={shop->ItemReceiveCount}; cost={shop->ItemCostCount}";
+                if (lastReadFailure != reason) log.Information("{Shop} snapshot waiting: {Reason}", name, reason);
+                lastReadFailure = reason;
+                return false;
+            }
+            lastReadFailure = null;
             // One NPC can open several exchange lists. Membership/currency IDs distinguish
             // them without depending on changing stock, selected quantity or translated names.
             var membership = new List<string>();
@@ -222,7 +239,7 @@ internal sealed unsafe class NativeExchangeController : IDisposable
         foreach (var id in ShiftIds.Append(ListId))
         { var node = addon->GetNodeById(id); if (node is null) continue; positions[id] = node->Y; node->SetYFloat(node->Y + 28); }
         list->SetSize(list->OwnerNode->Width, (ushort)(listHeight - 28));
-        var y = name == "InclusionShop" ? 118 : 194;
+        var y = name == "InclusionShop" ? 118 : CurrencyShop ? 92 : 194;
         missing = new CheckboxNode { Position = new(28, y), Size = new(200, 24), String = "없는 것만 보기" };
         missing.OnClick = value =>
         {
@@ -234,7 +251,7 @@ internal sealed unsafe class NativeExchangeController : IDisposable
             TextTooltip = "약품·요리·염료·촉매를 제외합니다. 등록 수집품은 유지합니다." };
         consumables.OnClick = value => { if (!sync) { Restore(addon); config.MerchantHideConsumables = value; save(); lastRead = 0; } };
         consumables.AttachNode(addon);
-        calculate = new TextButtonNode { Position = new(556, y - 3), Size = new(176, 28), String = "필요 재화", OnClick = () => currency.OpenForShop(addon->Id) };
+        calculate = new TextButtonNode { Position = new(CurrencyShop ? 476 : 556, y - 3), Size = new(176, 28), String = "필요 재화", OnClick = () => currency.OpenForShop(addon->Id) };
         calculate.AttachNode(addon);
         lastRead = 0;
     }
@@ -253,7 +270,7 @@ internal sealed unsafe class NativeExchangeController : IDisposable
         foreach (var (id, y) in positions) { var node = addon->GetNodeById(id); if (node is not null) node->SetYFloat(y); }
         var list = addon->GetComponentListById(ListId); if (list is not null && list->OwnerNode is not null) list->SetSize(list->OwnerNode->Width, listHeight);
         addon->UpdateCollisionNodeList(false);
-        positions.Clear(); boundAddon = 0; context = ""; renderFailed = false; lastShape = null;
+        positions.Clear(); boundAddon = 0; context = ""; renderFailed = false; lastShape = null; lastFailure = null; lastReadFailure = null;
     }
     public void Dispose() { controller.Dispose(); if (boundAddon != 0) Detach((AtkUnitBase*)boundAddon); }
 }

@@ -1,6 +1,6 @@
 # 네이티브 UI 계약
 
-0.1.1.7의 UI는 KamiToolKit의 게임 컴포넌트를 사용한다. 보조 ImGui 목록은 없다. 라이브 native pointer는 각 UI lifecycle/Framework 콜백 안에서만 읽는다. 최종 화면·입력 동작의 실기 확인은 별도다.
+0.1.1.8의 UI는 KamiToolKit의 게임 컴포넌트를 사용한다. 보조 ImGui 목록은 없다. 라이브 native pointer는 각 UI lifecycle/Framework 콜백 안에서만 읽는다. 최종 화면·입력 동작의 실기 확인은 별도다.
 
 ## 고정 환경
 
@@ -11,7 +11,19 @@
 
 ## 상점
 
-### 0.1.1.6 교환 상점의 원본 행 필터
+### 0.1.1.8 원본 렌더러 풀 대응
+
+0.1.1.6/7의 렌더러 중복 금지 검사는 잘못된 계약이었다. KR SetupItem RVA6A1FF0은 CategoryItemRendererList의 템플릿과 NodeList를 NodeCount+1로 순환 배정한다. 행 수가 화면 행 수보다 많으면 서로 다른 품목이 같은 렌더러를 공유한다. 이를 비정상으로 거부하면 필터가 비활성화되고, 검증만 제거한 채 OwnerNode를 숨기면 표시할 다른 품목도 사라진다.
+
+현재 구현은 원본 Items 벡터/UIntValues/StringValues/ItemIndexMap/인덱스를 유지한다. 카테고리별 원본 렌더러 풀을 확인하고 표시 품목에만 순환 배정한다. 숨긴 품목은 높이0·IsHidden·Disabled와 그림/충돌이 없는 단일 전용 렌더러를 사용한다. 따라서 Height0 항목도 순회하는 native draw가 다른 품목을 중복해서 그리지 않는다. 숨김 전용 렌더러는 고정 KamiToolKit의 ComponentNode로 생성하며 표시 행을 재구성하지 않는다.
+
+평면 구조, 고유 항목, 유효한 풀/노드, 한 뷰포트에 렌더러가 중복 배정되지 않는 용량을 검사한다. 충돌 노드가 없는 평면 SectionHeader 플래그는 허용하되 Group/LastItemInGroup/Depth는 거부한다. 실제 표시 범위의 렌더러만 보이게 하고 refresh/해제 전에 원래 연결/높이/숨김/비활성/표시를 복원한다. 제외 품목이 없으면 변경하지 않는다.
+
+KR Populate RVA6A62C0의 6A631D는 원본 인덱스를 Renderer.ListItemIndex에 저장하며 6A6405–6A6412에서도 같은 인덱스와 현재 행 렌더러를 populator에 전달한다. 이 경로와 native 수량·미리보기·구매 이벤트를 그대로 사용하고 구매 명령/콜백을 생성하지 않는다. 목록 계산/스크롤 보정은 설치된 바인딩을 사용한다. 새 런타임 주소/후크는 추가하지 않았다.
+
+ShopExchangeCurrency의 KR ULD는680×528, node20/component1022 TreeList, header13/구분선19이며 새로운 컨트롤은y92에 들어간다. AgentShop의 addon ID/수신 배열/3배 비용 배열 일치를 확인한 현재 탭만 계산한다. 일치하지 않으면 이유/개수만 로그에 남기며 다른 목록으로 추정하지 않는다. 필터 적용 실패에서는 원본을 복구하고 체크박스를 잠그지 않아 해제할 수 있다.
+
+### 이전 0.1.1.6/7 구현과 실패 원인
 
 InclusionShop/ShopExchangeItem의 단순화한 대체 ListNode는 제거된 상태를 유지한다. ULD의 component1024/1025는 TreeList다. 0.1.1.5의 IsHidden/LayoutRefreshPending만으로는 충분하지 않았다. KR CalculateVisibleItemHeightAndCount RVA6A5BB0은 IsHidden을 읽지 않고 Height/Depth/Type으로 높이와 개수를 계산한다. UpdateListItems RVA6A4F70과 Draw RVA6A3840도 Height만큼 위치를 진행시킨다. 해당 원본 실행 파일의 정적 분석으로 확인했다.
 
@@ -32,6 +44,7 @@ InclusionShop/ShopExchangeItem의 단순화한 대체 ListNode는 제거된 상�
 | Shop | 584×512 | 16 | 7,12,13 |
 | InclusionShop | 760×586 | 19 | 11,17 |
 | ShopExchangeItem | 760×556 | 20 | 12,18 |
+| ShopExchangeCurrency | 680×528 | 20 | 13,19 |
 
 기존 행 배열/agent 인덱스는 변경하지 않는다. 네이티브 체크박스/종류 선택/버튼을 위한 한 줄을 확보하고, 필터를 사용할 때만 같은 게임 화면 안에 네이티브 행 목록을 표시한다. 필터 해제/탭 변경/게임 화면 종료/플러그인 언로드 시 원래 목록의 위치·높이·투명도·입력 상태를 복원하고 추가 노드를 해제한다.
 
