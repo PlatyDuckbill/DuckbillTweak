@@ -15,7 +15,11 @@ internal sealed class LootService : IDisposable
     private readonly IPartyList party;
     private readonly IFramework framework;
     private readonly Configuration config;
+    private readonly IPluginLog log;
     private readonly HashSet<uint> supportedMessages = [];
+    private readonly HashSet<uint> receivedMessages = [];
+    private readonly HashSet<string> rejectionReasons = [];
+    private bool recordedRoll;
     private ulong character;
     private uint territory;
     private long lastRead;
@@ -26,10 +30,11 @@ internal sealed class LootService : IDisposable
     public IReadOnlyList<PlayerKey> OtherMembers { get; private set; } = [];
 
     public LootService(IChatGui chat, IDataManager data, IClientState client, IPlayerState player,
-        IPartyList party, IFramework framework, Configuration config)
+        IPartyList party, IFramework framework, Configuration config, IPluginLog log)
     {
         this.chat = chat; this.data = data; this.client = client; this.player = player;
         this.party = party; this.framework = framework; this.config = config;
+        this.log = log;
         var sheet = data.GetExcelSheet<LogMessage>();
         // Contracts checked against the installed client's macros, rather than parsing translated chat text.
         foreach (var id in new uint[] { 1231, 1232, 1233, 5180, 5183, 5187, 5188 })
@@ -42,6 +47,7 @@ internal sealed class LootService : IDisposable
         }
         chat.LogMessage += Receive;
         framework.Update += Update;
+        log.Information("Loot log contract: RollsSupported={Supported}; MessageTypes={Count}", Supported, supportedMessages.Count);
     }
 
     private void Receive(ILogMessage message)
@@ -50,6 +56,8 @@ internal sealed class LootService : IDisposable
             !supportedMessages.Contains(message.LogMessageId)) return;
         // Reject queued events from a previous login/zone until Update establishes a new session.
         if (character != player.ContentId || territory != client.TerritoryType) return;
+        if (receivedMessages.Add(message.LogMessageId))
+            log.Information("Loot log received: MessageType={Type}", message.LogMessageId);
         if (!message.TryGetIntParameter(0, out var raw) || raw <= 0) return;
         var rawId = (uint)raw;
         var baseId = rawId >= 1_000_000 ? rawId - 1_000_000 : rawId;
@@ -64,7 +72,7 @@ internal sealed class LootService : IDisposable
         var awarded = message.LogMessageId is 1232 or 1233 or 5187 or 5188;
         if (awarded && !Ledger.Entries.Any(e => e.RawItemId == rawId && e.Winner is null)) return;
         var actor = message.SourceEntity;
-        if (actor is null || !actor.IsPlayer || actor.Name.IsEmpty) { Unattributed++; return; }
+        if (actor is null || !actor.IsPlayer || actor.Name.IsEmpty) { Reject("missing player identity"); return; }
         var key = new PlayerKey(actor.Name.ExtractText(), actor.HomeWorldId);
         if (key.WorldId == 0)
         {
@@ -75,12 +83,23 @@ internal sealed class LootService : IDisposable
         if (message.LogMessageId == 1231)
         {
             if (!message.TryGetIntParameter(2, out var value) || value is < 1 or > 99 ||
-                !message.TryGetStringParameter(1, out var text)) { Unattributed++; return; }
+                !message.TryGetStringParameter(1, out var text)) { Reject("invalid roll parameters"); return; }
             var kindText = text.ExtractText().Trim();
             var kind = kindText switch { "선입찰" => RollKind.Need, "입찰" => RollKind.Greed, _ => RollKind.Unknown };
             roll = new(key, kind, kindText, value);
         }
-        if (!Ledger.Observe(rawId, name, party.IsAlliance, key, roll, awarded, now)) Unattributed++;
+        if (!Ledger.Observe(rawId, name, party.IsAlliance, key, roll, awarded, now)) Reject("ambiguous or completed item");
+        else if (roll is not null && !recordedRoll)
+        {
+            recordedRoll = true;
+            log.Information("Loot roll recording active for this session");
+        }
+    }
+
+    private void Reject(string reason)
+    {
+        Unattributed++;
+        if (rejectionReasons.Add(reason)) log.Warning("Loot log could not be attributed: {Reason}", reason);
     }
 
     private void Update(IFramework _)
@@ -114,7 +133,11 @@ internal sealed class LootService : IDisposable
         Ledger.Prune(DateTimeOffset.UtcNow);
     }
 
-    public void Clear() { Ledger.Clear(); PartyMembers = []; OtherMembers = []; Unattributed = 0; }
+    public void Clear()
+    {
+        Ledger.Clear(); PartyMembers = []; OtherMembers = []; Unattributed = 0;
+        receivedMessages.Clear(); rejectionReasons.Clear(); recordedRoll = false;
+    }
 
     public void Dispose()
     {

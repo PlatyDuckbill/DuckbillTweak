@@ -49,7 +49,8 @@ internal sealed unsafe class NativeLootAddon(LootService loot, Configuration con
         itemName.String = entry.Name;
         itemName.ItemTooltip = entry.RawItemId;
         status.Size = new(Size.X - 56, 38); itemName.Size = new(Size.X - 56, 30);
-        status.String = entry.Ambiguous ? "같은 아이템이 동시에 나와 보상별 숫자를 구분할 수 없습니다." :
+        status.String = !loot.Supported ? "현재 게임의 입찰 숫자 로그 형식을 지원하지 않습니다." :
+            entry.Ambiguous ? "같은 아이템이 동시에 나와 보상별 숫자를 구분할 수 없습니다." :
             entry.Winner is { } won ? $"획득: {won.Name}   ·   — 숫자 미수신" : "— 숫자 미수신   ·   게임에서 받은 숫자만 표시합니다.";
         var known = entry.Rolls.Keys.Concat(entry.Decided).Distinct().ToArray();
         var own = loot.PartyMembers.ToArray();

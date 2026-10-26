@@ -1,6 +1,6 @@
 # 네이티브 UI 계약
 
-0.1.1.1의 UI는 KamiToolKit의 게임 컴포넌트를 사용한다. 보조 ImGui 목록은 없다. 라이브 native pointer는 각 UI lifecycle/Framework 콜백 안에서만 읽는다. 최종 화면·입력 동작의 실기 확인은 별도다.
+0.1.1.2의 UI는 KamiToolKit의 게임 컴포넌트를 사용한다. 보조 ImGui 목록은 없다. 라이브 native pointer는 각 UI lifecycle/Framework 콜백 안에서만 읽는다. 최종 화면·입력 동작의 실기 확인은 별도다.
 
 ## 고정 환경
 
@@ -45,7 +45,9 @@ InclusionShop은 CategoryIndexMap으로 화면 선택→실제 Category를 매�
 
 ## 입찰
 
-NeedGreed ULD의 목록6과 현재 바인딩의 AddonNeedGreed.Items를 대조한다. 원래 입찰/포기 버튼과 콜백은 변경하지 않는다. 렌더러의 공개 IAddonEventManager MouseUp 이벤트로 우클릭을 받고, 현재 hovered index/아이템/툴팁 ID를 확인해 관리 값만 복사한 뒤 숫자 화면을 연다. addon finalize/플러그인 dispose에서 모든 이벤트를 제거한다.
+NeedGreed ULD의 목록6과 현재 바인딩의 AddonNeedGreed.Items를 대조한다. 원래 입찰/포기 버튼과 콜백은 변경하지 않는다. 공개 IAddonEventManager로 렌더러 EventNode/CollisionNodeList의 MouseDown을 구독하고, IAddonLifecycle PreReceiveEvent의 ListItemClick/DoubleClick도 받는다. 마우스 이벤트는 클릭 대상 노드를 현재 렌더러와 대조하고, 목록 이벤트는 오른쪽 버튼과 SelectedIndex/ListItemRenderer를 대조한다. hovered item/툴팁 ID에 의존하지 않는다.
+
+확인된 아이템 행의 우클릭만 소비한다. addon ID/원본 행/아이템 ID/시각을 관리 값으로 복사하고 다음 addon update에서 재검증한 후 화면을 연다. 1초가 지난 요청은 버리고, 같은 물리 클릭의 두 경로 전달은300ms 동안 중복 요청하지 않는다. addon finalize/기능 해제/플러그인 dispose에서 구독과 대기 요청을 모두 제거한다. 바인딩 상태와 입력/화면 요청을 각각 기록한다. 로그 수신 형식/숫자 기록 시작/귀속 실패 사유도 구분하며 원문·이름·실제 숫자는 기록하지 않는다.
 
 게임 로그로 받은 숫자만 표시한다. 다른 파티 명단은 공개 IPartyList accessor로 읽고 A/B/C 소속을 추측하지 않는다. 같은 raw item ID의 동시 드롭은 기존 구분 불가 처리를 유지한다. 우클릭 시 기본 컨텍스트 메뉴와의 동작, 화면 위치, 배율/테마, 전리품 배분 방식별 결과는 대표 확인 대기다.
 
