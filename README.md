@@ -29,7 +29,8 @@ https://raw.githubusercontent.com/PlatyDuckbill/DuckbillRepo/main/pluginmaster.j
 ```
 
 이 공용 저장소에서 **DuckbillTweak와 DuckbillFisher**를 각각 설치·업데이트할 수 있습니다.
-기존 Tweak/Fisher 개별 저장소 URL을 등록했다면 해당 행을 제거하고 위 공용 URL로 변경합니다. 플러그인을 삭제하거나 설정을 초기화할 필요는 없습니다.
+기존 Tweak/Fisher 개별 URL은 종료했습니다. 기존 사용자는 저장소 설정의 해당 행을 제거하고 위 공용 URL을 등록합니다.
+설치 출처도 전환하려면 기존 플러그인을 끄고 **플러그인만 제거한 뒤 공용 저장소에서 한 번 다시 설치**합니다. **설정·기록 삭제/초기화는 선택하지 않습니다.** 자세한 절차는 [공용 저장소 안내](https://github.com/PlatyDuckbill/DuckbillRepo#기존-개별-저장소에서-전환)를 참고하세요.
 
 개발 DLL을 등록해 사용 중이라면 해당 등록을 비활성화한 뒤 배포판을 설치해 중복 로드를 피합니다. 기존 기능 설정은 유지됩니다.
 

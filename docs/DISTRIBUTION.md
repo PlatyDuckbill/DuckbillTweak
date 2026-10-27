@@ -49,6 +49,8 @@ PowerShell7/저장소 루트에서 실행합니다. 테스트나 게시를 실�
 https://raw.githubusercontent.com/PlatyDuckbill/DuckbillRepo/main/pluginmaster.json
 ```
 
+기존 개별 URL은 종료했습니다. 기존 사용자는 [공용 저장소 전환 절차](https://github.com/PlatyDuckbill/DuckbillRepo#기존-개별-저장소에서-전환)에 따라 URL 교체 후 설정·기록을 유지한 채 플러그인만 한 번 제거·재설치해 설치 출처를 전환합니다. 설정·기록 삭제/초기화를 선택하지 않습니다.
+
 ## 다음 업데이트
 
 사용자가 할 수 있게 된 일부터 한 항목·한 문장으로 적습니다. 개발 중 수정 순서나 내부 검사 수치는 공개 안내에 나열하지 않습니다. 첫 공개판은 개발판 변경을 공개판 사이의 업데이트로 소개하지 않습니다.
