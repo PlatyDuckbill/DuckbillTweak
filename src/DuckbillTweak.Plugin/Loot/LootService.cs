@@ -19,15 +19,23 @@ internal sealed class LootService : IDisposable
     private readonly HashSet<uint> supportedMessages = [];
     private readonly HashSet<uint> receivedMessages = [];
     private readonly HashSet<string> rejectionReasons = [];
+    private readonly HashSet<RollKind> observedKinds = [];
     private bool recordedRoll;
     private ulong character;
     private uint territory;
     private long lastRead;
+    private readonly NativeLootObserver native = new();
+    public bool NativeObservationEnabled { set => native.Enabled = value; }
+    public PlayerKey Self => new(player.CharacterName, player.HomeWorld.RowId);
     public LootLedger Ledger { get; } = new();
     public bool Supported => supportedMessages.Contains(1231);
     public int Unattributed { get; private set; }
     public IReadOnlyList<PlayerKey> PartyMembers { get; private set; } = [];
     public IReadOnlyList<PlayerKey> OtherMembers { get; private set; } = [];
+    public uint Icon(uint rawId) => data.GetExcelSheet<Item>().TryGetRow(rawId % 1_000_000, out var item) ? item.Icon : 0u;
+    public string PlayerTooltip(PlayerKey key) => data.GetExcelSheet<World>().TryGetRow(key.WorldId, out var world)
+        ? $"{key.Name}@{world.Name.ExtractText()}" : key.Name;
+    public void CaptureRoster(LootEntry entry) => Ledger.CaptureRoster(entry, PartyMembers, OtherMembers, false);
 
     public LootService(IChatGui chat, IDataManager data, IClientState client, IPlayerState player,
         IPartyList party, IFramework framework, Configuration config, IPluginLog log)
@@ -66,17 +74,19 @@ internal sealed class LootService : IDisposable
         var now = DateTimeOffset.UtcNow;
         if (message.LogMessageId == 5183)
         {
-            Ledger.Add(rawId, name, party.IsAlliance, now);
+            CaptureRoster(Ledger.Add(rawId, name, party.IsAlliance, now));
             return;
         }
         var awarded = message.LogMessageId is 1232 or 1233 or 5187 or 5188;
-        if (awarded && !Ledger.Entries.Any(e => e.RawItemId == rawId && e.Winner is null)) return;
+        if (awarded && !Ledger.Entries.Any(e => e.RawItemId == rawId)) return;
         var actor = message.SourceEntity;
         if (actor is null || !actor.IsPlayer || actor.Name.IsEmpty) { Reject("missing player identity"); return; }
         var key = new PlayerKey(actor.Name.ExtractText(), actor.HomeWorldId);
         if (key.WorldId == 0)
         {
-            var matches = PartyMembers.Concat(OtherMembers).Where(p => p.Name == key.Name).Distinct().ToArray();
+            var matches = PartyMembers.Concat(OtherMembers).Concat(Ledger.Entries.Where(e => e.RawItemId == rawId)
+                    .SelectMany(e => e.Members).Select(m => m.Player))
+                .Where(p => p.WorldId != 0 && p.Name == key.Name).Distinct().ToArray();
             if (matches.Length == 1) key = matches[0];
         }
         ObservedRoll? roll = null;
@@ -85,8 +95,11 @@ internal sealed class LootService : IDisposable
             if (!message.TryGetIntParameter(2, out var value) || value is < 1 or > 99 ||
                 !message.TryGetStringParameter(1, out var text)) { Reject("invalid roll parameters"); return; }
             var kindText = text.ExtractText().Trim();
-            var kind = kindText switch { "선입찰" => RollKind.Need, "입찰" => RollKind.Greed, _ => RollKind.Unknown };
+            var kind = kindText.ToUpperInvariant() switch { "선입찰" or "NEED" => RollKind.Need, "입찰" or "GREED" => RollKind.Greed, _ => RollKind.Unknown };
             roll = new(key, kind, kindText, value);
+            if (observedKinds.Add(kind)) log.Information("Loot roll kind decoded: {Kind}", kind);
+            if (kind == RollKind.Unknown && rejectionReasons.Add("unknown roll kind"))
+                log.Warning("Loot roll type not recognized; keeping the value without assigning Need/Greed or a rank.");
         }
         if (!Ledger.Observe(rawId, name, party.IsAlliance, key, roll, awarded, now)) Reject("ambiguous or completed item");
         else if (roll is not null && !recordedRoll)
@@ -94,6 +107,7 @@ internal sealed class LootService : IDisposable
             recordedRoll = true;
             log.Information("Loot roll recording active for this session");
         }
+        foreach (var entry in Ledger.Entries.Where(e => e.RawItemId == rawId && e.IsOpen)) CaptureRoster(entry);
     }
 
     private void Reject(string reason)
@@ -115,6 +129,7 @@ internal sealed class LootService : IDisposable
         if (lastRead != 0 && Stopwatch.GetElapsedTime(lastRead).TotalSeconds < 1) return;
         lastRead = Stopwatch.GetTimestamp();
         PartyMembers = party.Select(m => new PlayerKey(m.Name.TextValue, m.World.RowId)).ToArray();
+        if (PartyMembers.Count == 0 && !string.IsNullOrWhiteSpace(Self.Name)) PartyMembers = [Self];
         var others = new List<PlayerKey>();
         if (party.IsAlliance)
         {
@@ -130,13 +145,16 @@ internal sealed class LootService : IDisposable
             }
         }
         OtherMembers = others;
+        foreach (var entry in Ledger.Entries.Where(e => e.IsOpen)) Ledger.CaptureRoster(entry, PartyMembers, OtherMembers, true);
+        native.Update(Ledger, Self, DateTimeOffset.UtcNow);
         Ledger.Prune(DateTimeOffset.UtcNow);
     }
 
     public void Clear()
     {
         Ledger.Clear(); PartyMembers = []; OtherMembers = []; Unattributed = 0;
-        receivedMessages.Clear(); rejectionReasons.Clear(); recordedRoll = false;
+        receivedMessages.Clear(); rejectionReasons.Clear(); observedKinds.Clear(); recordedRoll = false;
+        native.Clear();
     }
 
     public void Dispose()
