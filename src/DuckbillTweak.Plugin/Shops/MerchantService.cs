@@ -29,6 +29,7 @@ internal sealed class MerchantService : IDisposable
     private readonly IPluginLog log;
     private readonly Configuration config;
     private readonly SpecialCurrencyResolver currencyResolver;
+    private readonly ShopItemClassifier itemClassifier;
     private readonly NativeOwnership nativeOwnership;
     private readonly StoredInventoryBridge storedInventory;
     private ushort displayedAddon;
@@ -82,6 +83,7 @@ internal sealed class MerchantService : IDisposable
         this.player = player; this.conditions = conditions; this.target = target; this.gameGui = gameGui;
         this.framework = framework; this.log = log; this.config = config;
         currencyResolver = CurrencyData.Load(data);
+        itemClassifier = new(data.GetExcelSheet<SpecialShop>());
         nativeOwnership = new(data, unlocks);
         storedInventory = new(pluginInterface, log);
         framework.Update += Update;
@@ -113,7 +115,7 @@ internal sealed class MerchantService : IDisposable
         if (registration == Ownership.Unknown || !nativeOwnership.StorageKnown(item)) return Ownership.Unknown;
         return stock.OwnershipComplete ? Ownership.Missing : Ownership.Unknown;
     }
-    public bool IsConsumable(uint rawId) => ItemDetails(rawId)?.Consumable == true;
+    public bool IsExcludedSupply(uint rawId) => ItemDetails(rawId)?.ExcludedSupply == true;
     public Reward? NativeReward(uint rawId, uint quantity, IReadOnlyList<Price>? prices = null)
     {
         var item = ItemDetails(rawId);
@@ -138,7 +140,7 @@ internal sealed class MerchantService : IDisposable
     {
         var resolved = currencyResolver.Resolve(type, id);
         var baseId = resolved ?? id;
-        var valid = resolved.HasValue && data.GetExcelSheet<Item>().TryGetRow(baseId, out var item) && !item.Name.IsEmpty;
+        var valid = amount > 0 && resolved.HasValue && data.GetExcelSheet<Item>().TryGetRow(baseId, out var item) && !item.Name.IsEmpty;
         return new(new(baseId, type == 1 ? ItemQuality.High : ItemQuality.Normal, 0),
             valid ? ItemName(baseId) : $"미확인 재화 #{id}", amount, valid);
     }
@@ -254,13 +256,7 @@ internal sealed class MerchantService : IDisposable
 
     private ShopItem Describe(Item item) => new(item.RowId, item.Name.ExtractText(), item.ItemUICategory.RowId,
         item.ItemUICategory.ValueNullable?.Name.ExtractText() ?? "기타", item.IsUntradable,
-        IsConsumableItem(item));
-
-    private static bool IsConsumableItem(Item item) => item.EquipSlotCategory.RowId == 0 &&
-        (item.ItemUICategory.RowId is 44 or 46 or 55 or 60 ||
-         // KR manuals and PvP supplies are classified as Other/Miscellany, not Medicine.
-         // Do not exclude all Miscellany: it also contains permanent collectibles.
-         item.ItemAction.ValueNullable?.Action.RowId is 816 or 944);
+        itemClassifier.Classify(item));
 
     private void AddGil(uint id, List<Offer> offers, HashSet<string> visited)
     {

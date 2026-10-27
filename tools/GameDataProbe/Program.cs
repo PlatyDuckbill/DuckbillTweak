@@ -81,6 +81,35 @@ if (args[1] == "items" && args.Length >= 3)
     foreach (var item in game.GetExcelSheet<Item>()!.Where(i => i.Name.ExtractText().Contains(args[2], StringComparison.Ordinal)))
         Console.WriteLine($"Item={item.RowId}; Name={item.Name.ExtractText()}; Category={item.ItemUICategory.RowId}/{item.ItemUICategory.ValueNullable?.Name.ExtractText()}; Search={item.ItemSearchCategory.RowId}; Action={item.ItemAction.RowId}/{item.ItemAction.ValueNullable?.Action.RowId}; ActionData={string.Join(',', item.ItemAction.ValueNullable?.Data.ToArray() ?? [])}; Additional={item.AdditionalData.RowType?.Name}/{item.AdditionalData.RowId}; Equip={item.EquipSlotCategory.RowId}");
 }
+else if (args[1] == "shop-policy-audit")
+{
+    var items = game.GetExcelSheet<Item>()!;
+    var shops = game.GetExcelSheet<SpecialShop>()!;
+    var classifier = new DuckbillTweak.Plugin.Shops.ShopItemClassifier(shops);
+    var classified = items.Where(i => !i.Name.IsEmpty).Select(i => (Item: i, Purpose: classifier.Classify(i))).ToArray();
+    foreach (var group in classified.GroupBy(x => x.Purpose))
+        Console.WriteLine($"Purpose={group.Key}; Count={group.Count()}; Excluded={ShopItemPolicy.Excluded(group.Key)}; Equipped={group.Count(x => x.Item.EquipSlotCategory.RowId != 0)}");
+    foreach (var entry in classified.Where(x => x.Item.Name.ExtractText().Contains("강화약", StringComparison.Ordinal) ||
+                 x.Item.RowId is 24337 or 14273 or 14274 or 14952 or 6954 or 6955 or 50847))
+        Console.WriteLine($"Item={entry.Item.RowId}/{entry.Item.Name.ExtractText()}; Purpose={entry.Purpose}; Excluded={ShopItemPolicy.Excluded(entry.Purpose)}");
+    // Use the production filter/planner on the real 11-row coin exchange. No ownership is assumed.
+    foreach (var shop in shops.Where(s => s.Item.Any(o => o.ItemCosts.Any(c => c.ItemCost.RowId == 50847))))
+    {
+        var offers = shop.Item.Where(o => o.ReceiveItems.Any(r => r.Item.RowId != 0)).Select((o, index) => new Offer(
+            $"{shop.RowId}:{index}", shop.Name.ExtractText(), o.ReceiveItems.Where(r => r.Item.RowId != 0).Select(r =>
+                new Reward(new ShopItem(r.Item.RowId, r.Item.Value.Name.ExtractText(), r.Item.Value.ItemUICategory.RowId, "", r.Item.Value.IsUntradable,
+                    classifier.Classify(r.Item.Value)), r.ReceiveCount, r.ReceiveHq ? ItemQuality.High : ItemQuality.Normal)).ToArray(),
+            o.ItemCosts.Where(c => c.ItemCost.RowId != 0).Select(c => new Price(new(c.ItemCost.RowId, c.CostType == 1 ? ItemQuality.High : ItemQuality.Normal, c.CollectabilityCost),
+                items.GetRow(c.ItemCost.RowId).Name.ExtractText(), c.CurrencyCost, c.CostType is 0 or 1)).ToArray(), false)).ToArray();
+        var filter = new ShopFilter { HideConsumables = true };
+        var selected = offers.Where(o => filter.Matches(o, _ => Ownership.Unknown)).ToArray();
+        var defaults = PurchasePlanner.SelectDefaults(selected);
+        var totals = PurchasePlanner.Calculate(selected.Where(o => defaults.Contains(o.Id)), _ => null);
+        Console.WriteLine($"CoinShop={shop.RowId}; Rows={offers.Length}; FilteredRows={selected.Length}; EligibilityUnknownIncluded={selected.Count(o => !o.ConditionsKnown)}");
+        foreach (var offer in offers) Console.WriteLine($"  {offer.Rewards[0].Item.Name}; Purpose={offer.Rewards[0].Item.Purpose}; Included={defaults.Contains(offer.Id)}; Receive={offer.Rewards[0].Quantity}; Cost={string.Join(',', offer.Prices.Select(p => $"{p.Name}x{p.Quantity}"))}");
+        foreach (var total in totals) Console.WriteLine($"  Required={total.Name}x{total.Required}; Owned={total.Owned?.ToString() ?? "Unknown"}");
+    }
+}
 else if (args[1] == "consumables-audit")
 {
     foreach (var group in game.GetExcelSheet<Item>()!.Where(i => !i.Name.IsEmpty && i.ItemAction.ValueNullable?.Action.RowId is 816 or 944)
@@ -168,6 +197,11 @@ else if (args[1] == "audit")
     }
     var unknown = new Dictionary<string, int>();
     var resolved = 0;
+    var activeOffers = game.GetExcelSheet<SpecialShop>()!.SelectMany(s => s.Item)
+        .Where(o => o.ReceiveItems.Any(r => r.Item.RowId != 0)).ToArray();
+    Console.WriteLine($"Offers={activeOffers.Length}; MultipleCosts={activeOffers.Count(o => o.ItemCosts.Count(c => c.ItemCost.RowId != 0) > 1)}; MultipleRewards={activeOffers.Count(o => o.ReceiveItems.Count(r => r.Item.RowId != 0) > 1)}; BundledQuantity={activeOffers.Count(o => o.ReceiveItems.Any(r => r.Item.RowId != 0 && r.ReceiveCount > 1))}");
+    foreach (var group in activeOffers.SelectMany(o => o.ItemCosts).Where(c => c.ItemCost.RowId != 0).GroupBy(c => c.CostType))
+        Console.WriteLine($"CostType={group.Key}; Prices={group.Count()}; DistinctReferences={group.Select(c => c.ItemCost.RowId).Distinct().Count()}; Collectability={group.Count(c => c.CollectabilityCost != 0)}");
     foreach (var shop in game.GetExcelSheet<SpecialShop>()!)
     foreach (var offer in shop.Item.Where(e => e.ReceiveItems.Any(r => r.Item.RowId != 0)))
     foreach (var cost in offer.ItemCosts.Where(c => c.ItemCost.RowId != 0))

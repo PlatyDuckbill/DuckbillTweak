@@ -12,7 +12,7 @@ using KamiToolKit.Nodes;
 namespace DuckbillTweak.Plugin.Native;
 
 internal sealed record ExchangeRow(int OriginalIndex, uint ItemId, uint Icon, string Name, string Cost, string Owned,
-    bool AllOwned, string Context, bool Enabled = true, bool AllConsumable = false);
+    bool AllOwned, string Context, bool Enabled = true, bool AllExcludedSupplies = false, bool AllOwnedOrSupply = false);
 
 /// <summary>Native integration for the inspected inclusion, item and currency exchange layouts.</summary>
 internal sealed unsafe class NativeExchangeController : IDisposable
@@ -105,7 +105,8 @@ internal sealed unsafe class NativeExchangeController : IDisposable
         sync = false;
         missing.TextTooltip = merchants.OwnershipHelp;
         if (!hide && !config.MerchantHideConsumables) { Restore(addon); return; }
-        var hidden = rows.Select(r => hide && r.AllOwned || config.MerchantHideConsumables && r.AllConsumable).ToArray();
+        var hidden = rows.Select(r => hide && r.AllOwned || config.MerchantHideConsumables && r.AllExcludedSupplies ||
+            hide && config.MerchantHideConsumables && r.AllOwnedOrSupply).ToArray();
         if (!nativeFilter.Apply(addon, list, hidden, out var visible))
         {
             if (lastFailure != nativeFilter.Failure) log.Warning("{Shop} filter contract: {Reason}", name, nativeFilter.Failure);
@@ -172,9 +173,10 @@ internal sealed unsafe class NativeExchangeController : IDisposable
                 var nativeOwned = item.OwnedItemCount;
                 // This native row describes one reward. Other catalog offers are not part of it.
                 var owned = merchants.ItemOwnership(item.ItemId, nativeOwned) == Ownership.Owned;
+                var supply = merchants.IsExcludedSupply(item.ItemId);
                 if (owned) ownedItems.Add(id);
                 rows.Add(new(i, item.ItemId, item.ItemIconId, merchants.ItemDisplayName(item.ItemId),
-                    string.Join(" / ", costs), item.OwnedItemCount.ToString("N0"), owned, key, nativeFilter.IsEnabled(list, i), merchants.IsConsumable(item.ItemId)));
+                    string.Join(" / ", costs), item.OwnedItemCount.ToString("N0"), owned, key, nativeFilter.IsEnabled(list, i), supply, owned || supply));
                 if (merchants.NativeReward(item.ItemId, item.ItemCount, prices) is { } reward)
                     offers.Add(merchants.DisplayedOffer($"{key}:{i}", [reward], prices, nativeFilter.IsEnabled(list, i)));
             }
@@ -204,10 +206,15 @@ internal sealed unsafe class NativeExchangeController : IDisposable
             var ids = item.GiveItemId.ToArray().Where(x => x != 0).ToArray();
             if (ids.Length == 0) return false;
             var allOwned = true;
+            var allOwnedOrSupply = true;
             for (var reward = 0; reward < item.GiveItemId.Length; reward++)
                 if (item.GiveItemId[reward] != 0)
                 {
-                    if (merchants.ItemOwnership(item.GiveItemId[reward], item.GiveItemOwnedCount[reward]) != Ownership.Owned) allOwned = false;
+                    if (merchants.ItemOwnership(item.GiveItemId[reward], item.GiveItemOwnedCount[reward]) != Ownership.Owned)
+                    {
+                        allOwned = false;
+                        if (!merchants.IsExcludedSupply(item.GiveItemId[reward])) allOwnedOrSupply = false;
+                    }
                     else inclusionOwned.Add(item.GiveItemId[reward] >= 1_000_000 ? item.GiveItemId[reward] - 1_000_000 : item.GiveItemId[reward]);
                 }
             var costs = new List<string>();
@@ -220,7 +227,7 @@ internal sealed unsafe class NativeExchangeController : IDisposable
                     if (price.Resolved) inclusionBalances[price.Key] = item.CostOwnedCount[cost];
                 }
             rows.Add(new(i, ids[0], merchants.Icon(ids[0]), string.Join(" / ", ids.Select(merchants.ItemName)),
-                string.Join(" / ", costs), item.GiveItemOwnedCount[0].ToString("N0"), allOwned, key, nativeFilter.IsEnabled(list, i), ids.All(merchants.IsConsumable)));
+                string.Join(" / ", costs), item.GiveItemOwnedCount[0].ToString("N0"), allOwned, key, nativeFilter.IsEnabled(list, i), ids.All(merchants.IsExcludedSupply), allOwnedOrSupply));
             var rewards = new List<Reward>();
             for (var reward = 0; reward < item.GiveItemId.Length; reward++)
                 if (item.GiveItemId[reward] != 0 && merchants.NativeReward(item.GiveItemId[reward] + (item.GiveItemHq[reward] != 0 ? 1_000_000u : 0), item.GiveAmount[reward]) is { } received)
@@ -247,8 +254,8 @@ internal sealed unsafe class NativeExchangeController : IDisposable
             { Restore(addon); config.ExchangeCategoryHideOwned[context] = value; save(); lastRead = 0; }
         };
         missing.AttachNode(addon);
-        consumables = new CheckboxNode { Position = new(244, y), Size = new(190, 24), String = "소모품 제외", IsChecked = config.MerchantHideConsumables,
-            TextTooltip = "약품·요리·염료·촉매·효과 설명서·PvP 소모품·폭죽을 제외합니다. 등록 수집품은 유지합니다." };
+        consumables = new CheckboxNode { Position = new(244, y), Size = new(190, 24), String = ShopItemPolicy.FilterLabel, IsChecked = config.MerchantHideConsumables,
+            TextTooltip = ShopItemPolicy.FilterHelp };
         consumables.OnClick = value => { if (!sync) { Restore(addon); config.MerchantHideConsumables = value; save(); lastRead = 0; } };
         consumables.AttachNode(addon);
         calculate = new TextButtonNode { Position = new(CurrencyShop ? 476 : 556, y - 3), Size = new(176, 28), String = "필요 재화", OnClick = () => currency.OpenForShop(addon->Id) };

@@ -4,7 +4,10 @@ public enum Ownership { Unknown, Missing, Owned }
 public enum TradeFilter { All, Tradable, Untradable }
 public enum ItemQuality { Normal, High }
 
-public sealed record ShopItem(uint Id, string Name, uint CategoryId, string Category, bool Untradable, bool Consumable = false);
+public sealed record ShopItem(uint Id, string Name, uint CategoryId, string Category, bool Untradable, ShopItemPurpose Purpose = ShopItemPurpose.Other)
+{
+    public bool ExcludedSupply => ShopItemPolicy.Excluded(Purpose);
+}
 public sealed record Reward(ShopItem Item, uint Quantity, ItemQuality Quality);
 public readonly record struct CurrencyKey(uint ItemId, ItemQuality Quality, ushort Collectability);
 public sealed record Price(CurrencyKey Key, string Name, uint Quantity, bool Resolved = true);
@@ -28,7 +31,7 @@ public sealed class ShopFilter
     public bool Matches(Offer offer, Func<uint, Ownership> ownership) => offer.Rewards.Any(reward =>
     {
         var item = reward.Item;
-        if (HideConsumables && item.Consumable) return false;
+        if (HideConsumables && item.ExcludedSupply) return false;
         if (FilterCategories && !Categories.Contains(item.CategoryId)) return false;
         if (Trade == TradeFilter.Tradable && item.Untradable || Trade == TradeFilter.Untradable && !item.Untradable) return false;
         if (!string.IsNullOrWhiteSpace(Search) && !item.Name.Contains(Search, StringComparison.OrdinalIgnoreCase)) return false;

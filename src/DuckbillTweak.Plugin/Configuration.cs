@@ -11,6 +11,7 @@ public sealed class Configuration : IPluginConfiguration
     public bool MerchantTools { get; set; }
     public bool LootRolls { get; set; }
     public bool MerchantHideOwned { get; set; }
+    // Keep the persisted key so existing check states survive the expanded supply policy.
     public bool MerchantHideConsumables { get; set; }
     public Dictionary<uint, bool> MerchantCategoryHideOwned { get; set; } = [];
     public Dictionary<string, bool> ExchangeCategoryHideOwned { get; set; } = [];

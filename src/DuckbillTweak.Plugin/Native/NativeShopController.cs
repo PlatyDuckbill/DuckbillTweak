@@ -137,7 +137,7 @@ internal sealed unsafe class NativeShopController : IDisposable
         syncing = false;
         missing.TextTooltip = (categoryId == 0 ? "모든 종류에서는 종류별 제외 설정이 우선합니다. 이 체크를 변경하면 종류별 설정을 초기화합니다.\n" : "") + merchants.OwnershipHelp;
         var filtered = next.Where(r => (categoryId == 0 || r.CategoryId == categoryId) &&
-            (!config.HideOwnedInCategory(r.CategoryId) || !r.OwnedAlready) && (!config.MerchantHideConsumables || !merchants.IsConsumable(r.RawItemId))).ToArray();
+            (!config.HideOwnedInCategory(r.CategoryId) || !r.OwnedAlready) && (!config.MerchantHideConsumables || !merchants.IsExcludedSupply(r.RawItemId))).ToArray();
         // A filter setting alone must not replace the native list when it removes no rows.
         if (filtered.Length == next.Count) { RestoreList(addon); return; }
         var dataChanged = !rows.SequenceEqual(filtered);
@@ -186,8 +186,8 @@ internal sealed unsafe class NativeShopController : IDisposable
             save(); lastRead = 0;
         };
         missing.AttachNode(&addon->AtkUnitBase);
-        consumables = new CheckboxNode { Position = new(174, 84), Size = new(132, 24), String = "소모품 제외", IsChecked = config.MerchantHideConsumables,
-            TextTooltip = "약품·요리·염료·촉매·효과 설명서·PvP 소모품·폭죽을 제외합니다. 등록 수집품은 유지합니다." };
+        consumables = new CheckboxNode { Position = new(174, 84), Size = new(132, 24), String = ShopItemPolicy.FilterLabel, IsChecked = config.MerchantHideConsumables,
+            TextTooltip = ShopItemPolicy.FilterHelp };
         consumables.OnClick = value => { if (!syncing) { RestoreList(addon); config.MerchantHideConsumables = value; save(); lastRead = 0; } };
         consumables.AttachNode(&addon->AtkUnitBase);
         categories = new DropDownNode<CategoryOption> { Position = new(310, 80), Size = new(122, 28),

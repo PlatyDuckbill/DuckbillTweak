@@ -61,3 +61,5 @@ KR LogMessage1231은 lnum1=아이템, lstr2=입찰 종류, lnum3=숫자다. Dala
 0.1.1.9 참고 추가: [InventoryTools IPCService](https://github.com/Critical-Impact/InventoryTools/blob/70a9f410d9a8ab97bef6bcf795415ea2d7c75097/InventoryTools/IPC/IPCService.cs), revision70a9f410d9a8ab97bef6bcf795415ea2d7c75097, GPL-3.0. 공개 호출 계약과 보유 범위만 참고했으며 구현은 복사하지 않았다. 설치된InventoryTools1.15.0.13/동봉CriticalCommonLib의IL과도 대조했다. 런타임 종속성 추가/어셈블리 로딩/외부 플러그인 파일 읽기 없이 Dalamud 공개 IPC만 선택적으로 호출한다. 위 고정SimpleTweaks TrackOutfits도 게임 캐시와 현재 정보 구분을 재참고했다.
 
 0.1.2.0은 위 고정LootView11032cb108f433406ac0f8ed704f77b530024e19의README, LootTrackingService.LogMessages.cs/Recording.cs/Rolls.cs/RollActions.cs에서공개결과와본인선택의시점·표현을참고했다. GPL 구현은복사하지않았으며입찰함수/자동UI숨김도도입하지않았다. 타인의Decided를결과미수신만으로Pass로바꾸는처리는이저장소의Unknown계약과맞지않아사용하지않는다. 실제읽기필드는설치된KR바인딩과로컬실행파일을별도로대조했고구현은독립적으로작성했다.
+
+0.1.2.1은 설치된 KR Item/ItemUICategory/SpecialShop 데이터와 동일한 바인딩을 사용한다. 네이티브 읽기 필드·시그니처·버전 가드는 변경하지 않았다. 분류 정책은 Core의 관리 값 연산, 시트 연결은 Plugin의 ShopItemClassifier에 둔다. GameDataProbe는 같은 분류기 소스를 링크하여 복제 규칙의 불일치를 피한다. 새 외부 구현/의존성은 도입하지 않았다. 게임 자료의 전체 이름/설명/아이콘을 저장소로 추출하지 않는다.

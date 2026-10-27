@@ -47,8 +47,8 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
         missing = new CheckboxNode { Position = new(28, 50), Size = new(200, 24), String = "없는 것만 계산", IsChecked = config.ShopFilter.HideOwned };
         missing.OnClick = value => { if (!syncing) { config.ShopFilter.HideOwned = value; save(); lastRead = 0; } };
         missing.AttachNode(this);
-        consumables = new CheckboxNode { Position = new(260, 50), Size = new(220, 24), String = "소모품 제외", IsChecked = config.MerchantHideConsumables,
-            TextTooltip = "약품·요리·염료·촉매·효과 설명서·PvP 소모품·폭죽을 제외합니다. 등록 수집품은 유지합니다." };
+        consumables = new CheckboxNode { Position = new(260, 50), Size = new(220, 24), String = ShopItemPolicy.FilterLabel, IsChecked = config.MerchantHideConsumables,
+            TextTooltip = ShopItemPolicy.FilterHelp };
         consumables.OnClick = value => { if (!syncing) { config.MerchantHideConsumables = value; save(); lastRead = 0; } };
         consumables.AttachNode(this);
         categories = new DropDownNode<CategoryOption> { Position = new(28, 84), Size = new(290, 28),
@@ -87,7 +87,9 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
         items = new ListNode<CalculationRow, CalculationRowNode> { Position = new(28, 364), Size = new(704, 182), OptionsList = [], AutoResetScroll = false };
         items.NoResultsTextNode.String = "계산할 품목이 없습니다.";
         items.AttachNode(this);
-        Label("각 행은 1회 교환 기준입니다. 묶음 품목의 비용은 한 번만 합산합니다.", 28, 552, 692, fontSize: 12);
+        var explanation = Label("각 행은 1회 교환 기준 · 같은 보상의 대체 교환식은 한 번만 계산합니다.", 28, 552, 692, fontSize: 12);
+        explanation.TextTooltip = "묶음으로 받는 개수와 관계없이 지불 비용은 1회분입니다. 여러 재화를 요구하면 모두 합산합니다.\n" +
+            "같은 보상의 대체 교환식은 현재 목록의 첫 번째 식을 사용합니다. 최저 비용이나 재귀적인 재료 교환 계산은 아닙니다.";
         previousOffers = null; lastRead = 0;
     }
 
@@ -128,23 +130,26 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
             HideConsumables = config.MerchantHideConsumables,
             FilterCategories = categoryId != 0, Categories = categoryId == 0 ? [] : [categoryId] };
         var offers = view.Offers.Where(o => filter.Matches(o, merchants.CalculationOwnership)).ToArray();
-        var ids = PurchasePlanner.SelectDefaults(offers.Where(o => o.ConditionsKnown));
+        // These offers came from the currently displayed native rows. A disabled row
+        // can simply mean insufficient currency. That must not remove its cost from
+        // a saving-up estimate. Keep eligibility uncertainty separate from the price.
+        var ids = PurchasePlanner.SelectDefaults(offers);
         var selected = offers.Where(o => ids.Contains(o.Id)).ToArray();
         var unknown = selected.Count(o => o.Prices.Any(p => !p.Resolved));
-        var conditions = offers.Count(o => !o.ConditionsKnown);
+        var conditions = selected.Count(o => !o.ConditionsKnown);
         var uncertainOwnership = filter.HideOwned ? selected.SelectMany(o => o.Rewards).Select(r => r.Item.Id).Distinct()
             .Count(id => merchants.CalculationOwnership(id) == Ownership.Unknown) : 0;
         summary.String = $"현재 상점 분류 · {selected.Length}개 교환을 각 1회 계산" + (unknown > 0 ? " · 부분 합계" : "");
         var messages = new List<string>();
         if (unknown > 0) messages.Add($"비용 미확인 {unknown}건");
-        if (conditions > 0) messages.Add($"조건 미확인 {conditions}건 제외");
+        if (conditions > 0) messages.Add($"구매 가능 여부 미확인 {conditions}건 포함");
         if (merchants.UnreadableDisplayedOffers > 0) messages.Add($"수량 미확인 {merchants.UnreadableDisplayedOffers}건 제외");
         if (uncertainOwnership > 0) messages.Add($"보유 미확인 {uncertainOwnership}종 포함");
         notice.String = messages.Count == 0 ? "현재 상점에 표시된 교환 수량과 가격 기준입니다." : string.Join(" · ", messages);
-        notice.TextTooltip = string.Join("\n", messages) + "\n" + merchants.OwnershipHelp;
+        notice.TextTooltip = string.Join("\n", messages) + "\n재화 부족 등으로 구매할 수 없는 표시 품목도 필요량에 포함합니다. 해금 조건의 충족을 보장하지 않습니다.\n" + merchants.OwnershipHelp;
         totals.NoResultsTextNode.String = view.Offers.Count == 0 ? "현재 상점의 계산 가능한 품목 정보를 확인하지 못했습니다." :
             offers.Length == 0 ? "선택한 필터에 해당하는 품목이 없습니다." :
-            selected.Length == 0 ? "구매 조건을 확인한 교환식이 없습니다." : "계산할 재화가 없습니다.";
+            selected.Length == 0 ? "선택된 교환식이 없습니다." : "계산할 재화가 없습니다.";
         items.NoResultsTextNode.String = totals.NoResultsTextNode.String;
         var next = PurchasePlanner.Calculate(selected, merchants.CalculationQuantity).Select(t => new TotalRow(merchants.Icon(t.Key.ItemId),
             t.Name + (t.Key.Quality == ItemQuality.High ? " HQ" : "") + (t.Key.Collectability > 0 ? $" (소장가치 {t.Key.Collectability} 이상)" : ""),
@@ -163,7 +168,9 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
             return new CalculationRow(reward.Item.Id + (reward.Quality == ItemQuality.High ? 1_000_000u : 0), merchants.Icon(reward.Item.Id),
                 string.Join(" / ", offer.Rewards.Select(r => r.Item.Name + (r.Quality == ItemQuality.High ? " HQ" : "") + (offer.Rewards.Count > 1 ? $" ×{r.Quantity:N0}" : ""))),
                 offer.Rewards.Count == 1 ? reward.Quantity.ToString("N0") : "묶음",
-                string.Join(" / ", offer.Prices.Select(p => $"{p.Name} ×{p.Quantity:N0}")), owned);
+                string.Join(" / ", offer.Prices.Select(p => p.Resolved
+                    ? $"{p.Name}{(p.Key.Quality == ItemQuality.High ? " HQ" : "")}{(p.Key.Collectability > 0 ? $" (소장가치 {p.Key.Collectability} 이상)" : "")} ×{p.Quantity:N0}"
+                    : $"{p.Name} (비용 미확인)")), owned);
         }).ToList();
         if (!items.OptionsList.SequenceEqual(itemRows))
         {
