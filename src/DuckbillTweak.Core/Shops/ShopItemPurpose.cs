@@ -5,10 +5,10 @@ public enum ShopItemPurpose { Other, Equipment, Collectible, Consumable, Materia
 public static class ShopItemPolicy
 {
     public const string FilterLabel = "수집 위주 보기";
-    public const string FilterHelp = "장비·등록 수집품·악보를 중심으로 표시합니다. 분류 미확인 품목도 남깁니다.\n" +
-        "소모품·제작/강화/교환 재료·마테리아·하우징·보물지도·초코보 경주 용품은 제외합니다.\n" +
-        "보유 여부와는 별도입니다. 없는 것만 보기도 켜면 보유한 수집 대상까지 숨깁니다.\n" +
-        "제외한 아이템도 지불 재화로 쓰이면 필요량에 포함합니다. 체크를 해제하면 다시 표시합니다.";
+    public const string OwnedFilterHelp = "보유·등록한 장비와 수집품을 숨깁니다.\n소모품·재료·하우징은 그대로 표시합니다.";
+    public const string FilterHelp = "장비와 등록 수집품 위주로 표시합니다.\n소모품·재료·마테리아·하우징 등을 숨깁니다.";
+
+    public static bool CanHideOwned(ShopItemPurpose purpose) => purpose is ShopItemPurpose.Equipment or ShopItemPurpose.Collectible;
 
     public static ShopItemPurpose Classify(uint category, bool equipment, uint action, bool additionalData, bool exchangeCost,
         ShopItemPurpose linkedPurpose = ShopItemPurpose.Other, bool craftingIngredient = false)

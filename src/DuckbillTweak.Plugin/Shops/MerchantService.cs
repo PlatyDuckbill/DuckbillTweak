@@ -55,11 +55,7 @@ internal sealed class MerchantService : IDisposable
     public bool NativeOwnershipEnabled { set => nativeOwnership.Enabled = value; }
     public bool DresserLoaded => nativeOwnership.DresserLoaded;
     public bool CabinetLoaded => nativeOwnership.CabinetLoaded;
-    public string OwnershipHelp => "품목 종류와 관계없이 등록했거나 보유한 물건을 숨깁니다. 소모품도 보유 중이면 숨깁니다.\n" +
-        "등록한 수집품·소지품·장비함·착용 장비·환상투영함·추억의 보관함 및 기록된 집사·초코보 가방을 확인합니다.\n" +
-        $"환상투영함: {nativeOwnership.DresserSource} / 추억의 보관함: {nativeOwnership.CabinetSource}\n" +
-        storedInventory.Help + "\n공유 금고/하우징 물품은 개인 보유 판정에서 제외합니다.\n" +
-        "낡은 악보는 제작 결과 악보가 모두 등록됐으면 제외합니다.";
+    public string OwnershipHelp => ShopItemPolicy.OwnedFilterHelp;
     public bool IsShopOpen(ushort id) => id != 0 && SessionReady && new[] { "Shop", "ShopExchangeItem", "ShopExchangeCurrency", "InclusionShop" }.Any(name =>
     {
         var addon = gameGui.GetAddonByName(name);
@@ -117,6 +113,7 @@ internal sealed class MerchantService : IDisposable
         return Ownership.Unknown;
     }
     public bool IsExcludedSupply(uint rawId) => ItemDetails(rawId)?.ExcludedSupply == true;
+    public bool CanHideOwned(uint rawId) => ItemDetails(rawId)?.CanHideOwned == true;
     public Reward? NativeReward(uint rawId, uint quantity, IReadOnlyList<Price>? prices = null)
     {
         var item = ItemDetails(rawId);

@@ -7,6 +7,7 @@ public enum ItemQuality { Normal, High }
 public sealed record ShopItem(uint Id, string Name, uint CategoryId, string Category, bool Untradable, ShopItemPurpose Purpose = ShopItemPurpose.Other)
 {
     public bool ExcludedSupply => ShopItemPolicy.Excluded(Purpose);
+    public bool CanHideOwned => ShopItemPolicy.CanHideOwned(Purpose);
 }
 public sealed record Reward(ShopItem Item, uint Quantity, ItemQuality Quality);
 public readonly record struct CurrencyKey(uint ItemId, ItemQuality Quality, ushort Collectability);
@@ -35,7 +36,7 @@ public sealed class ShopFilter
         if (FilterCategories && !Categories.Contains(item.CategoryId)) return false;
         if (Trade == TradeFilter.Tradable && item.Untradable || Trade == TradeFilter.Untradable && !item.Untradable) return false;
         if (!string.IsNullOrWhiteSpace(Search) && !item.Name.Contains(Search, StringComparison.OrdinalIgnoreCase)) return false;
-        return !CategoryHideOwned.GetValueOrDefault(item.CategoryId, HideOwned) || ownership(item.Id) != Ownership.Owned;
+        return !CategoryHideOwned.GetValueOrDefault(item.CategoryId, HideOwned) || !item.CanHideOwned || ownership(item.Id) != Ownership.Owned;
     });
 }
 

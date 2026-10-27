@@ -117,7 +117,13 @@ else if (args[1] == "shop-policy-audit")
     var classifier = new DuckbillTweak.Plugin.Shops.ShopItemClassifier(shops, game.GetExcelSheet<Recipe>()!, game.GetExcelSheet<RacingChocoboItem>()!);
     var classified = items.Where(i => !i.Name.IsEmpty).Select(i => (Item: i, Purpose: classifier.Classify(i))).ToArray();
     foreach (var group in classified.GroupBy(x => x.Purpose))
-        Console.WriteLine($"Purpose={group.Key}; Count={group.Count()}; Excluded={ShopItemPolicy.Excluded(group.Key)}; Equipped={group.Count(x => x.Item.EquipSlotCategory.RowId != 0)}");
+    {
+        var item = group.First().Item;
+        var offer = new Offer($"audit:{item.RowId}", "", [new(new(item.RowId, item.Name.ExtractText(), item.ItemUICategory.RowId, "", item.IsUntradable, group.Key), 1, ItemQuality.Normal)], [], true);
+        var ownedFilter = new ShopFilter { HideOwned = true };
+        var collectionFilter = new ShopFilter { HideOwned = false, HideConsumables = true };
+        Console.WriteLine($"Purpose={group.Key}; Count={group.Count()}; Excluded={ShopItemPolicy.Excluded(group.Key)}; Equipped={group.Count(x => x.Item.EquipSlotCategory.RowId != 0)}; OwnedFilterKeepsOwned={ownedFilter.Matches(offer, _ => Ownership.Owned)}; OwnedFilterKeepsUnknown={ownedFilter.Matches(offer, _ => Ownership.Unknown)}; CollectionFilterKeeps={collectionFilter.Matches(offer, _ => Ownership.Owned)}");
+    }
     var excludedUnlocks = classified.Where(x => ShopItemPolicy.Excluded(x.Purpose) &&
         ShopItemPolicy.IsCollectionAction(x.Item.ItemAction.ValueNullable?.Action.RowId ?? 0)).ToArray();
     Console.WriteLine($"ExcludedPermanentUnlocks={excludedUnlocks.Length}");

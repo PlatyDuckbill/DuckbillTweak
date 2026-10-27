@@ -135,9 +135,10 @@ internal sealed unsafe class NativeShopController : IDisposable
         syncing = true;
         if (consumables is not null && consumables.IsChecked != config.MerchantHideConsumables) consumables.IsChecked = config.MerchantHideConsumables;
         syncing = false;
-        missing.TextTooltip = (categoryId == 0 ? "모든 종류에서는 종류별 제외 설정이 우선합니다. 이 체크를 변경하면 종류별 설정을 초기화합니다.\n" : "") + merchants.OwnershipHelp;
+        missing.TextTooltip = merchants.OwnershipHelp;
         var filtered = next.Where(r => (categoryId == 0 || r.CategoryId == categoryId) &&
-            (!config.HideOwnedInCategory(r.CategoryId) || !r.OwnedAlready) && (!config.MerchantHideConsumables || !merchants.IsExcludedSupply(r.RawItemId))).ToArray();
+            (!config.HideOwnedInCategory(r.CategoryId) || !merchants.CanHideOwned(r.RawItemId) || !r.OwnedAlready) &&
+            (!config.MerchantHideConsumables || !merchants.IsExcludedSupply(r.RawItemId))).ToArray();
         // A filter setting alone must not replace the native list when it removes no rows.
         if (filtered.Length == next.Count) { RestoreList(addon); return; }
         var dataChanged = !rows.SequenceEqual(filtered);

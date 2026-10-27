@@ -141,7 +141,7 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
         var selected = offers.Where(o => ids.Contains(o.Id)).ToArray();
         var unknown = selected.Count(o => o.Prices.Any(p => !p.Resolved));
         var conditions = selected.Count(o => !o.ConditionsKnown);
-        var uncertainOwnership = filter.HideOwned ? selected.SelectMany(o => o.Rewards).Select(r => r.Item.Id).Distinct()
+        var uncertainOwnership = filter.HideOwned ? selected.SelectMany(o => o.Rewards).Where(r => r.Item.CanHideOwned).Select(r => r.Item.Id).Distinct()
             .Count(id => merchants.CalculationOwnership(id) == Ownership.Unknown) : 0;
         summary.String = $"현재 상점 분류 · {selected.Length}개 교환을 각 1회 계산" + (unknown > 0 ? " · 부분 합계" : "");
         var messages = new List<string>();

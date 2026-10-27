@@ -173,10 +173,11 @@ internal sealed unsafe class NativeExchangeController : IDisposable
                 var nativeOwned = item.OwnedItemCount;
                 // This native row describes one reward. Other catalog offers are not part of it.
                 var owned = merchants.ItemOwnership(item.ItemId, nativeOwned) == Ownership.Owned;
+                var hideOwned = owned && merchants.CanHideOwned(item.ItemId);
                 var supply = merchants.IsExcludedSupply(item.ItemId);
                 if (owned) ownedItems.Add(id);
                 rows.Add(new(i, item.ItemId, item.ItemIconId, merchants.ItemDisplayName(item.ItemId),
-                    string.Join(" / ", costs), item.OwnedItemCount.ToString("N0"), owned, key, nativeFilter.IsEnabled(list, i), supply, owned || supply));
+                    string.Join(" / ", costs), item.OwnedItemCount.ToString("N0"), hideOwned, key, nativeFilter.IsEnabled(list, i), supply, hideOwned || supply));
                 if (merchants.NativeReward(item.ItemId, item.ItemCount, prices) is { } reward)
                     offers.Add(merchants.DisplayedOffer($"{key}:{i}", [reward], prices, nativeFilter.IsEnabled(list, i)));
             }
@@ -210,12 +211,13 @@ internal sealed unsafe class NativeExchangeController : IDisposable
             for (var reward = 0; reward < item.GiveItemId.Length; reward++)
                 if (item.GiveItemId[reward] != 0)
                 {
-                    if (merchants.ItemOwnership(item.GiveItemId[reward], item.GiveItemOwnedCount[reward]) != Ownership.Owned)
+                    var owned = merchants.ItemOwnership(item.GiveItemId[reward], item.GiveItemOwnedCount[reward]) == Ownership.Owned;
+                    if (owned) inclusionOwned.Add(item.GiveItemId[reward] >= 1_000_000 ? item.GiveItemId[reward] - 1_000_000 : item.GiveItemId[reward]);
+                    if (!owned || !merchants.CanHideOwned(item.GiveItemId[reward]))
                     {
                         allOwned = false;
                         if (!merchants.IsExcludedSupply(item.GiveItemId[reward])) allOwnedOrSupply = false;
                     }
-                    else inclusionOwned.Add(item.GiveItemId[reward] >= 1_000_000 ? item.GiveItemId[reward] - 1_000_000 : item.GiveItemId[reward]);
                 }
             var costs = new List<string>();
             var prices = new List<Price>();
