@@ -81,6 +81,12 @@ if (args[1] == "items" && args.Length >= 3)
     foreach (var item in game.GetExcelSheet<Item>()!.Where(i => i.Name.ExtractText().Contains(args[2], StringComparison.Ordinal)))
         Console.WriteLine($"Item={item.RowId}; Name={item.Name.ExtractText()}; Category={item.ItemUICategory.RowId}/{item.ItemUICategory.ValueNullable?.Name.ExtractText()}; Search={item.ItemSearchCategory.RowId}; Action={item.ItemAction.RowId}/{item.ItemAction.ValueNullable?.Action.RowId}; ActionData={string.Join(',', item.ItemAction.ValueNullable?.Data.ToArray() ?? [])}; Additional={item.AdditionalData.RowType?.Name}/{item.AdditionalData.RowId}; Equip={item.EquipSlotCategory.RowId}");
 }
+else if (args[1] == "category-order")
+{
+    foreach (var category in game.GetExcelSheet<ItemUICategory>()!.Where(c => !c.Name.IsEmpty)
+                 .OrderBy(c => c.OrderMajor).ThenBy(c => c.OrderMinor).ThenBy(c => c.RowId))
+        Console.WriteLine($"{category.OrderMajor:D2}/{category.OrderMinor:D2} {category.RowId}: {category.Name.ExtractText()}");
+}
 else if (args[1] == "policy-actions")
 {
     foreach (var group in game.GetExcelSheet<Item>()!.Where(i => !i.Name.IsEmpty &&

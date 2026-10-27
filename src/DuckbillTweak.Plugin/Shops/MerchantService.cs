@@ -95,6 +95,8 @@ internal sealed class MerchantService : IDisposable
         ? item.Name.ExtractText() : $"아이템 #{rawId}";
     public string ItemDisplayName(uint rawId) => ItemName(rawId) + (rawId >= 1_000_000 ? " HQ" : "");
     public ShopItem? ItemDetails(uint rawId) => data.GetExcelSheet<Item>().TryGetRow(rawId >= 1_000_000 ? rawId - 1_000_000 : rawId, out var item) ? Describe(item) : null;
+    public (int Major, int Minor, uint Id) CategoryOrder(uint id) => data.GetExcelSheet<ItemUICategory>().TryGetRow(id, out var category)
+        ? (category.OrderMajor, category.OrderMinor, id) : (int.MaxValue, int.MaxValue, id);
     public Ownership ItemOwnership(uint rawId, uint nativeOwned = 0)
     {
         var id = rawId >= 1_000_000 ? rawId - 1_000_000 : rawId;

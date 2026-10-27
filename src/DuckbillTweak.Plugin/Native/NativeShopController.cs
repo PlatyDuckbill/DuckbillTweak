@@ -122,7 +122,7 @@ internal sealed unsafe class NativeShopController : IDisposable
             .Select(r => r.RawItemId >= 1_000_000 ? r.RawItemId - 1_000_000 : r.RawItemId).ToHashSet(), next.Count);
         var options = new[] { new CategoryOption(0, "모든 종류") }.Concat(next.Select(r =>
             new CategoryOption(r.CategoryId, itemInfo[r.RawItemId >= 1_000_000 ? r.RawItemId - 1_000_000 : r.RawItemId].Category))
-            .DistinctBy(c => c.Id).OrderBy(c => c.Name)).ToList();
+            .DistinctBy(c => c.Id).OrderBy(c => merchants.CategoryOrder(c.Id))).ToList();
         missing.IsEnabled = true;
         if (!categories.Options.SequenceEqual(options))
         {

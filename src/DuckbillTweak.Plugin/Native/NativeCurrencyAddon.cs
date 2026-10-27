@@ -123,7 +123,7 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
         {
             previousOffers = view.Offers;
             var options = new[] { new CategoryOption(0, "모든 품목 종류") }.Concat(view.Offers.SelectMany(o => o.Rewards)
-                .Select(r => new CategoryOption(r.Item.CategoryId, r.Item.Category)).DistinctBy(c => c.Id).OrderBy(c => c.Name)).ToList();
+                .Select(r => new CategoryOption(r.Item.CategoryId, r.Item.Category)).DistinctBy(c => c.Id).OrderBy(c => merchants.CategoryOrder(c.Id))).ToList();
             syncing = true;
             if (!categories.Options.SequenceEqual(options)) categories.Options = options;
             categories.SelectedOption = categories.Options.FirstOrDefault(c => c.Id == categoryId) ?? categories.Options[0];
