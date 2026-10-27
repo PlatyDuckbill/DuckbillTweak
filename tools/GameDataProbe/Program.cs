@@ -81,6 +81,68 @@ if (args[1] == "items" && args.Length >= 3)
     foreach (var item in game.GetExcelSheet<Item>()!.Where(i => i.Name.ExtractText().Contains(args[2], StringComparison.Ordinal)))
         Console.WriteLine($"Item={item.RowId}; Name={item.Name.ExtractText()}; Category={item.ItemUICategory.RowId}/{item.ItemUICategory.ValueNullable?.Name.ExtractText()}; Search={item.ItemSearchCategory.RowId}; Action={item.ItemAction.RowId}/{item.ItemAction.ValueNullable?.Action.RowId}; ActionData={string.Join(',', item.ItemAction.ValueNullable?.Data.ToArray() ?? [])}; Additional={item.AdditionalData.RowType?.Name}/{item.AdditionalData.RowId}; Equip={item.EquipSlotCategory.RowId}");
 }
+else if (args[1] == "exchange-catalog-audit")
+{
+    var shops = game.GetExcelSheet<SpecialShop>()!;
+    var catalog = DuckbillTweak.Plugin.Shops.SheetExchangeCatalog.Load(shops);
+    var classifier = new DuckbillTweak.Plugin.Shops.ShopItemClassifier(shops, game.GetExcelSheet<Recipe>()!, game.GetExcelSheet<RacingChocoboItem>()!);
+    var items = game.GetExcelSheet<Item>()!;
+    using var mapping = JsonDocument.Parse(File.ReadAllText("data/special-currencies.kr.json"));
+    var tokens = mapping.RootElement.GetProperty("items").EnumerateObject().ToDictionary(p => uint.Parse(p.Name), p => p.Value.GetUInt32());
+    var tomes = game.GetExcelSheet<TomestonesItem>()!.Where(t => t.Tomestones.RowId != 0 && t.Item.RowId != 0)
+        .GroupBy(t => t.Tomestones.RowId).Where(g => g.Count() == 1).ToDictionary(g => g.Key, g => g.Single().Item.RowId);
+    var resolver = new SpecialCurrencyResolver(tokens, tomes);
+    Price Decode(ExchangeCost cost)
+    {
+        var id = resolver.Resolve(cost.Type, cost.Id);
+        var valid = cost.Quantity > 0 && id.HasValue && items.TryGetRow(id.Value, out var row) && !row.Name.IsEmpty;
+        return new(new(id ?? cost.Id, cost.Type == 1 ? ItemQuality.High : ItemQuality.Normal, cost.Collectability),
+            valid ? items.GetRow(id!.Value).Name.ExtractText() : "미확인", cost.Quantity, valid);
+    }
+    var pages = 0; var recoveredPages = 0; var recoveredRows = 0; var missing = 0; var unknown = 0;
+    foreach (var shop in shops)
+    {
+        var rows = shop.Item.Where(row => row.ReceiveItems.Any(reward => reward.Item.RowId != 0)).ToArray();
+        if (rows.Length == 0 || rows.Any(row => row.ReceiveItems.Count(reward => reward.Item.RowId != 0) != 1)) continue;
+        pages++;
+        // Audit the missing native-price/quantity path against real sheet pages.
+        var page = rows.Select(row => row.ReceiveItems.First(reward => reward.Item.RowId != 0))
+            .Select(reward => new ExchangeObservation(reward.Item.RowId + (reward.ReceiveHq ? 1_000_000u : 0), 0, [])).ToArray();
+        var matched = catalog.Match(shop.Name.ExtractText(), page, Decode);
+        if (matched is null) { missing++; if (missing <= 8) Console.WriteLine($"AmbiguousPage={shop.RowId}/{shop.Name.ExtractText()}"); continue; }
+        recoveredPages++; recoveredRows += matched.Count;
+        unknown += matched.Count(row => row.Prices.Any(price => !price.Resolved));
+        if (!rows.Any(row => row.ItemCosts.Any(cost => args.Skip(2).Any(name => cost.ItemCost.IsValid && cost.ItemCost.Value.Name.ExtractText() == name)))) continue;
+        var offers = rows.Select((row, index) =>
+        {
+            var reward = row.ReceiveItems.First(reward => reward.Item.RowId != 0);
+            var item = reward.Item.Value; var purpose = classifier.Classify(item);
+            return new Offer($"{shop.RowId}:{index}", shop.Name.ExtractText(),
+                [new(new(item.RowId, item.Name.ExtractText(), ShopCategory.GroupId(item.ItemUICategory.RowId, purpose),
+                    ShopCategory.GroupName(item.ItemUICategory.Value.Name.ExtractText(), purpose), item.IsUntradable, purpose),
+                    matched[index].Quantity, reward.ReceiveHq ? ItemQuality.High : ItemQuality.Normal)], matched[index].Prices, false);
+        }).Where(offer => new ShopFilter { HideConsumables = true }.Matches(offer, _ => Ownership.Unknown)).ToArray();
+        Console.WriteLine($"Target={shop.RowId}/{shop.Name.ExtractText()}; RecoveredRows={matched.Count}; CollectionOffers={offers.Length}");
+        foreach (var total in PurchasePlanner.Calculate(offers, _ => null)) Console.WriteLine($" Required={total.Name}x{total.Required}; Owned=Unknown");
+    }
+    Console.WriteLine($"SingleRewardPages={pages}; RecoveredPages={recoveredPages}; RecoveredRows={recoveredRows}; AmbiguousPages={missing}; UnresolvedCostRows={unknown}");
+    foreach (var group in shops.SelectMany(shop => shop.Item.SelectMany(row => row.ItemCosts.Where(cost => cost.ItemCost.RowId != 0 && cost.CurrencyCost == 0)
+                 .Select(cost => (Shop: shop, Cost: cost)))).GroupBy(entry => entry.Cost.CostType))
+        Console.WriteLine($"ZeroCostType={group.Key}; Entries={group.Count()}; Examples={string.Join(';', group.Take(4).Select(entry => $"{entry.Shop.RowId}/{entry.Shop.Name.ExtractText()}/Item{entry.Cost.ItemCost.RowId}"))}");
+}
+else if (args[1] == "currency-offers" && args.Length >= 3)
+{
+    var names = args.Skip(2).ToArray();
+    var targets = game.GetExcelSheet<Item>()!.Where(item => names.Any(name => item.Name.ExtractText() == name)).Select(item => item.RowId).ToHashSet();
+    foreach (var shop in game.GetExcelSheet<SpecialShop>()!)
+    {
+        var offers = shop.Item.Where(offer => offer.ItemCosts.Any(cost => targets.Contains(cost.ItemCost.RowId))).ToArray();
+        if (offers.Length == 0) continue;
+        Console.WriteLine($"Shop={shop.RowId}/{shop.Name.ExtractText()}; Encoding={shop.UseCurrencyType}; Offers={offers.Length}");
+        foreach (var offer in offers.Take(3))
+            Console.WriteLine($" Receive={string.Join(',', offer.ReceiveItems.Where(reward => reward.Item.RowId != 0).Select(reward => $"{reward.Item.RowId}/{reward.Item.Value.Name.ExtractText()}x{reward.ReceiveCount}"))}; Cost={string.Join(',', offer.ItemCosts.Where(cost => cost.ItemCost.RowId != 0).Select(cost => $"{cost.ItemCost.RowId}x{cost.CurrencyCost}/type{cost.CostType}"))}");
+    }
+}
 else if (args[1] == "category-order")
 {
     foreach (var category in game.GetExcelSheet<ItemUICategory>()!.Where(c => !c.Name.IsEmpty)

@@ -12,7 +12,7 @@
 
 상인 카탈로그/가격은 NPC 변경 시 읽는다. 인벤토리/수집품 상태는 상점/재화 화면이 열렸을 때500ms 간격, 파티 명단은1초 간격이다. 네이티브 상점 상태는 addon update에서300ms 간격으로 복사한다. ImGui Draw나 별도 채팅 오브젝트/좌표 관측기는 없다. [네이티브 계약](NATIVE-UI.md)에 구조와 제한을 기록한다.
 
-미확인 비용을 합계에서 빠뜨려 완전한 합계처럼 표시하지 않는다. 해당 교환식을 선택하면 부분 합계 경고가 나온다. 조건이 있는 판매는 기본 계산 선택에서 제외한다. 단가 할인이나 최저 비용 경로 최적화는 하지 않는다.
+미확인 비용을 합계에서 빠뜨려 완전한 합계처럼 표시하지 않는다. 해당 교환식을 선택하면 부분 합계 경고가 나온다. 현재 원본 상점에 표시된 판매는 구매 조건 충족 여부와 비용 계산을 분리하며, 조건 미확인도 예상 필요량에 포함하고 안내한다. 단가 할인이나 최저 비용 경로 최적화는 하지 않는다.
 
 ## 조사한 프로젝트
 
@@ -67,3 +67,5 @@ KR LogMessage1231은 lnum1=아이템, lstr2=입찰 종류, lnum3=숫자다. Dala
 0.1.2.2 분류 근거는 설치된 KR2026.10.06 Item/ItemAction/ItemUICategory/SpecialShop/Recipe/RacingChocoboItem 시트다. 추가 소모 동작851,852,2483,2634,2645,3800,5136,9994,17290,31315,32865,34493,36120,47023의 모든 해당 Item 설명을 오프라인 대조했다. 게임 이름 접미사 판정/외부 구현 복사/새 종속성/새 네이티브 메모리 접근은 없다. HousingFurniture/HousingYardObject/TreasureHuntRank 참조 타입과 실제 제작 재료를 이용한다. 소모 동작과 등록 동작이 다른 것을 확인했으며 알 수 없는 Action/추가 데이터는 기타로 보존한다. 감사 도구도 생산 분류기 소스를 그대로 링크한다.
 
 0.1.2.3 추가 참고: [CriticalCommonLib InventoryItem.ToNumeric](https://github.com/Critical-Impact/CriticalCommonLib/blob/34d364ea938e585b4f7eeab5b36e4261fdd817d0/Models/InventoryItem.cs), [InventoryType](https://github.com/Critical-Impact/CriticalCommonLib/blob/34d364ea938e585b4f7eeab5b36e4261fdd817d0/Enums/InventoryType.cs), [CharacterMonitor](https://github.com/Critical-Impact/CriticalCommonLib/blob/34d364ea938e585b4f7eeab5b36e4261fdd817d0/Services/CharacterMonitor.cs), 고정34d364ea938e585b4f7eeab5b36e4261fdd817d0/GPL-3.0. 위 InventoryTools 고정70a9f410d9a8ab97bef6bcf795415ea2d7c75097의 IPCService도 재대조했다. 공개 반환 배열 형식/열거값/소유자 범위만 참조했고 구현을 복사하거나 DLL 의존성을 추가하지 않았다. 설치된1.15.0.13의 IL과 함께 확인했다. 보관 기록은 사용자 플러그인의 공개 IPC로만 읽으며 개인 설정 파일/데이터베이스/게임 메모리를 추가로 읽지 않는다. 기록 최신 시각과 전체 적재 여부는 반환되지 않아 완전한 실시간 재고로 취급하지 않는다.
+
+0.1.2.8 참고: [FFCS CurrencyManager](https://github.com/aers/FFXIVClientStructs/blob/b72bc1f73e5f2b09ba460a9238fbf3b9a5bbeb3c/FFXIVClientStructs/FFXIV/Client/Game/CurrencyManager.cs), 위 고정b72bc1f73e5f2b09ba460a9238fbf3b9a5bbeb3c/MIT. ItemBucket의 예시와 공개 읽기 함수 의미를 참고했고 설치된 KR DLL/실행 코드와 별도로 대조했다. 구현 복사/새 native address/새 런타임 종속성은 없다. NativeCurrencyReader는 이미 존재하는 설치 바인딩을 기존 한국 프로필 가드 뒤에서 읽기 전용으로 호출한다. Core ExchangeCatalog는 SpecialShop에서 복사한 관리 값만 다루며 현재 페이지 전체를 연결한다. 게임/화폐 이름별 예외가 아니라 구조·ID·가격/수량을 기준으로 한다. 미래의 다른 addon/패킷/가격 인코딩을 추측 지원하거나 게임 업데이트 가드를 건너뛰지는 않는다.

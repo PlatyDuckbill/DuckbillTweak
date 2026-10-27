@@ -142,12 +142,28 @@ internal sealed unsafe class NativeExchangeController : IDisposable
                 return false;
             }
             lastReadFailure = null;
-            // One NPC can open several exchange lists. Membership/currency IDs distinguish
-            // them without depending on changing stock, selected quantity or translated names.
+            var observations = new List<ExchangeObservation>();
+            for (var i = 0; i < shop->ItemReceiveCount; i++)
+            {
+                var nativePrices = new List<Price>();
+                for (var costIndex = 0; costIndex < 3; costIndex++)
+                {
+                    ref var cost = ref shop->ItemCost[i * 3 + costIndex];
+                    if (cost.ItemId == 0) continue;
+                    var raw = cost.ItemId;
+                    nativePrices.Add(merchants.NativePrice(raw >= 1_000_000 ? (byte)1 : (byte)0,
+                        raw >= 1_000_000 ? raw - 1_000_000 : raw, cost.ItemCount));
+                }
+                observations.Add(new(shop->ItemReceive[i].ItemId, shop->ItemReceive[i].ItemCount, nativePrices));
+            }
+            var shopName = ReadShopName(shop);
+            var resolved = merchants.ResolveNativePage(shopName, observations);
+            // One NPC can open several exchange lists. Page membership, native shop identity
+            // and currency IDs distinguish them independently of stock or selected quantity.
             var membership = new List<string>();
             for (var i = 0; i < shop->ItemReceiveCount; i++)
                 membership.Add($"{shop->ItemReceive[i].ItemId}:{shop->ItemCost[i * 3].ItemId}:{shop->ItemCost[i * 3 + 1].ItemId}:{shop->ItemCost[i * 3 + 2].ItemId}");
-            var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join(";", membership.Order(StringComparer.Ordinal)))));
+            var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(shopName + ":" + string.Join(";", membership.Order(StringComparer.Ordinal)))));
             key = $"exchange:{merchants.View.NpcId}:{digest}";
             var offers = new List<Offer>();
             var balances = new Dictionary<CurrencyKey, long>();
@@ -157,17 +173,15 @@ internal sealed unsafe class NativeExchangeController : IDisposable
                 ref var item = ref shop->ItemReceive[i];
                 var id = item.ItemId >= 1_000_000 ? item.ItemId - 1_000_000 : item.ItemId;
                 if (id == 0) return false;
-                var costs = new List<string>();
-                var prices = new List<Price>();
+                var prices = resolved[i]?.Prices ?? observations[i].Prices;
                 for (var costIndex = 0; costIndex < 3; costIndex++)
                 {
                     ref var cost = ref shop->ItemCost[i * 3 + costIndex];
                     if (cost.ItemId != 0)
                     {
                         var raw = cost.ItemId;
-                        var price = merchants.NativePrice(raw >= 1_000_000 ? (byte)1 : (byte)0, raw >= 1_000_000 ? raw - 1_000_000 : raw, cost.ItemCount);
-                        prices.Add(price); costs.Add($"{price.Name} ×{price.Quantity:N0}");
-                        if (price.Resolved) balances[price.Key] = cost.OwnedItemCount;
+                        var native = merchants.NativePrice(raw >= 1_000_000 ? (byte)1 : (byte)0, raw >= 1_000_000 ? raw - 1_000_000 : raw, cost.ItemCount);
+                        if (native.Resolved && prices.Any(price => price.Resolved && price.Key == native.Key)) balances[native.Key] = cost.OwnedItemCount;
                     }
                 }
                 var nativeOwned = item.OwnedItemCount;
@@ -177,8 +191,8 @@ internal sealed unsafe class NativeExchangeController : IDisposable
                 var supply = merchants.IsExcludedSupply(item.ItemId);
                 if (owned) ownedItems.Add(id);
                 rows.Add(new(i, item.ItemId, item.ItemIconId, merchants.ItemDisplayName(item.ItemId),
-                    string.Join(" / ", costs), item.OwnedItemCount.ToString("N0"), hideOwned, key, nativeFilter.IsEnabled(list, i), supply, hideOwned || supply));
-                if (merchants.NativeReward(item.ItemId, item.ItemCount, prices) is { } reward)
+                    string.Join(" / ", prices.Select(price => $"{price.Name} ×{price.Quantity:N0}")), item.OwnedItemCount.ToString("N0"), hideOwned, key, nativeFilter.IsEnabled(list, i), supply, hideOwned || supply));
+                if (resolved[i] is { } exchange && merchants.NativeReward(item.ItemId, exchange.Quantity, prices) is { } reward)
                     offers.Add(merchants.DisplayedOffer($"{key}:{i}", [reward], prices, nativeFilter.IsEnabled(list, i)));
             }
             merchants.PublishDisplayedShop(addon->Id, key, offers, balances, ownedItems, rows.Count);
@@ -238,6 +252,15 @@ internal sealed unsafe class NativeExchangeController : IDisposable
         }
         merchants.PublishDisplayedShop(addon->Id, key, inclusionOffers, inclusionBalances, inclusionOwned, rows.Count);
         return true;
+    }
+
+    private static string ReadShopName(AgentShop* shop)
+    {
+        var pointer = shop->ShopName.Value;
+        if (pointer is null) return "";
+        var length = 0;
+        while (length < 512 && pointer[length] != 0) length++;
+        return length == 512 ? "" : Encoding.UTF8.GetString(new ReadOnlySpan<byte>(pointer, length));
     }
 
     private void Attach(AtkUnitBase* addon)

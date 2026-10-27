@@ -148,7 +148,7 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
         var messages = new List<string>();
         if (unknown > 0) messages.Add($"비용 미확인 {unknown}건");
         if (conditions > 0) messages.Add($"구매 가능 여부 미확인 {conditions}건 포함");
-        if (merchants.UnreadableDisplayedOffers > 0) messages.Add($"수량 미확인 {merchants.UnreadableDisplayedOffers}건 제외");
+        if (merchants.UnreadableDisplayedOffers > 0) messages.Add($"교환 정보 미확인 {merchants.UnreadableDisplayedOffers}건 제외");
         if (uncertainOwnership > 0) messages.Add($"보유 미확인 {uncertainOwnership}종 포함");
         notice.String = messages.Count == 0 ? "현재 상점에 표시된 교환 수량과 가격 기준입니다." : string.Join(" · ", messages);
         notice.TextTooltip = string.Join("\n", messages) + "\n재화 부족 등으로 구매할 수 없는 표시 품목도 필요량에 포함합니다. 해금 조건의 충족을 보장하지 않습니다.\n" + merchants.OwnershipHelp;

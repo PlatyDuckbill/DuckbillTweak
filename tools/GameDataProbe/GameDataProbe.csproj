@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../src/DuckbillTweak.Plugin/Shops/ShopItemClassifier.cs" Link="ShopItemClassifier.cs" />
+    <Compile Include="../../src/DuckbillTweak.Plugin/Shops/SheetExchangeCatalog.cs" Link="SheetExchangeCatalog.cs" />
     <ProjectReference Include="../../src/DuckbillTweak.Core/DuckbillTweak.Core.csproj" />
     <Reference Include="Lumina"><HintPath>$(DalamudLibPath)/Lumina.dll</HintPath></Reference>
     <Reference Include="Lumina.Excel"><HintPath>$(DalamudLibPath)/Lumina.Excel.dll</HintPath></Reference>

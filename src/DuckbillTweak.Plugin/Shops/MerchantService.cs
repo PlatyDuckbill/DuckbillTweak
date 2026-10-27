@@ -29,6 +29,8 @@ internal sealed class MerchantService : IDisposable
     private readonly IPluginLog log;
     private readonly Configuration config;
     private readonly SpecialCurrencyResolver currencyResolver;
+    private readonly ExchangeCatalog exchangeCatalog;
+    private readonly NativeCurrencyReader wallet = new();
     private readonly ShopItemClassifier itemClassifier;
     private readonly NativeOwnership nativeOwnership;
     private readonly StoredInventoryBridge storedInventory;
@@ -37,7 +39,7 @@ internal sealed class MerchantService : IDisposable
     private IReadOnlyList<Offer> displayedOffers = [];
     private IReadOnlyDictionary<CurrencyKey, long> displayedBalances = new Dictionary<CurrencyKey, long>();
     private IReadOnlySet<uint> displayedOwned = new HashSet<uint>();
-    private (ushort Addon, int Offers, int Skipped, int Verified, bool Dresser, bool Cabinet)? lastDisplayed;
+    private (ushort Addon, int Offers, int Skipped, int Verified, bool Dresser, bool Cabinet, int MissingCosts, int EmptyCosts)? lastDisplayed;
     public int UnreadableDisplayedOffers { get; private set; }
     private long lastRead;
     private ulong character;
@@ -52,7 +54,7 @@ internal sealed class MerchantService : IDisposable
     public bool SessionReady => config.MerchantTools && client.IsLoggedIn && player.IsLoaded &&
         character != 0 && character == player.ContentId && territory == client.TerritoryType &&
         !conditions[ConditionFlag.BetweenAreas] && !conditions[ConditionFlag.BetweenAreas51];
-    public bool NativeOwnershipEnabled { set => nativeOwnership.Enabled = value; }
+    public bool NativeOwnershipEnabled { set { nativeOwnership.Enabled = value; wallet.Enabled = value; } }
     public bool DresserLoaded => nativeOwnership.DresserLoaded;
     public bool CabinetLoaded => nativeOwnership.CabinetLoaded;
     public string OwnershipHelp => ShopItemPolicy.OwnedFilterHelp;
@@ -69,7 +71,14 @@ internal sealed class MerchantService : IDisposable
         view = View with { Name = "현재 상점 목록", Offers = displayedOffers, Message = null };
         return true;
     }
-    public long? CalculationQuantity(CurrencyKey key) => displayedAddon != 0 && displayedBalances.TryGetValue(key, out var count) ? count : View.Inventory.Quantity(key);
+    public long? CalculationQuantity(CurrencyKey key)
+    {
+        if (wallet.Quantity(key) is { } walletCount) return walletCount;
+        if (displayedAddon != 0 && displayedBalances.TryGetValue(key, out var count)) return count;
+        // A wallet currency need not exist in ordinary inventory containers.
+        if (key.ItemId != 1 && data.GetExcelSheet<Item>().TryGetRow(key.ItemId, out var item) && item.ItemUICategory.RowId == 100) return null;
+        return View.Inventory.Quantity(key);
+    }
     public StoredCurrency CalculationStorage(CurrencyKey key) => storedInventory.Currency(key);
     public string StorageHelp => storedInventory.Help;
     public Ownership CalculationOwnership(uint id) => displayedAddon != 0 && displayedOwned.Contains(id) ? Ownership.Owned : ItemOwnership(id);
@@ -82,6 +91,7 @@ internal sealed class MerchantService : IDisposable
         this.player = player; this.conditions = conditions; this.target = target; this.gameGui = gameGui;
         this.framework = framework; this.log = log; this.config = config;
         currencyResolver = CurrencyData.Load(data);
+        exchangeCatalog = SheetExchangeCatalog.Load(data.GetExcelSheet<SpecialShop>());
         itemClassifier = new(data.GetExcelSheet<SpecialShop>(), data.GetExcelSheet<Recipe>(), data.GetExcelSheet<RacingChocoboItem>());
         nativeOwnership = new(data, unlocks);
         storedInventory = new(pluginInterface, log);
@@ -139,11 +149,21 @@ internal sealed class MerchantService : IDisposable
     }
     public Price NativePrice(byte type, uint id, uint amount)
     {
-        var resolved = currencyResolver.Resolve(type, id);
+        var resolved = currencyResolver.Resolve(type, id, wallet.SpecialItem);
         var baseId = resolved ?? id;
         var valid = amount > 0 && resolved.HasValue && data.GetExcelSheet<Item>().TryGetRow(baseId, out var item) && !item.Name.IsEmpty;
         return new(new(baseId, type == 1 ? ItemQuality.High : ItemQuality.Normal, 0),
             valid ? ItemName(baseId) : $"미확인 재화 #{id}", amount, valid);
+    }
+    public IReadOnlyList<ResolvedExchange?> ResolveNativePage(string shopName, IReadOnlyList<ExchangeObservation> page)
+    {
+        var matched = exchangeCatalog.Match(shopName, page, cost =>
+        {
+            var price = NativePrice(cost.Type, cost.Id, cost.Quantity);
+            return price with { Key = price.Key with { Collectability = cost.Collectability } };
+        });
+        return page.Select((row, index) => matched?[index] ??
+            (row.Quantity > 0 && row.Prices.Count > 0 ? new ResolvedExchange(row.Quantity, row.Prices) : null)).ToArray();
     }
     public void PublishDisplayedShop(ushort addon, string context, IReadOnlyList<Offer> offers, IReadOnlyDictionary<CurrencyKey, long> balances, IReadOnlySet<uint> owned, int total)
     {
@@ -155,11 +175,12 @@ internal sealed class MerchantService : IDisposable
         displayedAddon = addon; displayedContext = context;
         if (!same) displayedOffers = offers;
         displayedBalances = balances; displayedOwned = owned; UnreadableDisplayedOffers = total - offers.Count;
-        var state = (addon, offers.Count, UnreadableDisplayedOffers, offers.Count(o => o.ConditionsKnown), DresserLoaded, CabinetLoaded);
+        var state = (addon, offers.Count, UnreadableDisplayedOffers, offers.Count(o => o.ConditionsKnown), DresserLoaded, CabinetLoaded,
+            offers.Count(o => o.Prices.Any(p => !p.Resolved)), offers.Count(o => o.Prices.Count == 0));
         if (lastDisplayed != state)
         {
-            log.Information("Shop calculation snapshot: Addon={Addon}; Offers={Offers}; Unreadable={Unreadable}; ConditionsVerified={Verified}; DresserLoaded={Dresser}; CabinetLoaded={Cabinet}",
-                addon, offers.Count, UnreadableDisplayedOffers, state.Item4, DresserLoaded, CabinetLoaded);
+            log.Information("Shop calculation snapshot: Addon={Addon}; Offers={Offers}; Unreadable={Unreadable}; ConditionsVerified={Verified}; DresserLoaded={Dresser}; CabinetLoaded={Cabinet}; UnknownCosts={Unknown}; EmptyCosts={Empty}",
+                addon, offers.Count, UnreadableDisplayedOffers, state.Item4, DresserLoaded, CabinetLoaded, state.Item7, state.Item8);
             lastDisplayed = state;
         }
     }
@@ -168,7 +189,7 @@ internal sealed class MerchantService : IDisposable
     public uint Icon(uint rawId) => data.GetExcelSheet<Item>().TryGetRow(rawId >= 1_000_000 ? rawId - 1_000_000 : rawId, out var item) ? item.Icon : 0u;
     public string NativeCost(byte type, uint id, uint amount)
     {
-        var item = currencyResolver.Resolve(type, id);
+        var item = currencyResolver.Resolve(type, id, wallet.SpecialItem);
         return item.HasValue ? $"{ItemName(item.Value)} ×{amount:N0}" : $"미확인 재화 ×{amount:N0}";
     }
 
@@ -295,7 +316,7 @@ internal sealed class MerchantService : IDisposable
             foreach (var cost in entry.ItemCosts.Where(x => x.ItemCost.RowId != 0))
             {
                 var rawId = cost.ItemCost.RowId;
-                var resolvedId = currencyResolver.Resolve(cost.CostType, rawId);
+                var resolvedId = currencyResolver.Resolve(cost.CostType, rawId, wallet.SpecialItem);
                 var itemId = resolvedId ?? rawId;
                 var resolved = resolvedId.HasValue &&
                     data.GetExcelSheet<Item>().TryGetRow(itemId, out var currency) && !currency.Name.IsEmpty;

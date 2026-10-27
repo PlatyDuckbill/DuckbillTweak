@@ -10,3 +10,5 @@
 - 로컬 전체 가격 ID 검사는 `GameDataProbe audit`으로 재현한다. ID 해석 성공이 실제 거래 조건·필요량·보유량 검증을 뜻하지 않는다.
 
 게임 업데이트 시 표의 gameVersion만 바꿔 가드를 통과시키지 않는다. 변경한 시트/게임 동작을 대조하고 결과를 docs에 기록한다.
+
+0.1.2.8부터 런타임 특수 화폐 해석은 검사한 CurrencyManager.GetItemIdBySpecialId 매핑을 우선하며 이 JSON은 보조 자료다. 일반 신규 Item ID/지갑 bucket 재화는 이 표에 하나씩 추가하는 방식으로 처리하지 않는다. 게임 버전/해시 검사는 계속 유지한다.

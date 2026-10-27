@@ -2,7 +2,7 @@
   <PropertyGroup>
     <AssemblyName>DuckbillTweak</AssemblyName>
     <RootNamespace>DuckbillTweak.Plugin</RootNamespace>
-    <Version>0.1.2.7</Version>
+    <Version>0.1.2.8</Version>
     <Author>PlatyDuckbill</Author>
     <Name>DuckbillTweak</Name>
     <Punchline>Small conveniences for FFXIV Korea.</Punchline>
