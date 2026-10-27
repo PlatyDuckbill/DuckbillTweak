@@ -1,6 +1,6 @@
 # 설치 목록과 릴리스 배포
 
-현재 공개 버전은 **0.2.0.0**입니다. DuckbillTweak와 DuckbillFisher는 [DuckbillRepo](https://github.com/PlatyDuckbill/DuckbillRepo)의 공용 설치 URL을 사용합니다.
+현재 공개 버전은 **0.2.0.1**입니다. DuckbillTweak와 DuckbillFisher는 [DuckbillRepo](https://github.com/PlatyDuckbill/DuckbillRepo)의 공용 설치 URL을 사용합니다.
 이 문서는 DuckbillFisher의 설치 목록/릴리스/내장 업데이트 안내 구성을 참고해 작성했습니다.
 고정 후보와 실제 게시 결과는 [배포 확인](RELEASE.md)에서 관리합니다.
 

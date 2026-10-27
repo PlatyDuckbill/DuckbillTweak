@@ -21,7 +21,7 @@
 
 ## 설치
 
-현재 공개 버전은 **[0.2.0.0](https://github.com/PlatyDuckbill/DuckbillTweak/releases/tag/v0.2.0.0)**입니다.
+현재 공개 버전은 **[0.2.0.1](https://github.com/PlatyDuckbill/DuckbillTweak/releases/tag/v0.2.0.1)**입니다.
 Dalamud 설정의 커스텀 플러그인 저장소에 아래 URL을 입력하고 같은 줄의 **＋**를 누른 뒤 저장합니다. 플러그인 목록을 새로고침하고 **DuckbillTweak**를 검색해 설치합니다.
 
 ```text
