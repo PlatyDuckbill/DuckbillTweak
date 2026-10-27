@@ -1,6 +1,6 @@
 # 설치 목록과 릴리스 배포
 
-현재 후보는 **0.2.0.0**입니다. 공개 전에 사용자 제공 목록 이미지와 최종 후보 확인을 반영합니다.
+현재 후보는 **0.2.0.0**입니다. 사용자 제공 목록 이미지를512×512로 반영했으며, 공개 전 최종 후보 확인을 진행합니다.
 이 문서는 DuckbillFisher의 설치 목록/릴리스/내장 업데이트 안내 구성을 참고해 작성했습니다.
 고정 후보와 실제 게시 결과는 [배포 확인](RELEASE.md)에서 관리합니다.
 
@@ -11,11 +11,11 @@
 | `src/DuckbillTweak.Plugin/DuckbillTweak.Plugin.csproj` | 기준 버전, 설치 화면 설명과 영문 Changelog |
 | `data/releases.json` | 내장 한글·영문 릴리스 안내, 최근 10개 표시 |
 | `CHANGELOG.md`, `docs/releases/버전.md` | 사용자 관점의 한글·영문 업데이트 내역 |
-| `assets/duckbilltweak-icon.png` | 사용자가 제공할 설치 목록 대표 아이콘 |
+| `assets/duckbilltweak-icon.png` | 사용자 제공 원본에서 축소한512×512 설치 목록 대표 아이콘 |
 | `repo/pluginmaster.json` | 실제 설치 목록. 공개 전에는 `[]` 유지 |
 | 버전 ZIP과 `.sha256` | GitHub Release에 올릴 패키지와 체크섬 |
 
-`IconUrl`은 설치 목록 대표 아이콘, `ImageUrls`는 소개 이미지 배열입니다. `Changelog`는 설치/업데이트 화면의 안내입니다. [공식 메타데이터](https://dalamud.dev/plugin-development/plugin-metadata/), [커스텀 저장소](https://dalamud.dev/plugin-publishing/custom-repositories/)를2026-10-27에 대조했습니다. 이미지를 아직 받지 않았으므로 빈 이미지 링크를 넣지 않습니다. 대표 아이콘을 정해진 경로에 추가하면 csproj의 조건부 IconUrl이 버전 태그 경로를 사용합니다.
+`IconUrl`은 설치 목록 대표 아이콘, `ImageUrls`는 소개 이미지 배열입니다. `Changelog`는 설치/업데이트 화면의 안내입니다. [공식 메타데이터](https://dalamud.dev/plugin-development/plugin-metadata/), [커스텀 저장소](https://dalamud.dev/plugin-publishing/custom-repositories/)를2026-10-27에 대조했습니다. 현재 대표 아이콘은 버전 태그 경로를 사용하며 소개 스크린샷은 아직 없어 ImageUrls는 넣지 않습니다. 패키징 시 대표 PNG의 규격과 manifest의 IconUrl을 대조합니다.
 
 ## 후보 준비
 

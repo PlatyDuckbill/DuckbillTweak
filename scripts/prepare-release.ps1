@@ -30,6 +30,18 @@ try {
         $duckbillManifest.DalamudApiLevel -ne 15 -or !$duckbillManifest.CanUnloadAsync) { throw 'Manifest identity/API/version mismatch.' }
     $duckbillAssembly = [Reflection.AssemblyName]::GetAssemblyName((Join-Path $duckbillBuild 'DuckbillTweak.dll'))
     if ($duckbillAssembly.Name -cne 'DuckbillTweak' -or $duckbillAssembly.Version -ne [version]$duckbillVersion) { throw 'DLL version mismatch.' }
+    $duckbillIconRecord = $null
+    $duckbillIconPath = Join-Path $duckbillRoot 'assets/duckbilltweak-icon.png'
+    if (Test-Path -LiteralPath $duckbillIconPath) {
+        $duckbillIconBytes = [IO.File]::ReadAllBytes($duckbillIconPath)
+        if ($duckbillIconBytes.Length -lt 24 -or [Convert]::ToHexString($duckbillIconBytes[0..7]) -cne '89504E470D0A1A0A') { throw 'Invalid icon PNG.' }
+        $duckbillIconWidth = ([int]$duckbillIconBytes[16] -shl 24) -bor ([int]$duckbillIconBytes[17] -shl 16) -bor ([int]$duckbillIconBytes[18] -shl 8) -bor [int]$duckbillIconBytes[19]
+        $duckbillIconHeight = ([int]$duckbillIconBytes[20] -shl 24) -bor ([int]$duckbillIconBytes[21] -shl 16) -bor ([int]$duckbillIconBytes[22] -shl 8) -bor [int]$duckbillIconBytes[23]
+        if ($duckbillIconWidth -ne $duckbillIconHeight -or $duckbillIconWidth -lt 64 -or $duckbillIconWidth -gt 512) { throw 'Icon must be a square PNG between 64 and 512 pixels.' }
+        $duckbillIconUrl = "https://raw.githubusercontent.com/PlatyDuckbill/DuckbillTweak/v$duckbillVersion/assets/duckbilltweak-icon.png"
+        if ($duckbillManifest.IconUrl -cne $duckbillIconUrl) { throw 'Manifest icon URL does not match this release.' }
+        $duckbillIconRecord = [ordered]@{Width=$duckbillIconWidth;Height=$duckbillIconHeight;Url=$duckbillIconUrl;Sha256=(Get-FileHash -LiteralPath $duckbillIconPath -Algorithm SHA256).Hash.ToLowerInvariant()}
+    }
     $duckbillHistory = @(Get-Content -LiteralPath 'data/releases.json' -Raw | ConvertFrom-Json)
     $duckbillNotes = @($duckbillHistory | Where-Object Version -eq $duckbillVersion)
     if ($duckbillNotes.Count -ne 1) { throw 'Expected exactly one release-history entry for this version.' }
@@ -79,6 +91,7 @@ try {
     [IO.File]::WriteAllText((Join-Path $duckbillOutput 'release-notes.md'), $duckbillReleaseMarkdown, [Text.UTF8Encoding]::new($false))
     $duckbillRecord = [ordered]@{ Version = $duckbillVersion; PreparedAtUtc = [DateTimeOffset]::UtcNow.ToString('O')
         SourceCommit = (git rev-parse HEAD); SourceDirty = [bool](git status --porcelain)
+        Icon = $duckbillIconRecord
         Zip = $duckbillAssetName; Sha256 = $duckbillHash; Files = $duckbillRequired; ExtractedDll = (Join-Path $duckbillValidation 'DuckbillTweak.dll')
         InGameVerified = $false; Published = $false }
     [IO.File]::WriteAllText((Join-Path $duckbillOutput 'validation.json'), (ConvertTo-Json $duckbillRecord -Depth 5) + "`n", [Text.UTF8Encoding]::new($false))

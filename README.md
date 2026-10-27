@@ -1,5 +1,7 @@
 # DuckbillTweak
 
+<img src="assets/duckbilltweak-icon.png" width="192" height="192" alt="DuckbillTweak 오리너구리 아이콘">
+
 **파판의 익숙한 화면에 필요한 편의 기능을 더합니다.**
 
 한국 FFXIV용 Dalamud 플러그인입니다. 상점에서 수집할 품목을 찾고, 필요한 재화를 계산하고, 입찰 결과를 확인할 수 있습니다. 필요한 기능만 따로 켜서 사용합니다.
