@@ -31,6 +31,7 @@ internal sealed class MerchantService : IDisposable
     private readonly SpecialCurrencyResolver currencyResolver;
     private readonly ExchangeCatalog exchangeCatalog;
     private readonly NativeCurrencyReader wallet = new();
+    private string? lastNativePage;
     private readonly ShopItemClassifier itemClassifier;
     private readonly NativeOwnership nativeOwnership;
     private readonly StoredInventoryBridge storedInventory;
@@ -157,11 +158,20 @@ internal sealed class MerchantService : IDisposable
     }
     public IReadOnlyList<ResolvedExchange?> ResolveNativePage(string shopName, IReadOnlyList<ExchangeObservation> page)
     {
+        var signature = shopName + ":" + string.Join(";", page.Select(row => $"{row.RawItemId}x{row.Quantity}[{string.Join(',', row.Prices.Select(price => $"{price.Key.ItemId}x{price.Quantity}/{price.Resolved}"))}]"));
         var matched = exchangeCatalog.Match(shopName, page, cost =>
         {
             var price = NativePrice(cost.Type, cost.Id, cost.Quantity);
             return price with { Key = price.Key with { Collectability = cost.Collectability } };
         });
+        if (lastNativePage != signature)
+        {
+            lastNativePage = signature;
+            log.Information("Exchange page trace: Shop={Shop}; Rows={Rows}; CatalogMatched={Matched}", shopName, page.Count, matched is not null);
+            foreach (var row in matched is null ? page.Take(3) : [])
+                log.Information("Exchange row trace: Reward={Item}; Quantity={Quantity}; Prices={Prices}", row.RawItemId, row.Quantity,
+                    string.Join(',', row.Prices.Select(price => $"{price.Key.ItemId}x{price.Quantity}/{price.Resolved}")));
+        }
         return page.Select((row, index) => matched?[index] ??
             (row.Quantity > 0 && row.Prices.Count > 0 ? new ResolvedExchange(row.Quantity, row.Prices) : null)).ToArray();
     }
@@ -334,6 +344,7 @@ internal sealed class MerchantService : IDisposable
 
     private void Reset()
     {
+        lastNativePage = null;
         SessionGeneration++;
         View = MerchantView.Empty; character = 0; territory = 0; lastNpc = 0; manual = false; manualRequest = null;
         nativeOwnership.Clear(); storedInventory.Clear(); displayedAddon = 0; displayedContext = ""; displayedOffers = []; displayedBalances = new Dictionary<CurrencyKey, long>(); displayedOwned = new HashSet<uint>(); UnreadableDisplayedOffers = 0; lastDisplayed = null;

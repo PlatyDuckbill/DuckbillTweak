@@ -76,10 +76,37 @@ if (args.Length < 2)
     return 1;
 }
 using var game = new GameData(args[0], new LuminaOptions { DefaultExcelLanguage = Language.Korean });
+SpecialCurrencyResolver? probeCurrencyResolver = null;
+Price DecodeCatalogCost(ExchangeCost cost)
+{
+    if (probeCurrencyResolver is null)
+    {
+        using var mapping = JsonDocument.Parse(File.ReadAllText("data/special-currencies.kr.json"));
+        var tokens = mapping.RootElement.GetProperty("items").EnumerateObject().ToDictionary(p => uint.Parse(p.Name), p => p.Value.GetUInt32());
+        var tomes = game.GetExcelSheet<TomestonesItem>()!.Where(t => t.Tomestones.RowId != 0 && t.Item.RowId != 0)
+            .GroupBy(t => t.Tomestones.RowId).Where(g => g.Count() == 1).ToDictionary(g => g.Key, g => g.Single().Item.RowId);
+        probeCurrencyResolver = new(tokens, tomes);
+    }
+    var id = probeCurrencyResolver.Resolve(cost.Type, cost.Id);
+    var items = game.GetExcelSheet<Item>()!;
+    var valid = cost.Quantity > 0 && id.HasValue && items.TryGetRow(id.Value, out var row) && !row.Name.IsEmpty;
+    return new(new(id ?? cost.Id, cost.Type == 1 ? ItemQuality.High : ItemQuality.Normal, cost.Collectability),
+        valid ? items.GetRow(id!.Value).Name.ExtractText() : "미확인", cost.Quantity, valid);
+}
 if (args[1] == "items" && args.Length >= 3)
 {
     foreach (var item in game.GetExcelSheet<Item>()!.Where(i => i.Name.ExtractText().Contains(args[2], StringComparison.Ordinal)))
         Console.WriteLine($"Item={item.RowId}; Name={item.Name.ExtractText()}; Category={item.ItemUICategory.RowId}/{item.ItemUICategory.ValueNullable?.Name.ExtractText()}; Search={item.ItemSearchCategory.RowId}; Action={item.ItemAction.RowId}/{item.ItemAction.ValueNullable?.Action.RowId}; ActionData={string.Join(',', item.ItemAction.ValueNullable?.Data.ToArray() ?? [])}; Additional={item.AdditionalData.RowType?.Name}/{item.AdditionalData.RowId}; Equip={item.EquipSlotCategory.RowId}");
+}
+else if (args[1] == "exchange-observed" && args.Length >= 4)
+{
+    var catalog = DuckbillTweak.Plugin.Shops.SheetExchangeCatalog.Load(game.GetExcelSheet<SpecialShop>()!);
+    var page = args[3].Split(',').Select(id => new ExchangeObservation(uint.Parse(id), 1, [])).ToArray();
+    var matched = catalog.Match(args[2], page, DecodeCatalogCost);
+    Console.WriteLine($"ObservedPage={args[2]}; Rows={page.Length}; Matched={matched is not null}");
+    if (matched is not null)
+        for (var index = 0; index < page.Length; index++)
+            Console.WriteLine($"Reward={page[index].RawItemId}; Quantity={matched[index].Quantity}; Prices={string.Join(',', matched[index].Prices.Select(price => $"{price.Key.ItemId}x{price.Quantity}/{price.Resolved}"))}");
 }
 else if (args[1] == "exchange-catalog-audit")
 {
@@ -87,33 +114,22 @@ else if (args[1] == "exchange-catalog-audit")
     var catalog = DuckbillTweak.Plugin.Shops.SheetExchangeCatalog.Load(shops);
     var classifier = new DuckbillTweak.Plugin.Shops.ShopItemClassifier(shops, game.GetExcelSheet<Recipe>()!, game.GetExcelSheet<RacingChocoboItem>()!);
     var items = game.GetExcelSheet<Item>()!;
-    using var mapping = JsonDocument.Parse(File.ReadAllText("data/special-currencies.kr.json"));
-    var tokens = mapping.RootElement.GetProperty("items").EnumerateObject().ToDictionary(p => uint.Parse(p.Name), p => p.Value.GetUInt32());
-    var tomes = game.GetExcelSheet<TomestonesItem>()!.Where(t => t.Tomestones.RowId != 0 && t.Item.RowId != 0)
-        .GroupBy(t => t.Tomestones.RowId).Where(g => g.Count() == 1).ToDictionary(g => g.Key, g => g.Single().Item.RowId);
-    var resolver = new SpecialCurrencyResolver(tokens, tomes);
-    Price Decode(ExchangeCost cost)
-    {
-        var id = resolver.Resolve(cost.Type, cost.Id);
-        var valid = cost.Quantity > 0 && id.HasValue && items.TryGetRow(id.Value, out var row) && !row.Name.IsEmpty;
-        return new(new(id ?? cost.Id, cost.Type == 1 ? ItemQuality.High : ItemQuality.Normal, cost.Collectability),
-            valid ? items.GetRow(id!.Value).Name.ExtractText() : "미확인", cost.Quantity, valid);
-    }
     var pages = 0; var recoveredPages = 0; var recoveredRows = 0; var missing = 0; var unknown = 0;
     foreach (var shop in shops)
     {
         var rows = shop.Item.Where(row => row.ReceiveItems.Any(reward => reward.Item.RowId != 0)).ToArray();
         if (rows.Length == 0 || rows.Any(row => row.ReceiveItems.Count(reward => reward.Item.RowId != 0) != 1)) continue;
         pages++;
-        // Audit the missing native-price/quantity path against real sheet pages.
-        var page = rows.Select(row => row.ReceiveItems.First(reward => reward.Item.RowId != 0))
+        // Game rows can be reordered. Audit missing prices in a different order from the sheet.
+        var displayed = rows.Reverse().ToArray();
+        var page = displayed.Select(row => row.ReceiveItems.First(reward => reward.Item.RowId != 0))
             .Select(reward => new ExchangeObservation(reward.Item.RowId + (reward.ReceiveHq ? 1_000_000u : 0), 0, [])).ToArray();
-        var matched = catalog.Match(shop.Name.ExtractText(), page, Decode);
+        var matched = catalog.Match(shop.Name.ExtractText(), page, DecodeCatalogCost);
         if (matched is null) { missing++; if (missing <= 8) Console.WriteLine($"AmbiguousPage={shop.RowId}/{shop.Name.ExtractText()}"); continue; }
         recoveredPages++; recoveredRows += matched.Count;
         unknown += matched.Count(row => row.Prices.Any(price => !price.Resolved));
         if (!rows.Any(row => row.ItemCosts.Any(cost => args.Skip(2).Any(name => cost.ItemCost.IsValid && cost.ItemCost.Value.Name.ExtractText() == name)))) continue;
-        var offers = rows.Select((row, index) =>
+        var offers = displayed.Select((row, index) =>
         {
             var reward = row.ReceiveItems.First(reward => reward.Item.RowId != 0);
             var item = reward.Item.Value; var purpose = classifier.Classify(item);
@@ -125,7 +141,7 @@ else if (args[1] == "exchange-catalog-audit")
         Console.WriteLine($"Target={shop.RowId}/{shop.Name.ExtractText()}; RecoveredRows={matched.Count}; CollectionOffers={offers.Length}");
         foreach (var total in PurchasePlanner.Calculate(offers, _ => null)) Console.WriteLine($" Required={total.Name}x{total.Required}; Owned=Unknown");
     }
-    Console.WriteLine($"SingleRewardPages={pages}; RecoveredPages={recoveredPages}; RecoveredRows={recoveredRows}; AmbiguousPages={missing}; UnresolvedCostRows={unknown}");
+    Console.WriteLine($"ReorderedSingleRewardPages={pages}; RecoveredPages={recoveredPages}; RecoveredRows={recoveredRows}; AmbiguousPages={missing}; UnresolvedCostRows={unknown}");
     foreach (var group in shops.SelectMany(shop => shop.Item.SelectMany(row => row.ItemCosts.Where(cost => cost.ItemCost.RowId != 0 && cost.CurrencyCost == 0)
                  .Select(cost => (Shop: shop, Cost: cost)))).GroupBy(entry => entry.Cost.CostType))
         Console.WriteLine($"ZeroCostType={group.Key}; Entries={group.Count()}; Examples={string.Join(';', group.Take(4).Select(entry => $"{entry.Shop.RowId}/{entry.Shop.Name.ExtractText()}/Item{entry.Cost.ItemCost.RowId}"))}");
