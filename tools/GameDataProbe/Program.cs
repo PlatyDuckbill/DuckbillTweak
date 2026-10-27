@@ -81,16 +81,50 @@ if (args[1] == "items" && args.Length >= 3)
     foreach (var item in game.GetExcelSheet<Item>()!.Where(i => i.Name.ExtractText().Contains(args[2], StringComparison.Ordinal)))
         Console.WriteLine($"Item={item.RowId}; Name={item.Name.ExtractText()}; Category={item.ItemUICategory.RowId}/{item.ItemUICategory.ValueNullable?.Name.ExtractText()}; Search={item.ItemSearchCategory.RowId}; Action={item.ItemAction.RowId}/{item.ItemAction.ValueNullable?.Action.RowId}; ActionData={string.Join(',', item.ItemAction.ValueNullable?.Data.ToArray() ?? [])}; Additional={item.AdditionalData.RowType?.Name}/{item.AdditionalData.RowId}; Equip={item.EquipSlotCategory.RowId}");
 }
+else if (args[1] == "policy-actions")
+{
+    foreach (var group in game.GetExcelSheet<Item>()!.Where(i => !i.Name.IsEmpty &&
+        i.ItemAction.ValueNullable?.Action.RowId is 851 or 852 or 2483 or 2634 or 2645 or 3800 or 5136 or 9994 or 17290 or 31315 or 32865 or 34493 or 36120 or 47023)
+        .GroupBy(i => i.ItemAction.Value.Action.RowId))
+    {
+        Console.WriteLine($"Action={group.Key}; Count={group.Count()}; Equipment={group.Count(i => i.EquipSlotCategory.RowId != 0)}");
+        foreach (var item in group)
+            Console.WriteLine($" {item.RowId}/{item.Name.ExtractText()}; {item.Description.ExtractText()}");
+    }
+    foreach (var group in game.GetExcelSheet<RacingChocoboItem>()!.Where(r => r.Item.RowId != 0).GroupBy(r => r.Category))
+        Console.WriteLine($"RacingCategory={group.Key}; Count={group.Count()}; Items={string.Join(',', group.Select(r => $"{r.Item.RowId}/{r.Item.Value.Name.ExtractText()}"))}");
+}
+else if (args[1] == "shop-policy-gaps")
+{
+    var items = game.GetExcelSheet<Item>()!;
+    var shops = game.GetExcelSheet<SpecialShop>()!;
+    var classifier = new DuckbillTweak.Plugin.Shops.ShopItemClassifier(shops, game.GetExcelSheet<Recipe>()!, game.GetExcelSheet<RacingChocoboItem>()!);
+    var sold = shops.SelectMany(s => s.Item).SelectMany(o => o.ReceiveItems).Where(r => r.Item.RowId != 0).Select(r => r.Item.RowId)
+        .Concat(game.GetSubrowExcelSheet<GilShopItem>()!.SelectMany(r => r).Select(r => r.Item.RowId)).ToHashSet();
+    var candidates = items.Where(i => !i.Name.IsEmpty && sold.Contains(i.RowId) && i.EquipSlotCategory.RowId == 0 &&
+        !ShopItemPolicy.Excluded(classifier.Classify(i))).ToArray();
+    foreach (var group in candidates.GroupBy(i => (classifier.Classify(i), i.ItemAction.ValueNullable?.Action.RowId ?? 0, i.AdditionalData.RowType?.Name)))
+    {
+        Console.WriteLine($"Group={group.Key}; Count={group.Count()}");
+        foreach (var item in group.Take(group.Key.Item1 == ShopItemPurpose.Other ? 1000 : 8))
+            Console.WriteLine($"  {item.RowId}/{item.Name.ExtractText()}; Category={item.ItemUICategory.RowId}; Search={item.ItemSearchCategory.RowId}; Action={item.ItemAction.RowId}; Additional={item.AdditionalData.RowId}");
+    }
+}
 else if (args[1] == "shop-policy-audit")
 {
     var items = game.GetExcelSheet<Item>()!;
     var shops = game.GetExcelSheet<SpecialShop>()!;
-    var classifier = new DuckbillTweak.Plugin.Shops.ShopItemClassifier(shops);
+    var classifier = new DuckbillTweak.Plugin.Shops.ShopItemClassifier(shops, game.GetExcelSheet<Recipe>()!, game.GetExcelSheet<RacingChocoboItem>()!);
     var classified = items.Where(i => !i.Name.IsEmpty).Select(i => (Item: i, Purpose: classifier.Classify(i))).ToArray();
     foreach (var group in classified.GroupBy(x => x.Purpose))
         Console.WriteLine($"Purpose={group.Key}; Count={group.Count()}; Excluded={ShopItemPolicy.Excluded(group.Key)}; Equipped={group.Count(x => x.Item.EquipSlotCategory.RowId != 0)}");
+    var excludedUnlocks = classified.Where(x => ShopItemPolicy.Excluded(x.Purpose) &&
+        ShopItemPolicy.IsCollectionAction(x.Item.ItemAction.ValueNullable?.Action.RowId ?? 0)).ToArray();
+    Console.WriteLine($"ExcludedPermanentUnlocks={excludedUnlocks.Length}");
+    foreach (var entry in excludedUnlocks) Console.WriteLine($"Review={entry.Item.RowId}/{entry.Item.Name.ExtractText()}/{entry.Purpose}");
     foreach (var entry in classified.Where(x => x.Item.Name.ExtractText().Contains("강화약", StringComparison.Ordinal) ||
-                 x.Item.RowId is 24337 or 14273 or 14274 or 14952 or 6954 or 6955 or 50847))
+                 x.Item.RowId is 24337 or 14273 or 14274 or 14952 or 6954 or 6955 or 50847 or 4868 or 5890 or 7153 or 8837 or
+                     33328 or 9615 or 9852 or 17723 or 16784 or 49121 or 27593 or 50414 or 10128 or 30137 or 49806))
         Console.WriteLine($"Item={entry.Item.RowId}/{entry.Item.Name.ExtractText()}; Purpose={entry.Purpose}; Excluded={ShopItemPolicy.Excluded(entry.Purpose)}");
     // Use the production filter/planner on the real 11-row coin exchange. No ownership is assumed.
     foreach (var shop in shops.Where(s => s.Item.Any(o => o.ItemCosts.Any(c => c.ItemCost.RowId == 50847))))

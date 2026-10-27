@@ -63,3 +63,5 @@ KR LogMessage1231은 lnum1=아이템, lstr2=입찰 종류, lnum3=숫자다. Dala
 0.1.2.0은 위 고정LootView11032cb108f433406ac0f8ed704f77b530024e19의README, LootTrackingService.LogMessages.cs/Recording.cs/Rolls.cs/RollActions.cs에서공개결과와본인선택의시점·표현을참고했다. GPL 구현은복사하지않았으며입찰함수/자동UI숨김도도입하지않았다. 타인의Decided를결과미수신만으로Pass로바꾸는처리는이저장소의Unknown계약과맞지않아사용하지않는다. 실제읽기필드는설치된KR바인딩과로컬실행파일을별도로대조했고구현은독립적으로작성했다.
 
 0.1.2.1은 설치된 KR Item/ItemUICategory/SpecialShop 데이터와 동일한 바인딩을 사용한다. 네이티브 읽기 필드·시그니처·버전 가드는 변경하지 않았다. 분류 정책은 Core의 관리 값 연산, 시트 연결은 Plugin의 ShopItemClassifier에 둔다. GameDataProbe는 같은 분류기 소스를 링크하여 복제 규칙의 불일치를 피한다. 새 외부 구현/의존성은 도입하지 않았다. 게임 자료의 전체 이름/설명/아이콘을 저장소로 추출하지 않는다.
+
+0.1.2.2 분류 근거는 설치된 KR2026.10.06 Item/ItemAction/ItemUICategory/SpecialShop/Recipe/RacingChocoboItem 시트다. 추가 소모 동작851,852,2483,2634,2645,3800,5136,9994,17290,31315,32865,34493,36120,47023의 모든 해당 Item 설명을 오프라인 대조했다. 게임 이름 접미사 판정/외부 구현 복사/새 종속성/새 네이티브 메모리 접근은 없다. HousingFurniture/HousingYardObject/TreasureHuntRank 참조 타입과 실제 제작 재료를 이용한다. 소모 동작과 등록 동작이 다른 것을 확인했으며 알 수 없는 Action/추가 데이터는 기타로 보존한다. 감사 도구도 생산 분류기 소스를 그대로 링크한다.

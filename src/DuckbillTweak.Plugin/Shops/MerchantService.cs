@@ -55,7 +55,8 @@ internal sealed class MerchantService : IDisposable
     public bool NativeOwnershipEnabled { set => nativeOwnership.Enabled = value; }
     public bool DresserLoaded => nativeOwnership.DresserLoaded;
     public bool CabinetLoaded => nativeOwnership.CabinetLoaded;
-    public string OwnershipHelp => "등록한 수집품·소지품·장비함·착용 장비·환상투영함·추억의 보관함을 확인합니다.\n" +
+    public string OwnershipHelp => "품목 종류와 관계없이 등록했거나 보유한 물건을 숨깁니다. 소모품도 보유 중이면 숨깁니다.\n" +
+        "등록한 수집품·소지품·장비함·착용 장비·환상투영함·추억의 보관함을 확인합니다. 집사·초코보 가방은 미포함입니다.\n" +
         $"환상투영함: {nativeOwnership.DresserSource} / 추억의 보관함: {nativeOwnership.CabinetSource}\n" +
         (storedInventory.Available ? "Allagan Tools: 현재 캐릭터의 보관함 저장 기록도 확인합니다.\n" : "게임 저장 정보가 없으면 보관함을 한 번 열어 주세요.\n") +
         "낡은 악보는 제작 결과 악보가 모두 등록됐으면 제외합니다.";
@@ -83,7 +84,7 @@ internal sealed class MerchantService : IDisposable
         this.player = player; this.conditions = conditions; this.target = target; this.gameGui = gameGui;
         this.framework = framework; this.log = log; this.config = config;
         currencyResolver = CurrencyData.Load(data);
-        itemClassifier = new(data.GetExcelSheet<SpecialShop>());
+        itemClassifier = new(data.GetExcelSheet<SpecialShop>(), data.GetExcelSheet<Recipe>(), data.GetExcelSheet<RacingChocoboItem>());
         nativeOwnership = new(data, unlocks);
         storedInventory = new(pluginInterface, log);
         framework.Update += Update;
