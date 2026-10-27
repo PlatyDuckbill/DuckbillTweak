@@ -5,6 +5,7 @@
 - 0.2.0.1: 친구의 UI 참조 차단 대응. 기존 FFCS MVID1개에서 검증한wasdcxz15.0.3.9/dal4kr15.0.3.7의 세 모듈 MVID/SHA256 전체 조합으로 검사한다. 정확한 KR 게임 SHA/화면 형태/행·품목 재검증은 유지한다. SDK/API/lock/KamiToolKit 원본 변경 없음.
 - Tweak/KamiToolKit 핵심3모듈의245개 타입/1,047개 멤버 누락·상위AssemblyRef0. 관리형까지291개 타입/1,163개 멤버를 대조했고 시트 차이는`typeHash`캐시 키뿐이다. dal4kr의Lumina1.0 표기와7.0참조 차이는 해당 배포판 자체에도 있어 호스트 로드 확인 대기로 기록했다. 컴파일용wasdcxz15.0.3.7을 고정하고 ZIP/모듈 해시를`.cache`에서 검증한다. [출처·검토](NATIVE-UI.md).
 - 정규Debug 빌드 경고0/오류0, 내장 자료708바이트/28매핑·릴리스 원본 일치. 두 런타임의`native-contract`게임SHA/원본 명령7개/세 모듈 조합 일치, 혼합 DLL/동일MVID·변형 해시 거부를 오프라인 확인했다. 자동 테스트 추가/실행 없음. 친구의 현재 런타임/수정본 실기는 확인 대기이며 공개 Release/설치 JSON은 변경하지 않았다.
+- 소스837c4df의0.2.0.1 확인용candidate1을 로컬 준비했다. Release 빌드 경고0/오류0, ZIP412,228바이트/SHA256`3a7290fd3ea455a9f943372e355ca0d067e7c2536b269d34ad08f1d74f65bfe1`, 추출15파일/내장 자료/참조 버전 일치. 고정DLL의291개 타입/1,163개 멤버도 같은 차이와 누락0을 재확인했다. 경로`artifacts/release/0.2.0.1/candidate1/`, InGameVerified/Published는false다.
 
 - 0.2.0.0: 설치 설명/Changelog, 내장 한영 업데이트 내역, README/CHANGELOG/영문 릴리스 노트, Release 패키징/해시/추출 검사 추가. 사용자 제공 목록 이미지를512×512 투명 PNG로 반영했고 원본은assets/source에 보존했다. IconUrl은 버전 태그 경로를 사용한다.
 - 사용자 요청으로 Fisher/Tweak 설치 안내를 DuckbillRepo 공용 URL로 통합했다. 원본은 단일 객체 `repo/release.json`으로 제공하며 기존 `repo/pluginmaster.json`을 삭제해 개별 설치 URL을 종료했다. 공용 자동화의 새 원본 검증 성공 후 삭제했으며 실행 파일/기존 Release는 변경하지 않았다. 기존 사용자는 설정·기록을 유지한 1회 재설치로 설치 출처를 전환한다.

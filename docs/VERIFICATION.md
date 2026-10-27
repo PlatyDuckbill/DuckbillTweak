@@ -9,6 +9,7 @@
 - `native-contract`: 실제 KR 실행 파일 SHA256/원본 명령7개/세 모듈 MVID·SHA256을 두 지원 조합에 대조해 각각 일치. 별도 캐시에서 DLL을 섞은 조합과 FFCS의 MVID를 유지한 채 파일 끝에1바이트를 더한 조합은 모두 거부. 게임/설치 DLL은 변경하지 않았다. 제품 자동 테스트는 추가·실행하지 않았다.
 - 실기 대기: 같은 확인용 패키지로 본인·친구가 플러그인을 로드하고 `/dbtw` 설정을 연다. 로그의 `Native UI compatibility: Supported=True`와 해당프로필을 확인한다. 상점을 직접 열어 체크/스크롤/필요 재화, 입찰 기본 우클릭 메뉴와 추가 화면, PvP에서 사용자가 켠 말풍선의 기본 설정 연동을 대표 확인한다. 실제 구매/입찰/이동/채팅을 자동 실행하지 않는다.
 - 친구의 현재 런타임이 보관된dal4kr15.0.3.7과 같은지는 미확인이다. 다시 차단되면 전체 로그 대신 경고의 Dalamud 버전/FFCS MVID와 호환성 한 줄부터 확인한다. 공개 Release/설치 JSON은 별도 배포 요청 전까지 변경하지 않는다.
+- 소스`837c4df08c9e98d5554300302eb1dca0a6d7090f`(SourceDirty=false)의Release candidate1을 로컬 준비했다. Release 빌드 경고0/오류0, 패키징 허용 목록15파일/추출 해시/내장 한영/설치 노트/라이선스/양쪽DLL 참조 검사 통과. ZIP412,228바이트/SHA256`3a7290fd3ea455a9f943372e355ca0d067e7c2536b269d34ad08f1d74f65bfe1`. 고정Plugin DLL SHA256`9D02156D48CB1261B4F595BADDA544A4934FA4ABBBC8976ED0AB37030ACE35C4`, KamiToolKit DLL`278C0B0C848551DAEEC589E5EA9C36CD22200B37D8D5512AA239F1D5E69B5F52`. 추출본으로291개 타입/1,163개 멤버 대조를 다시 수행해 앞선 검토와 같은 차이·누락0을 확인했다. 보고서는`.cache/native-dal4kr/release-dal4kr.json`과`release-wasdcxz.json`, 패키지/검증 기록은`artifacts/release/0.2.0.1/candidate1/`이다. 실제 로드/인게임/공개 배포는 미확인이다.
 
 ## 0.2.0.0 배포 후보
 
