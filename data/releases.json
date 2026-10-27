@@ -1,5 +1,15 @@
 [
   {
+    "Version": "0.2.0.1",
+    "Date": "2026-10-28",
+    "Korean": [
+      "검증한 dal4kr 한국 Dalamud 배포판에서 설정 화면과 기능이 차단되던 문제를 수정했습니다."
+    ],
+    "English": [
+      "Fix settings and features being blocked on the inspected dal4kr Korean Dalamud distribution."
+    ]
+  },
+  {
     "Version": "0.2.0.0",
     "Date": "2026-10-27",
     "Korean": [

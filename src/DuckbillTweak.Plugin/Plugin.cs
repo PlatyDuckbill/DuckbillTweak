@@ -62,6 +62,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
         try
         {
             compatibility = await Task.Run(NativeCompatibility.Inspect, cancellationToken);
+            log.Information("Native UI compatibility: Supported={Supported}; {Reason}", compatibility.Supported, compatibility.Reason);
             if (compatibility.Supported)
             {
                 toolkitInitialized = true;

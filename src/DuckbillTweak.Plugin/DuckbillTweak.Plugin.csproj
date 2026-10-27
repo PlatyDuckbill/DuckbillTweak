@@ -2,12 +2,12 @@
   <PropertyGroup>
     <AssemblyName>DuckbillTweak</AssemblyName>
     <RootNamespace>DuckbillTweak.Plugin</RootNamespace>
-    <Version>0.2.0.0</Version>
+    <Version>0.2.0.1</Version>
     <Author>PlatyDuckbill</Author>
     <Name>DuckbillTweak</Name>
     <Punchline>Shop collection filters, currency planning and loot results for FFXIV Korea.</Punchline>
     <Description>Small conveniences in the game's own UI, for FFXIV Korea.&#xA;&#xA;• Filter owned equipment and collectibles, or focus shop lists on collection items.&#xA;• Calculate the current shop's currency requirements and shortages, with linked storage records.&#xA;• Right-click loot items to view participant choices and publicly received roll results.&#xA;• Enable PvP chat bubbles using your game's chat bubble settings.&#xA;&#xA;Open settings: /dbtw or /duckbilltweak. Each feature starts disabled.&#xA;Release history: Settings → 업데이트 내역, or /dbtw changelog.&#xA;&#xA;Korean client and inspected Dalamud API 15 bindings only. Loot numbers appear when the game publishes results. Stored inventory records may be incomplete or out of date.</Description>
-    <Changelog>• Filter owned equipment and collectibles, or focus shop lists on collection items.&#xA;• Calculate the current shop's currency requirements and shortages, with linked storage records.&#xA;• Right-click loot items to view participant choices and publicly received roll results.&#xA;• Enable PvP chat bubbles using your game's chat bubble settings.&#xA;• Turn each feature on or off independently in settings.</Changelog>
+    <Changelog>• Fix settings and features being blocked on the inspected dal4kr Korean Dalamud distribution.</Changelog>
     <IconUrl Condition="Exists('../../assets/duckbilltweak-icon.png')">https://raw.githubusercontent.com/PlatyDuckbill/DuckbillTweak/v$(Version)/assets/duckbilltweak-icon.png</IconUrl>
     <RepoUrl>https://github.com/PlatyDuckbill/DuckbillTweak</RepoUrl>
     <Tags>tweaks;shop;collection;loot;pvp;한국어</Tags>
@@ -36,5 +36,13 @@
       <DalamudReferenceApi>$([System.Version]::Parse('$(DalamudReferenceVersion)').Major)</DalamudReferenceApi>
     </PropertyGroup>
     <Error Condition="'$(DalamudReferenceApi)' != '15'" Text="This project requires Dalamud API 15." />
+    <GetAssemblyIdentity AssemblyFiles="$(DalamudLibPath)/FFXIVClientStructs.dll">
+      <Output TaskParameter="Assemblies" ItemName="ClientStructsReferenceIdentity" />
+    </GetAssemblyIdentity>
+    <PropertyGroup>
+      <ClientStructsReferenceVersion>@(ClientStructsReferenceIdentity->'%(Version)')</ClientStructsReferenceVersion>
+    </PropertyGroup>
+    <!-- Higher references can compile locally yet fail to load on the other KR distribution. -->
+    <Error Condition="'$(DalamudReferenceVersion)' != '15.0.3.7' Or '$(ClientStructsReferenceVersion)' != '7.57.0.9386'" Text="Build with the pinned compile-only KR references (scripts/prepare-dalamud-reference.ps1). Higher assembly references cannot support both inspected distributions." />
   </Target>
 </Project>

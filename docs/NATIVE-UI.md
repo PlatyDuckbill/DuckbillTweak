@@ -5,9 +5,47 @@
 ## 고정 환경
 
 - 게임: KR2026.10.06.0000.0000. 실행 파일 SHA-256: DB9824EFAC6D5370AB64B02353E882931DDA447E160EE1A5D9E5DCBA43695728.
-- 바인딩: 설치된 KR FFXIVClientStructs7.57.0.9415, MVID93c1ca2b-80f3-43ef-9d58-ab0e99bb8909.
+- 런타임: 아래0.2.0.1의 검증된 wasdcxz15.0.3.9/dal4kr15.0.3.7 세 모듈 조합. 버전 번호만으로 허용하지 않는다.
 - KamiToolKit: MIT, revision1eaccb5c6d6fcc697f7e1b98b5528580f5edd201. 소스 수정 없이 submodule로 빌드하며 라이선스를 출력에 포함한다.
-- SDK/API 버전은 변경하지 않았다. NativeCompatibility가 게임 해시·바인딩 모듈 ID를 확인한다. 틀리면 사용자 명령에 미지원 사유만 출력한다.
+- SDK/API 버전은 변경하지 않았다. NativeCompatibility가 게임 해시와 로드된 세 모듈의 MVID/디스크 SHA256 조합을 확인한다. 틀리면 사용자 명령에 미지원 사유만 출력한다.
+
+### 0.2.0.1 한국 Dalamud 배포판 차이 대응 (2026-10-28)
+
+기존 경고는 게임 검사 전 FFCS MVID 하나를 개발 환경 값과 비교하면서 발생했다. 같은 한국 게임이어도 dal4kr의 다른 빌드 DLL은 거부됐다. 기존 Fisher 조사 파일을 읽기 전용으로 재사용하되, 낚시 타입의 검증을 Tweak의 UI 지원 근거로 대체하지 않았다.
+
+| 지원 조합 | 모듈 | AssemblyVersion | MVID | SHA256 |
+|---|---|---|---|---|
+| wasdcxz15.0.3.9 | Dalamud | 15.0.3.9 | 1e8f635a-5365-40f6-b920-830d6a816d43 | 7255103B62A1BB3687492B78E8FAF4B91BD969826B39D76602D0A861C92E158D |
+| wasdcxz15.0.3.9 | FFXIVClientStructs | 7.57.0.9415 | 93c1ca2b-80f3-43ef-9d58-ab0e99bb8909 | 052AC3B331F6DFC2A72B58D61506A1A696A68EB13416B3C3D514FAFDF5EB4F40 |
+| wasdcxz15.0.3.9 | InteropGenerator.Runtime | 1.0.0.0 | a296f580-78c4-4617-afef-e85be4bdfe55 | 04C4C92CD05506EDFED442EEE9D331734AF7B9E151A572964365B80EF38B9422 |
+| dal4kr15.0.3.7 | Dalamud | 15.0.3.7 | b4e06917-bffd-4e12-89da-82bde6b4c73e | B92AC6B5BB51BB874590EB2E5D4BCDD1F9328786AB3D8A5D493583EFFD447926 |
+| dal4kr15.0.3.7 | FFXIVClientStructs | 7.57.0.9700 | 3b9613ec-ea8d-4d0e-9c1e-6f91f3b46d50 | 0E9F985538F800F75B4AABADE1C443F3537D93C695BE368852CA44D9A7D3371E |
+| dal4kr15.0.3.7 | InteropGenerator.Runtime | 1.0.0.0 | d5357f8d-0f92-464f-8936-de6fe0816b4d | A75408D83A54D2ED59B3BF178A0474772CE86F4046F2645E76C2B84AE232B178 |
+
+출처는 [wasdcxz 고정4157460b](https://github.com/wasdcxz/dalamud.assets/tree/4157460b5b57c6196b6ee66b363dabdbf1d67758)의7.57-15.0.3.9.zip(SHA256258B3C61A15369D0F902A166A31085132C948F5921DDB62829B5FD57A9B2D218)과 [dal4kr 고정8a3c698b](https://github.com/dal4kr/Dalamud.Resources/tree/8a3c698bc4697e8a68013e156417c31a50a5e263)의Dalamud/latest/Release.zip(SHA256EA859A153E3C1235F6E773EF04B94406680E376A835D3BC158C1D5C03E2AC79C)이다. Fisher에 보관된 실제 파일의 세 해시를 다시 읽어 위 조합과 일치함을 확인했다.
+
+원본 소스 revision은 wasdcxz의 Dalamud0bbbf4f5dc1106da40bd51e0f5184a12ffd1024c/FFCS479ea936b7ecbf6436c16941ece9c9ee83cba494, dal4kr의 Dalamudbf26bb431c62f167abf233a0e983d4e059c9dd1b/FFCS5ecda407c82597890b41f704e087381fc7dfb912이다. Dalamud는AGPL-3.0, FFCS/Interop은MIT이다. SDK DLL은 오프라인 참조·메타데이터 조사용이며 제품 ZIP에 포함하지 않고 구현 소스도 복제하지 않았다.
+
+`scripts/compare-native-runtime.ps1`은 실제 DuckbillTweak.dll과 고정 KamiToolKit.dll의 외부 타입 참조(라이브러리의 미사용 노드 포함)를 읽는다. 핵심3모듈의245개와 Lumina/Lumina.Excel의46개, 총291개 루트 타입/중첩 타입의 크기·정렬·필드 오프셋·상수·특성·메서드 시그니처·이름으로 해석한IL·로컬·예외 구간을 비교한다. 실제 사용 멤버는1,163개(핵심3모듈1,047개)이며 존재·구현·두 산출물의 AssemblyRef도 대조한다. 전체 전이 의존성이나 게임 실행을 증명하는 자동 허용 도구는 아니다. 차이가 있으면 보고서를 쓰고 실패하므로 아래 검토를 반드시 병행한다.
+
+컴파일 기준wasdcxz15.0.3.7 대비 dal4kr15.0.3.7은236/245개 동일,9개 차이이며 사용 멤버1,047개 누락0/상위 참조0이다. 차이 검토:
+
+- `AddonArgs`: 관리 backing field/초기화·이름 getter·미사용 pointer helper 차이. Tweak/KamiToolKit이 참조하는 addon pointer getter는 동일하다. 이름 getter/생성자/setter는 호출하지 않는다.
+- `ImRaii`: 미사용 PushClipRect 오버로드 및 내부 Font/Header 처리 차이. Tweak의 설정/상점/입찰은 네이티브 UI이며 이 ImGui 디버그 경로를 생성·표시하지 않는다.
+- `AgentMap`/`Atk2DAreaMap`: 미사용 지도 tooltip/position 필드·함수 삭제. Tweak은 지도 UI를 사용하지 않는다.
+- `ItemOrderModule`/`RaptureAtkModule`/`AtkUnitBase`: 변경 함수는 각각 GetActiveRetainerSorter/ChangeUiMode/UnsubscribeAtkArrayData와 해당 주소 초기화이다. 실제 참조 멤버에는 없으며, 사용하는 필드 오프셋·함수/가상 함수는 동일하다.
+- `RaptureHotbarModule.ExecuteSlot`: 유일한 변경 참조 멤버이나 KamiToolKit의 미사용 HotbarNode에만 존재한다. Tweak은 해당 노드를 생성하거나 게임 핫바/행동 실행을 호출하지 않는다.
+- `IconSubFolder`: 한국/중국 enum 상수 차이. 고정 KamiToolKit은 한국 상수를 하드코딩하지 않고 현재 TextureResourceManager.IconLanguage를 읽어 동일한 GetIconPath에 전달하며, 실패 시 공통None만 사용한다.
+
+같은 기준 대비 기존wasdcxz15.0.3.9는244/245개 동일, NumberArrayData에 미사용4개 함수만 추가됐다. 사용하는 멤버는 모두 동일하며 두 후보 모두 원본 KR 실행 파일 SHA256과 말풍선/compact map/selected tab의7개 명령이 일치했다. 프로필은 세 모듈 전체 조합으로만 선택하고, 혼합/변형 DLL은 거부한다. 기존 각 화면의 UI 형태·원본 인덱스/품목 재검증·Framework/수명/Unknown 처리는 그대로다. 실제 친구의 현재 DLL이 보관 조합과 같은지와 인게임 대표 동작은 확인 대기다.
+
+추가 관리형 자료 대조: 실제 사용하는 Lumina 타입의 필드/메서드/IL은 모두 같았다. Lumina.Excel의7개 타입(Achievement/Action/ENpcBase/Item/PreHandler/Quest/TopicSelect)은 각 메서드의정수`typeHash`만 달랐다. 타입 후보 배열·행/열 오프셋·Sheet 특성과 호출은 동일하며, 동일한`RowRef.GetFirstValidRowOrUntyped`→`ExcelModule.FindRowInterval`의 캐시 키 인자임을 IL에서 확인했다. 이중 Tweak의 직접 참조는 Item.AdditionalData/PreHandler.Target2개이다. 관리형까지 합친 결과는 dal4kr275/291개 동일·16개 차이, 기존wasdcxz283/291개 동일·8개 차이이며 누락 멤버는 모두0이다.
+
+dal4kr의 Lumina는AssemblyVersion1.0.0.0/MVID43c52c26-69c9-4a75-9af8-5a520f3ad2f1/SHA256B3CDD54311E4AD9D7713389100B7798AF86F444A0C03A2A337DE70723521CD24로 표기된다. 해당 배포판 자체의 Lumina.Excel7.0.0.0(MVIDb63cafa6-ea4f-4c68-9278-1b4af7278a13/SHA256DF7D5E431E897D2096FF14C0280B631396CD6EB297BECD130EBC29A1071942C0)도Lumina7.0.0.0을 참조한다. 따라서 비교 스크립트는 Plugin/KamiToolKit의 Lumina AssemblyRef2개를 추가 검토 대상으로 보고한다. 버전 표기만으로 이 배포판의 로드 실패/성공을 단정하지 않으며, 실제 호스트에서 이 의존성이 해결되는지는 인게임 로드 확인에 포함한다. 다른 직접 비시스템 의존성(Core/KamiToolKit/Lumina.Excel/ImGui/Serilog)의 버전·공개 키는 두 환경에서 충족된다. SDK DLL 수정·혼합 참조·자체 Lumina 배포나 런타임 로더 변경은 하지 않았다.
+
+컴파일은 두 런타임보다 높지 않은wasdcxz15.0.3.7(FFCS7.57.0.9386) 전체 참조를 사용한다. 고정 출처/ZIP 및 세 모듈 SHA는`build/dalamud-reference.json`에 있고 `prepare-dalamud-reference.ps1`이`.cache`에만 복원한다. 현재 설치15.0.3.9로 빌드하면 Dalamud AssemblyRef가15.0.3.9가 되어 친구15.0.3.7에서 로드가 막힐 수 있으므로 csproj에서도 고정 컴파일 버전을 검사한다. `resources`는 실제 Plugin/KamiToolKit 두 DLL의 AssemblyRef도 확인해 높은 버전으로 남은 UI DLL의 혼입을 거부한다. 이는 컴파일용 참조이며wasdcxz15.0.3.7을 새 런타임 지원 대상으로 등록한 것은 아니다. SDK/API/lock/submodule은 변경하지 않았다.
+
+비교 스크립트의 메타데이터 기술 루틴은 동일 저자의 [DuckbillFisher 고정0d8fcd6a](https://github.com/PlatyDuckbill/DuckbillFisher/blob/0d8fcd6a1efc01197d630ff0c32ddbcf59a0878a/scripts/compare-native-runtime.ps1)에서 이식하고 고정 낚시 목록을 실제 Tweak/KamiToolKit 참조 수집·사용 멤버/AssemblyRef 검사로 확장했다. 해당 저장소는 별도 라이선스 파일이 없는 동일 사용자 작업물이며 원본을 변경하지 않았다. 이 개발용 스크립트는 제품 ZIP에 포함하지 않는다.
 
 ## 상점
 
@@ -118,8 +156,9 @@ NeedGreed ULD의 목록6과 현재 바인딩의 AddonNeedGreed.Items를 대조�
 
 ```powershell
 . ./scripts/enter-dev.ps1
-dotnet run --project tools/GameDataProbe -- native-contract '게임 경로/ffxiv_dx11.exe' "$env:DALAMUD_HOME/FFXIVClientStructs.dll"
+dotnet run --project tools/GameDataProbe -- native-contract '게임 경로/ffxiv_dx11.exe' '확인할 실제 KR Dalamud 런타임 폴더'
 dotnet run --project tools/GameDataProbe -- '게임 경로/sqpack' uld ui/uld/Shop.uld
+./scripts/compare-native-runtime.ps1 -BaselinePath $env:DALAMUD_HOME -CandidatePath '확인할 실제 KR Dalamud 런타임 폴더' -PluginDirectory src/DuckbillTweak.Plugin/bin/Debug -ReportPath .cache/native-comparison.json
 ```
 
 이 명령은 디스크의 실행 파일/자료만 읽는다. 게임 프로세스의 메모리를 읽거나 쓰거나 테스트하지 않는다. 빌드/정적 검사 통과를 실기 완료로 기록하지 않는다.

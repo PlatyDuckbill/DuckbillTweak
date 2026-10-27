@@ -7,10 +7,11 @@ using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
 using Lumina.Data.Files;
+using DuckbillTweak.Plugin.Native;
 
 if (args.Length >= 3 && args[0] == "native-contract")
 {
-    const string expectedGame = "DB9824EFAC6D5370AB64B02353E882931DDA447E160EE1A5D9E5DCBA43695728";
+    const string expectedGame = NativeRuntimeProfiles.GameSha256;
     var exe = File.ReadAllBytes(args[1]);
     if (Convert.ToHexString(SHA256.HashData(exe)) != expectedGame) throw new InvalidDataException("Game hash mismatch.");
     using var gamePe = new PEReader(new MemoryStream(exe));
@@ -31,12 +32,22 @@ if (args.Length >= 3 && args[0] == "native-contract")
         if (!exe.AsSpan(offset, bytes.Length).SequenceEqual(bytes)) throw new InvalidDataException($"Instruction mismatch at {rva:X}.");
         Console.WriteLine($"RVA={rva:X}; Original={Convert.ToHexString(bytes)}; Match=True");
     }
-    using var bindings = File.OpenRead(args[2]);
-    using var bindingsPe = new PEReader(bindings);
-    var metadata = bindingsPe.GetMetadataReader();
-    var module = metadata.GetGuid(metadata.GetModuleDefinition().Mvid);
-    if (module != new Guid("93c1ca2b-80f3-43ef-9d58-ab0e99bb8909")) throw new InvalidDataException("Client binding module mismatch.");
-    Console.WriteLine($"GameSHA256={expectedGame}; BindingMVID={module}; Match=True");
+    // Preserve the old DLL-path invocation while inspecting the complete distribution.
+    var referenceDirectory = Directory.Exists(args[2]) ? args[2] : Path.GetDirectoryName(Path.GetFullPath(args[2]))!;
+    NativeModuleIdentity ReadModule(string name)
+    {
+        using var stream = File.OpenRead(Path.Combine(referenceDirectory, name));
+        var sha256 = Convert.ToHexString(SHA256.HashData(stream));
+        stream.Position = 0;
+        using var pe = new PEReader(stream);
+        var metadata = pe.GetMetadataReader();
+        var mvid = metadata.GetGuid(metadata.GetModuleDefinition().Mvid);
+        Console.WriteLine($"Module={name}; MVID={mvid}; SHA256={sha256}");
+        return new(mvid, sha256);
+    }
+    var profile = NativeRuntimeProfiles.Match(ReadModule("Dalamud.dll"), ReadModule("FFXIVClientStructs.dll"), ReadModule("InteropGenerator.Runtime.dll"));
+    if (profile is null) throw new InvalidDataException("Uninspected or mixed native runtime distribution.");
+    Console.WriteLine($"GameSHA256={expectedGame}; NativeProfile={profile.Id}; Match=True");
     return 0;
 }
 
@@ -70,6 +81,29 @@ if (args.Length >= 2 && args[0] == "resources")
             throw new InvalidDataException($"Required plugin dependency missing: {name}.dll");
         if (name == "KamiToolKit" && !File.Exists(Path.Combine(artifactDirectory, "KamiToolKit.LICENSE.txt")))
             throw new InvalidDataException("KamiToolKit license notice missing.");
+    }
+    // Inspect both actual DLLs: a low plugin reference cannot compensate for a stale
+    // UI library built against a higher runtime. Do not load either assembly.
+    foreach (var artifact in new[] { args[1], Path.Combine(artifactDirectory, "KamiToolKit.dll") })
+    {
+        using var artifactStream = File.OpenRead(artifact);
+        using var artifactPe = new PEReader(artifactStream);
+        var artifactMetadata = artifactPe.GetMetadataReader();
+        foreach (var reference in artifactMetadata.AssemblyReferences.Select(artifactMetadata.GetAssemblyReference))
+        {
+            var name = artifactMetadata.GetString(reference.Name);
+            var maximum = name switch
+            {
+                "Dalamud" => new Version(15, 0, 3, 7),
+                "FFXIVClientStructs" => new Version(7, 57, 0, 9386),
+                "InteropGenerator.Runtime" => new Version(1, 0, 0, 0),
+                _ => null,
+            };
+            if (maximum is null) continue;
+            if (reference.Version > maximum)
+                throw new InvalidDataException($"{Path.GetFileName(artifact)} requires {name} {reference.Version}, above the shared compile reference {maximum}.");
+            Console.WriteLine($"Artifact={Path.GetFileName(artifact)}; Reference={name}/{reference.Version}; SharedRuntimeReference=True");
+        }
     }
     Console.WriteLine($"EmbeddedResource=DuckbillTweak.SpecialCurrencies; Bytes={payload.Length}; SourceMatch=True; Tokens={json.RootElement.GetProperty("items").EnumerateObject().Count()}");
     var historyResource = metadata.ManifestResources.Select(metadata.GetManifestResource)

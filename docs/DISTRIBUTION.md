@@ -22,7 +22,7 @@
 PowerShell7/저장소 루트에서 실행합니다. 테스트나 게시를 실행하지 않습니다.
 
 ```powershell
-./scripts/prepare-release.ps1 -OutputDirectory artifacts/release/0.2.0.0/candidate7
+./scripts/prepare-release.ps1 -OutputDirectory artifacts/release/0.2.0.1/candidate1
 ```
 
 1. 고정 SDK/참조로 의존성까지 Release 구성으로 빌드합니다.
