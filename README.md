@@ -21,7 +21,7 @@
 
 ## 설치
 
-현재 공개 버전은 **[0.2.0.1](https://github.com/PlatyDuckbill/DuckbillTweak/releases/tag/v0.2.0.1)**입니다.
+현재 공개 버전은 **[0.2.0.2](https://github.com/PlatyDuckbill/DuckbillTweak/releases/tag/v0.2.0.2)**입니다.
 Dalamud 설정의 커스텀 플러그인 저장소에 아래 URL을 입력하고 같은 줄의 **＋**를 누른 뒤 저장합니다. 플러그인 목록을 새로고침하고 **DuckbillTweak**를 검색해 설치합니다.
 
 ```text
@@ -65,7 +65,7 @@ git submodule update --init --recursive
 ```
 
 빌드 스크립트는 잠금 파일 복원·컴파일·내장 자료 검사를 수행합니다. 자동 테스트나 게임 입력을 실행하지 않습니다.
-기본 참조는 `build/dalamud-reference.json`에 고정한 컴파일용 KR15.0.3.7 전체 묶음이며, 처음 빌드할 때 다운로드·SHA256 확인 후 `.cache`에만 풉니다. 설치된 게임/Dalamud는 변경하지 않습니다. 현재 개발0.2.0.1은 검증된 wasdcxz15.0.3.9/dal4kr15.0.3.7 런타임 조합을 지원하며 실제 친구 PC 확인은 별도입니다. `DALAMUD_HOME` 또는 `-DalamudPath`를 지정할 때도 고정 컴파일 버전을 사용해야 합니다. 런타임 지원 범위와 비교 근거는 [네이티브 UI 계약](docs/NATIVE-UI.md)을 따릅니다.
+기본 참조는 `build/dalamud-reference.json`에 고정한 컴파일용 KR15.0.3.7 전체 묶음이며, 처음 빌드할 때 다운로드·SHA256 확인 후 `.cache`에만 풉니다. 설치된 게임/Dalamud는 변경하지 않습니다. 현재0.2.0.2는 검증된 wasdcxz15.0.3.9/dal4kr15.0.3.7 런타임 조합을 지원하며 실제 친구 PC 확인은 별도입니다. `DALAMUD_HOME` 또는 `-DalamudPath`를 지정할 때도 고정 컴파일 버전을 사용해야 합니다. 런타임 지원 범위와 비교 근거는 [네이티브 UI 계약](docs/NATIVE-UI.md)을 따릅니다.
 개발 DLL은 `src/DuckbillTweak.Plugin/bin/Debug/DuckbillTweak.dll`이며, 같은 폴더의 DLL·Assets·라이선스도 함께 필요합니다.
 
 [배포 절차](docs/DISTRIBUTION.md) · [현재 상태](docs/STATUS.md) · [확인 절차](docs/VERIFICATION.md) · [네이티브 UI 계약](docs/NATIVE-UI.md) · [구조·참고 자료](docs/DEVELOPMENT.md)
