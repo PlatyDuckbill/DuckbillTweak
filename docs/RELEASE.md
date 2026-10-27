@@ -15,12 +15,14 @@
 | ZIP / 체크섬 자산 | ID682128277 / ID682128305 · 서버digest/크기와 로컬 일치 |
 | 공개 시각 | 2026-10-27 16:13:04 UTC / 2026-10-28 01:13:04 KST |
 | 설치 원본 | `repo/release.json` · 0.2.0.2/API15 · LastUpdate1793117584(실제공개UTC) |
-| 공용 동기화 | 설치 원본push 후 확인 예정 |
+| 공용 동기화 | [workflow40538869411](https://github.com/PlatyDuckbill/DuckbillRepo/actions/runs/40538869411) 성공 · 공용원본`4c5dc72b87bc1fe17c70dc6c69151406a76be8bb` |
 | 실기 상태 | InGameVerified=false · 실제 업데이트/로드/창을 나중에 열기 확인 대기 |
 
 [공개 릴리스](https://github.com/PlatyDuckbill/DuckbillTweak/releases/tag/v0.2.0.2). 고정SDK/API/컴파일 참조와KamiToolKit revision을 유지한 Release 빌드 경고·오류0, 허용15파일과 추출본 전부의해시/내장자료/한영업데이트 내역/manifest 버전 일치를 확인했다. `native-contract`의정확한 KR 게임SHA256/원본명령7개/설치3모듈 조합도 재확인했다. 자동 테스트/게임 조작은 하지 않았다.
 
 공개 전에소스·ZIP 해시·추출파일·태그대상·서버자산digest/크기를 대조했다. 공개후인증없이 ZIP/체크섬/태그아이콘을 다운로드해HTTP200과원본SHA256 일치를확인한뒤 설치 원본을 작성했다. 게시근거는`.cache/publication-0.2.0.2/`에보관한다. 이전태그/자산과DuckbillFisher 저장소는변경하지않았다.
+
+설치 원본은`612bf5b`로push했다. 공용 동기화 성공 후 고정 공용 커밋의 목록을 익명HTTP200으로 조회해0.2.0.2/API15/다운로드·아이콘·업데이트 내역·LastUpdate를 포함한22필드 원본 일치를 확인했다. 다른 Fisher 항목은0.6.0.0을 유지한다. 기존 공용main raw URL은 초기 캐시가0.2.0.1을 반환했으나2026-10-27T16:16:28Z에 실제 [공용 설치 URL](https://raw.githubusercontent.com/PlatyDuckbill/DuckbillRepo/main/pluginmaster.json)에서도익명HTTP200/0.2.0.2/API15/22필드 원본 일치를 확인했다. 공개 배포와 공용 목록 반영은 완료이며 실제 게임 내 업데이트/기능 확인은 별도다.
 
 개발DLL의최근자동재로드는공개판과개발판중복으로`/duckbilltweak`명령이충돌해실패했다. 이로그를수정본로드성공으로보지않으며, 공개업데이트확인시개발등록을끄고설치판하나만활성화해야한다. 패키지/HTTP확인을실제Dalamud 업데이트나입찰화면성공으로확대하지않는다.
 
