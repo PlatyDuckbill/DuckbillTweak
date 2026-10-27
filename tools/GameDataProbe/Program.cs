@@ -87,6 +87,20 @@ else if (args[1] == "category-order")
                  .OrderBy(c => c.OrderMajor).ThenBy(c => c.OrderMinor).ThenBy(c => c.RowId))
         Console.WriteLine($"{category.OrderMajor:D2}/{category.OrderMinor:D2} {category.RowId}: {category.Name.ExtractText()}");
 }
+else if (args[1] == "category-groups")
+{
+    var classifier = new DuckbillTweak.Plugin.Shops.ShopItemClassifier(game.GetExcelSheet<SpecialShop>()!,
+        game.GetExcelSheet<Recipe>()!, game.GetExcelSheet<RacingChocoboItem>()!);
+    var items = game.GetExcelSheet<Item>()!.Where(item => !item.Name.IsEmpty).Select(item =>
+    {
+        var purpose = classifier.Classify(item);
+        return (Item: item, Group: ShopCategory.GroupId(item.ItemUICategory.RowId, purpose), Purpose: purpose);
+    }).ToArray();
+    var equipment = items.Where(item => item.Group == ShopCategory.Equipment).ToArray();
+    Console.WriteLine($"EquipmentGroup={ShopCategory.Equipment}; Items={equipment.Length}; NativeCategories={equipment.Select(item => item.Item.ItemUICategory.RowId).Distinct().Count()}; NonEquipment={equipment.Count(item => item.Purpose != ShopItemPurpose.Equipment)}; MissedEquipment={items.Count(item => item.Purpose == ShopItemPurpose.Equipment && item.Group != ShopCategory.Equipment)}");
+    foreach (var category in equipment.GroupBy(item => item.Item.ItemUICategory.RowId))
+        Console.WriteLine($"{category.Key}/{category.First().Item.ItemUICategory.Value.Name.ExtractText()} -> 장비 ({category.Count()})");
+}
 else if (args[1] == "policy-actions")
 {
     foreach (var group in game.GetExcelSheet<Item>()!.Where(i => !i.Name.IsEmpty &&

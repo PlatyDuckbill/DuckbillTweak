@@ -81,12 +81,13 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
         totals.NoResultsTextNode.String = "계산할 품목이 없습니다.";
         totals.AttachNode(this);
         Label("계산 대상 품목", 28, 310, 210);
-        var storageHint = Label("* 기록 기준 · 재화 행에 마우스를 올리면 보관 위치 표시", 244, 310, 476, fontSize: 12);
-        storageHint.TextTooltip = "≥는 확인한 기록의 합계 이상, ≤는 추가 필요량의 상한입니다. 미기록 보관함은 0개로 간주하지 않습니다.\n공유 금고·장터 출품·착용 장비/장비함·외형 보관은 위치만 표시하며 합계에 중복해서 넣지 않습니다.";
+        var storageHint = Label("* 보관 기록 기준 · 재화에 마우스를 올리면 위치 표시", 244, 310, 476, fontSize: 12);
+        storageHint.TextTooltip = "≥ 확인한 수량 이상 · ≤ 추가 필요량 이하\n공유·외형 등의 참고 수량은 합산하지 않습니다.";
         Label("품목", 58, 338, 280);
         Label("받는 수", 344, 338, 52, AlignmentType.Right);
         Label("1회 교환 비용", 412, 338, 206);
-        Label("보유 판정", 624, 338, 82, AlignmentType.Right);
+        var ownershipHeader = Label("보유 판정", 624, 338, 82, AlignmentType.Right);
+        ownershipHeader.TextTooltip = "보유: 소지 또는 등록 확인\n미확인: 보유·등록 여부를 확인하지 못함";
         new HorizontalLineNode { Position = new(28, 361), Size = new(692, 1) }.AttachNode(this);
         items = new ListNode<CalculationRow, CalculationRowNode> { Position = new(28, 364), Size = new(704, 182), OptionsList = [], AutoResetScroll = false };
         items.NoResultsTextNode.String = "계산할 품목이 없습니다.";
@@ -188,14 +189,12 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
         var coverage = new CurrencyCoverage(cost.Required, cost.Owned, stock.Personal);
         var name = cost.Name + (cost.Key.Quality == ItemQuality.High ? " HQ" : "") +
             (cost.Key.Collectability > 0 ? $" (소장가치 {cost.Key.Collectability} 이상)" : "");
-        var details = new List<string> { name, $"필요 {cost.Required:N0} / 지금 사용 가능 {Count(cost.Owned)}",
-            $"개인 보관 기록 {(stock.Personal > 0 ? stock.Personal.ToString("N0") : "미확인")} / 꺼내 쓸 수량(기록 기준) {Count(stock.Personal > 0 || cost.Owned >= cost.Required ? coverage.Retrieve : null)}" };
+        var details = new List<string> { name, $"필요 {cost.Required:N0} · 사용 가능 {Count(cost.Owned)}" };
+        if (stock.Personal > 0 && coverage.Retrieve > 0) details.Add($"보관함에서 꺼낼 수량: {coverage.Retrieve:N0}");
         foreach (var location in stock.Locations)
-            details.Add($"{location.Name}: {location.Quantity:N0}" + (location.Role == StorageRole.Personal ? " (합산)" : " (참고 · 합산 제외)"));
-        if (stock.Locations.Count == 0) details.Add("일치하는 보관 기록 없음 · 보유 0개를 뜻하지 않습니다.");
-        details.Add(merchants.StorageHelp);
-        if (stock.Locations.Any(x => x.Name.StartsWith("집사 기록", StringComparison.Ordinal))) details.Add("집사 기록 번호는 조회 순서이며 게임의 집사 정렬/이름과 다를 수 있습니다.");
-        details.Add("총보유/추가 필요는 기록 기준입니다. 미기록 보관함·기록 이후 이동/소비 때문에 실제 수량과 다를 수 있습니다.");
+            details.Add($"{location.Name}: {location.Quantity:N0}" + (location.Role == StorageRole.Personal ? "" : " (참고)"));
+        if (stock.Locations.Count == 0) details.Add(stock.Available ? "보관 기록 없음 · 수량 미확인" : "보관 정보 미확인");
+        details.Add("저장 기록과 실제 수량은 다를 수 있습니다.");
         return new(merchants.Icon(cost.Key.ItemId), name, cost.Required.ToString("N0"), Count(cost.Owned),
             stock.Personal > 0 ? $"≥{stock.Personal:N0}" : "미확인",
             cost.Owned.HasValue || stock.Personal > 0 ? $"≥{coverage.KnownTotal:N0}" : "미확인",

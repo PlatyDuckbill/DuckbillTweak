@@ -55,6 +55,7 @@ internal sealed class CalculationRowNode : ListItemNode<CalculationRow>, IListIt
         ItemTooltip = row.ItemId;
         cost.TextTooltip = row.Cost;
         name.TextTooltip = row.Name;
+        ownership.TextTooltip = row.Ownership == "미확인" ? "보유·등록 여부를 확인하지 못했습니다.\n없는 물건으로 확정한 것은 아닙니다." : row.Ownership;
     }
 }
 
