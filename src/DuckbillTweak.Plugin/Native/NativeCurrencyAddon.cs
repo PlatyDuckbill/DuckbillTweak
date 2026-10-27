@@ -70,15 +70,19 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
         } }.AttachNode(this);
         summary = Label("", 28, 118, 692);
         notice = Label("", 28, 146, 692, fontSize: 13);
-        Label("재화", 58, 180, 280);
-        Label("필요", 350, 180, 112, AlignmentType.Right);
-        Label("보유", 472, 180, 112, AlignmentType.Right);
-        Label("부족", 594, 180, 112, AlignmentType.Right);
+        Label("재화", 58, 180, 176);
+        Label("필요", 242, 180, 80, AlignmentType.Right);
+        Label("사용 가능", 328, 180, 90, AlignmentType.Right);
+        Label("개인 보관", 424, 180, 90, AlignmentType.Right);
+        Label("총보유*", 520, 180, 90, AlignmentType.Right);
+        Label("추가 필요*", 616, 180, 90, AlignmentType.Right);
         new HorizontalLineNode { Position = new(28, 203), Size = new(692, 1) }.AttachNode(this);
         totals = new ListNode<TotalRow, TotalRowNode> { Position = new(28, 206), Size = new(704, 90), OptionsList = [], AutoResetScroll = false };
         totals.NoResultsTextNode.String = "계산할 품목이 없습니다.";
         totals.AttachNode(this);
-        Label("계산 대상 품목", 28, 310, 300);
+        Label("계산 대상 품목", 28, 310, 210);
+        var storageHint = Label("* 기록 기준 · 재화 행에 마우스를 올리면 보관 위치 표시", 244, 310, 476, fontSize: 12);
+        storageHint.TextTooltip = "≥는 확인한 기록의 합계 이상, ≤는 추가 필요량의 상한입니다. 미기록 보관함은 0개로 간주하지 않습니다.\n공유 금고·장터 출품·착용 장비/장비함·외형 보관은 위치만 표시하며 합계에 중복해서 넣지 않습니다.";
         Label("품목", 58, 338, 280);
         Label("받는 수", 344, 338, 52, AlignmentType.Right);
         Label("1회 교환 비용", 412, 338, 206);
@@ -151,9 +155,7 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
             offers.Length == 0 ? "선택한 필터에 해당하는 품목이 없습니다." :
             selected.Length == 0 ? "선택된 교환식이 없습니다." : "계산할 재화가 없습니다.";
         items.NoResultsTextNode.String = totals.NoResultsTextNode.String;
-        var next = PurchasePlanner.Calculate(selected, merchants.CalculationQuantity).Select(t => new TotalRow(merchants.Icon(t.Key.ItemId),
-            t.Name + (t.Key.Quality == ItemQuality.High ? " HQ" : "") + (t.Key.Collectability > 0 ? $" (소장가치 {t.Key.Collectability} 이상)" : ""),
-            t.Required.ToString("N0"), Count(t.Owned), Count(t.Shortfall))).ToList();
+        var next = PurchasePlanner.Calculate(selected, merchants.CalculationQuantity).Select(Total).ToList();
         if (!totals.OptionsList.SequenceEqual(next))
         {
             if (!totals.OptionsList.Select(r => r.Name).SequenceEqual(next.Select(r => r.Name))) totals.ResetScroll();
@@ -178,6 +180,27 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
             items.OptionsList = itemRows;
             addon->UpdateCollisionNodeList(false);
         }
+    }
+
+    private TotalRow Total(CurrencyTotal cost)
+    {
+        var stock = merchants.CalculationStorage(cost.Key);
+        var coverage = new CurrencyCoverage(cost.Required, cost.Owned, stock.Personal);
+        var name = cost.Name + (cost.Key.Quality == ItemQuality.High ? " HQ" : "") +
+            (cost.Key.Collectability > 0 ? $" (소장가치 {cost.Key.Collectability} 이상)" : "");
+        var details = new List<string> { name, $"필요 {cost.Required:N0} / 지금 사용 가능 {Count(cost.Owned)}",
+            $"개인 보관 기록 {(stock.Personal > 0 ? stock.Personal.ToString("N0") : "미확인")} / 꺼내 쓸 수량(기록 기준) {Count(stock.Personal > 0 || cost.Owned >= cost.Required ? coverage.Retrieve : null)}" };
+        foreach (var location in stock.Locations)
+            details.Add($"{location.Name}: {location.Quantity:N0}" + (location.Role == StorageRole.Personal ? " (합산)" : " (참고 · 합산 제외)"));
+        if (stock.Locations.Count == 0) details.Add("일치하는 보관 기록 없음 · 보유 0개를 뜻하지 않습니다.");
+        details.Add(merchants.StorageHelp);
+        if (stock.Locations.Any(x => x.Name.StartsWith("집사 기록", StringComparison.Ordinal))) details.Add("집사 기록 번호는 조회 순서이며 게임의 집사 정렬/이름과 다를 수 있습니다.");
+        details.Add("총보유/추가 필요는 기록 기준입니다. 미기록 보관함·기록 이후 이동/소비 때문에 실제 수량과 다를 수 있습니다.");
+        return new(merchants.Icon(cost.Key.ItemId), name, cost.Required.ToString("N0"), Count(cost.Owned),
+            stock.Personal > 0 ? $"≥{stock.Personal:N0}" : "미확인",
+            cost.Owned.HasValue || stock.Personal > 0 ? $"≥{coverage.KnownTotal:N0}" : "미확인",
+            coverage.AdditionalAtMost == 0 ? "0" : cost.Owned.HasValue || stock.Personal > 0 ? $"≤{coverage.AdditionalAtMost:N0}" : "미확인",
+            string.Join("\n", details));
     }
 
     private TextNode Label(string text, float x, float y, float width, AlignmentType alignment = AlignmentType.Left, byte fontSize = 14)

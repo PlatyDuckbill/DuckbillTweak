@@ -56,9 +56,9 @@ internal sealed class MerchantService : IDisposable
     public bool DresserLoaded => nativeOwnership.DresserLoaded;
     public bool CabinetLoaded => nativeOwnership.CabinetLoaded;
     public string OwnershipHelp => "품목 종류와 관계없이 등록했거나 보유한 물건을 숨깁니다. 소모품도 보유 중이면 숨깁니다.\n" +
-        "등록한 수집품·소지품·장비함·착용 장비·환상투영함·추억의 보관함을 확인합니다. 집사·초코보 가방은 미포함입니다.\n" +
+        "등록한 수집품·소지품·장비함·착용 장비·환상투영함·추억의 보관함 및 기록된 집사·초코보 가방을 확인합니다.\n" +
         $"환상투영함: {nativeOwnership.DresserSource} / 추억의 보관함: {nativeOwnership.CabinetSource}\n" +
-        (storedInventory.Available ? "Allagan Tools: 현재 캐릭터의 보관함 저장 기록도 확인합니다.\n" : "게임 저장 정보가 없으면 보관함을 한 번 열어 주세요.\n") +
+        storedInventory.Help + "\n공유 금고/하우징 물품은 개인 보유 판정에서 제외합니다.\n" +
         "낡은 악보는 제작 결과 악보가 모두 등록됐으면 제외합니다.";
     public bool IsShopOpen(ushort id) => id != 0 && SessionReady && new[] { "Shop", "ShopExchangeItem", "ShopExchangeCurrency", "InclusionShop" }.Any(name =>
     {
@@ -74,6 +74,8 @@ internal sealed class MerchantService : IDisposable
         return true;
     }
     public long? CalculationQuantity(CurrencyKey key) => displayedAddon != 0 && displayedBalances.TryGetValue(key, out var count) ? count : View.Inventory.Quantity(key);
+    public StoredCurrency CalculationStorage(CurrencyKey key) => storedInventory.Currency(key);
+    public string StorageHelp => storedInventory.Help;
     public Ownership CalculationOwnership(uint id) => displayedAddon != 0 && displayedOwned.Contains(id) ? Ownership.Owned : ItemOwnership(id);
 
     public MerchantService(IDataManager data, IUnlockState unlocks, IGameInventory inventory, IClientState client,
@@ -101,20 +103,18 @@ internal sealed class MerchantService : IDisposable
     {
         var id = rawId >= 1_000_000 ? rawId - 1_000_000 : rawId;
         if (nativeOwned > 0 || View.Inventory.OwnedItems.GetValueOrDefault(id) > 0) return Ownership.Owned;
-        // Query optional storage only for requested/displayed items, not the NPC's
-        // entire catalog while refreshing its metadata.
-        if (!nativeOwnership.Contains(id) && data.GetExcelSheet<Item>().TryGetRow(id, out var item) &&
-            item.EquipSlotCategory.RowId != 0 && !nativeOwnership.StorageKnown(item) && storedInventory.Contains(id)) return Ownership.Owned;
         return ReadOwnership(id, View.Inventory);
     }
     private Ownership ReadOwnership(uint id, InventorySnapshot stock)
     {
         if (stock.OwnedItems.GetValueOrDefault(id) > 0 || nativeOwnership.Contains(id)) return Ownership.Owned;
         if (!data.GetExcelSheet<Item>().TryGetRow(id, out var item)) return Ownership.Unknown;
+        if (storedInventory.Contains(id, !nativeOwnership.StorageKnown(item))) return Ownership.Owned;
         var registration = nativeOwnership.Registration(item);
         if (registration == Ownership.Owned) return Ownership.Owned;
-        if (registration == Ownership.Unknown || !nativeOwnership.StorageKnown(item)) return Ownership.Unknown;
-        return stock.OwnershipComplete ? Ownership.Missing : Ownership.Unknown;
+        // The storage IPC cannot certify that all retainers/containers were scanned.
+        // An absent record therefore does not establish absence across the requested scope.
+        return Ownership.Unknown;
     }
     public bool IsExcludedSupply(uint rawId) => ItemDetails(rawId)?.ExcludedSupply == true;
     public Reward? NativeReward(uint rawId, uint quantity, IReadOnlyList<Price>? prices = null)

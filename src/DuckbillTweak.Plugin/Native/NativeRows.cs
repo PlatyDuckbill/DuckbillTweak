@@ -6,22 +6,32 @@ using KamiToolKit.Nodes;
 namespace DuckbillTweak.Plugin.Native;
 
 internal sealed record CategoryOption(uint Id, string Name);
-internal sealed record TotalRow(uint Icon, string Name, string Required, string Owned, string Shortfall);
+internal sealed record TotalRow(uint Icon, string Name, string Required, string Usable, string Stored, string Total, string Additional, string Details);
 internal sealed class TotalRowNode : ListItemNode<TotalRow>, IListItemNode
 {
     public static float ItemHeight => 30;
     private readonly IconImageNode icon = new() { Position = new(2, 3), Size = new(24, 24), FitTexture = true };
-    private readonly TextNode name = new() { Position = new(32, 2), Size = new(284, 26), FontSize = 14, TextFlags = TextFlags.Ellipsis };
-    private readonly TextNode required = new() { Position = new(322, 2), Size = new(112, 26), FontSize = 14, AlignmentType = AlignmentType.Right };
-    private readonly TextNode owned = new() { Position = new(444, 2), Size = new(112, 26), FontSize = 14, AlignmentType = AlignmentType.Right };
-    private readonly TextNode shortfall = new() { Position = new(566, 2), Size = new(112, 26), FontSize = 14, AlignmentType = AlignmentType.Right };
+    private readonly TextNode name = new() { Position = new(32, 2), Size = new(176, 26), FontSize = 14, TextFlags = TextFlags.Ellipsis };
+    private readonly TextNode required = Number(214, 80);
+    private readonly TextNode usable = Number(300, 90);
+    private readonly TextNode stored = Number(396, 90);
+    private readonly TextNode total = Number(492, 90);
+    private readonly TextNode additional = Number(588, 90);
+    private static TextNode Number(float x, float width) => new() { Position = new(x, 2), Size = new(width, 26), FontSize = 13, AlignmentType = AlignmentType.Right };
     public TotalRowNode()
     {
-        icon.AttachNode(this); name.AttachNode(this); required.AttachNode(this); owned.AttachNode(this); shortfall.AttachNode(this);
-        DisableInteractions();
+        icon.AttachNode(this); name.AttachNode(this); required.AttachNode(this); usable.AttachNode(this);
+        stored.AttachNode(this); total.AttachNode(this); additional.AttachNode(this);
+        EnableSelection = false;
+        RemoveEvent(AtkEventType.MouseDown);
     }
     protected override void SetNodeData(TotalRow row)
-    { icon.IconId = row.Icon; name.String = row.Name; required.String = row.Required; owned.String = row.Owned; shortfall.String = row.Shortfall; }
+    {
+        icon.IconId = row.Icon; name.String = row.Name; required.String = row.Required; usable.String = row.Usable;
+        stored.String = row.Stored; total.String = row.Total; additional.String = row.Additional;
+        TextTooltip = row.Details;
+        foreach (var node in new[] { name, required, usable, stored, total, additional }) node.TextTooltip = row.Details;
+    }
 }
 
 internal sealed record CalculationRow(uint ItemId, uint Icon, string Name, string Quantity, string Cost, string Ownership);
