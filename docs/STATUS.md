@@ -4,7 +4,7 @@
 
 - 0.2.0.0: 설치 설명/Changelog, 내장 한영 업데이트 내역, README/CHANGELOG/영문 릴리스 노트, Release 패키징/해시/추출 검사 추가. 사용자 제공 목록 이미지를512×512 투명 PNG로 반영했고 원본은assets/source에 보존했다. IconUrl은 버전 태그 경로를 사용한다.
 - 설치 목록 `repo/pluginmaster.json`은 공개 전까지 빈 배열이다. 고정 Release 후보/이미지 반영 후 공개 Release→익명 다운로드 확인→설치 JSON 게시 순서로 진행한다. 절차는 DISTRIBUTION.md 참조.
-- 소스5516b9d의 깨끗한 상태에서 candidate4를 고정했다. ZIP409,027바이트/SHA2567aaade38…af6b19de. GitHub Release425486053 초안과 ZIP/체크섬 업로드·서버 digest 대조 완료. 공개/최종 Release 실기/목록 이미지/설치 JSON 갱신은 남아 있으며 상세는 RELEASE.md를 따른다.
+- 이미지 반영 소스f19c07a의 깨끗한 상태에서 candidate6을 고정했다. ZIP409,068바이트/SHA25690fb837c…8bef5bf6. GitHub Release425486053 초안의 대상과 ZIP/체크섬을 갱신하고 서버 digest를 대조했다. 512×512 아이콘의 실제main raw 다운로드 해시도 확인했다. 공개/최종 Release 실기/설치 JSON 갱신은 남아 있으며 상세는 RELEASE.md를 따른다.
 - 같은 Downloads의 DuckbillFisher는 읽기 전용으로 참고했다. SDK/API/게임 호환성 가드는 유지하며, 상점 체크 저장 정책은 변경하지 않는다.
 
 - 원격: PlatyDuckbill/DuckbillTweak, main. SDK10.0.402 / Dalamud SDK15.0.0·API15 유지.
