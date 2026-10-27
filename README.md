@@ -21,14 +21,16 @@
 
 ## 설치
 
-**0.2.0.0은 첫 배포 준비 중입니다. 현재 릴리스 초안은 공개 설치 대상이 아닙니다.**
-공개 후 Dalamud 설정의 커스텀 플러그인 저장소에 아래 URL을 추가하고, 플러그인 목록에서 **DuckbillTweak**를 설치합니다.
+현재 공개 버전은 **[0.2.0.0](https://github.com/PlatyDuckbill/DuckbillTweak/releases/tag/v0.2.0.0)**입니다.
+Dalamud 설정의 커스텀 플러그인 저장소에 아래 URL을 입력하고 같은 줄의 **＋**를 누른 뒤 저장합니다. 플러그인 목록을 새로고침하고 **DuckbillTweak**를 검색해 설치합니다.
 
 ```text
 https://raw.githubusercontent.com/PlatyDuckbill/DuckbillTweak/main/repo/pluginmaster.json
 ```
 
-이후 업데이트도 같은 설치 목록에서 받을 수 있습니다. 배포 전에는 설치 목록을 빈 상태로 유지합니다.
+이후 업데이트도 같은 설치 목록에서 받을 수 있습니다. DuckbillFisher는 기존 Fisher 전용 URL을 사용합니다.
+
+개발 DLL을 등록해 사용 중이라면 해당 등록을 비활성화한 뒤 배포판을 설치해 중복 로드를 피합니다. 기존 기능 설정은 유지됩니다.
 
 ## 사용
 

@@ -1,1 +1,33 @@
-[]
+[
+  {
+    "Author": "PlatyDuckbill",
+    "Name": "DuckbillTweak",
+    "InternalName": "DuckbillTweak",
+    "AssemblyVersion": "0.2.0.0",
+    "Description": "Small conveniences in the game's own UI, for FFXIV Korea.\n\n• Filter owned equipment and collectibles, or focus shop lists on collection items.\n• Calculate the current shop's currency requirements and shortages, with linked storage records.\n• Right-click loot items to view participant choices and publicly received roll results.\n• Enable PvP chat bubbles using your game's chat bubble settings.\n\nOpen settings: /dbtw or /duckbilltweak. Each feature starts disabled.\nRelease history: Settings → 업데이트 내역, or /dbtw changelog.\n\nKorean client and inspected Dalamud API 15 bindings only. Loot numbers appear when the game publishes results. Stored inventory records may be incomplete or out of date.",
+    "ApplicableVersion": "any",
+    "RepoUrl": "https://github.com/PlatyDuckbill/DuckbillTweak",
+    "Tags": [
+      "tweaks",
+      "shop",
+      "collection",
+      "loot",
+      "pvp",
+      "한국어"
+    ],
+    "DalamudApiLevel": 15,
+    "LoadRequiredState": 0,
+    "LoadSync": false,
+    "CanUnloadAsync": true,
+    "LoadPriority": 0,
+    "IconUrl": "https://raw.githubusercontent.com/PlatyDuckbill/DuckbillTweak/v0.2.0.0/assets/duckbilltweak-icon.png",
+    "Punchline": "Shop collection filters, currency planning and loot results for FFXIV Korea.",
+    "Changelog": "• Filter owned equipment and collectibles, or focus shop lists on collection items.\n• Calculate the current shop's currency requirements and shortages, with linked storage records.\n• Right-click loot items to view participant choices and publicly received roll results.\n• Enable PvP chat bubbles using your game's chat bubble settings.\n• Turn each feature on or off independently in settings.",
+    "AcceptsFeedback": true,
+    "DownloadLinkInstall": "https://github.com/PlatyDuckbill/DuckbillTweak/releases/download/v0.2.0.0/DuckbillTweak-0.2.0.0.zip",
+    "LastUpdate": 1793075904,
+    "IsHide": false,
+    "IsTestingExclusive": false,
+    "DownloadLinkUpdate": "https://github.com/PlatyDuckbill/DuckbillTweak/releases/download/v0.2.0.0/DuckbillTweak-0.2.0.0.zip"
+  }
+]
