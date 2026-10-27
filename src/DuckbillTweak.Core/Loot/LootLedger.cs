@@ -107,11 +107,15 @@ public sealed class LootLedger
         // No winner/roll is not evidence of a pass or a timeout.
     }
 
-    public static IReadOnlyDictionary<PlayerKey, int> Ranks(LootEntry entry)
+    public static RollKind ChoiceFor(LootEntry entry, PlayerKey player)
     {
-        if (entry.Ambiguous) return new Dictionary<PlayerKey, int>();
-        var rolls = entry.Rolls.Values.Where(r => r.Kind is RollKind.Need or RollKind.Greed && r.Value is >= 1 and <= 99).ToArray();
-        return rolls.ToDictionary(r => r.Player, r => 1 + rolls.Count(other =>
-            (other.Kind == RollKind.Need && r.Kind == RollKind.Greed) || other.Kind == r.Kind && other.Value > r.Value));
+        if (entry.Ambiguous) return RollKind.Unknown;
+        return entry.Rolls.TryGetValue(player, out var roll) ? roll.Kind : entry.Choices.GetValueOrDefault(player, RollKind.Unknown);
     }
+
+    public static IEnumerable<PlayerKey> OrderPlayers(LootEntry entry, IEnumerable<PlayerKey> players) => players
+        .OrderBy(player => entry.Left.Contains(player) || ChoiceFor(entry, player) == RollKind.Pass ? 3 : ChoiceFor(entry, player) switch
+        { RollKind.Need => 0, RollKind.Greed => 1, _ => 2 })
+        .ThenByDescending(player => entry.Ambiguous ? 0 : entry.Rolls.GetValueOrDefault(player)?.Value ?? 0)
+        .ThenBy(player => player.Name, StringComparer.Ordinal).ThenBy(player => player.WorldId);
 }

@@ -99,7 +99,7 @@ internal sealed class LootService : IDisposable
             roll = new(key, kind, kindText, value);
             if (observedKinds.Add(kind)) log.Information("Loot roll kind decoded: {Kind}", kind);
             if (kind == RollKind.Unknown && rejectionReasons.Add("unknown roll kind"))
-                log.Warning("Loot roll type not recognized; keeping the value without assigning Need/Greed or a rank.");
+                log.Warning("Loot roll type not recognized; keeping the value without assigning Need/Greed.");
         }
         if (!Ledger.Observe(rawId, name, party.IsAlliance, key, roll, awarded, now)) Reject("ambiguous or completed item");
         else if (roll is not null && !recordedRoll)

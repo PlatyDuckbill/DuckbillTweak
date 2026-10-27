@@ -73,7 +73,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
                     loot.NativeObservationEnabled = true;
                     settings = new NativeSettingsAddon(config, Save) { InternalName = "DuckbillTweakSettings", Title = "DuckbillTweak", Size = new Vector2(580, 302) };
                     currency = new NativeCurrencyAddon(merchants, config, Save) { InternalName = "DuckbillTweakCurrency", Title = "필요 재화", Size = new Vector2(760, 586) };
-                    lootPopup = new NativeLootAddon(loot, config) { InternalName = "DuckbillTweakRolls", Title = "입찰 현황", Size = new Vector2(420, 500) };
+                    lootPopup = new NativeLootAddon(loot, config) { InternalName = "DuckbillTweakRolls", Title = "입찰 현황", Size = new Vector2(420, 420) };
                     shop = new(merchants, config, Save, currency, log);
                     exchanges.Add(new("InclusionShop", merchants, config, Save, currency, log));
                     exchanges.Add(new("ShopExchangeItem", merchants, config, Save, currency, log));
