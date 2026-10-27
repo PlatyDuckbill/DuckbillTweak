@@ -1,5 +1,15 @@
 [
   {
+    "Version": "0.2.0.2",
+    "Date": "2026-10-28",
+    "Korean": [
+      "입찰 현황 창을 미리 열지 않아도 나중에 열어 그동안 수집된 선택·상태와 공개된 주사위 결과를 확인할 수 있도록 수정했습니다."
+    ],
+    "English": [
+      "Fix loot tracking so opening the status window later shows collected choices, states, and publicly received roll results."
+    ]
+  },
+  {
     "Version": "0.2.0.1",
     "Date": "2026-10-28",
     "Korean": [

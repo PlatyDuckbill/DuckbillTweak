@@ -35,7 +35,24 @@ internal sealed class LootService : IDisposable
     public uint Icon(uint rawId) => data.GetExcelSheet<Item>().TryGetRow(rawId % 1_000_000, out var item) ? item.Icon : 0u;
     public string PlayerTooltip(PlayerKey key) => data.GetExcelSheet<World>().TryGetRow(key.WorldId, out var world)
         ? $"{key.Name}@{world.Name.ExtractText()}" : key.Name;
-    public void CaptureRoster(LootEntry entry) => Ledger.CaptureRoster(entry, PartyMembers, OtherMembers, false);
+    private void CaptureRoster(LootEntry entry) => Ledger.CaptureRoster(entry, PartyMembers, OtherMembers, false);
+    public LootEntry? FindCurrentEntry(uint rawItemId, bool duplicate)
+    {
+        var entry = native.FindCurrentEntry(Ledger, rawItemId, duplicate);
+        if (entry is not null)
+            log.Information("Loot popup record linked: ItemId={Item}; Entry={Entry}; Completed={Completed}; Rolls={Rolls}; Choices={Choices}; Ambiguous={Ambiguous}",
+                rawItemId, entry.Id, !entry.IsOpen, entry.Rolls.Count, entry.Choices.Count, entry.Ambiguous || duplicate);
+        return entry;
+    }
+
+    private LootEntry? CreateNativeEntry(uint rawItemId)
+    {
+        if (!data.GetExcelSheet<Item>().TryGetRow(rawItemId % 1_000_000, out var item) || item.Name.IsEmpty) return null;
+        var name = item.Name.ExtractText() + (rawItemId >= 1_000_000 ? " HQ" : "");
+        var entry = Ledger.Add(rawItemId, name, party.IsAlliance, DateTimeOffset.UtcNow);
+        CaptureRoster(entry);
+        return entry;
+    }
 
     public LootService(IChatGui chat, IDataManager data, IClientState client, IPlayerState player,
         IPartyList party, IFramework framework, Configuration config, IPluginLog log)
@@ -74,7 +91,11 @@ internal sealed class LootService : IDisposable
         var now = DateTimeOffset.UtcNow;
         if (message.LogMessageId == 5183)
         {
-            CaptureRoster(Ledger.Add(rawId, name, party.IsAlliance, now));
+            // The Framework snapshot may have discovered this reward before its log.
+            // Native chest/slot identities, rather than a second log seed, detect duplicates.
+            var entries = Ledger.Entries.Where(e => e.RawItemId == rawId && e.IsOpen).ToArray();
+            if (entries.Length == 0) CaptureRoster(Ledger.Add(rawId, name, party.IsAlliance, now));
+            else foreach (var entry in entries) CaptureRoster(entry);
             return;
         }
         var awarded = message.LogMessageId is 1232 or 1233 or 5187 or 5188;
@@ -126,6 +147,10 @@ internal sealed class LootService : IDisposable
         {
             Clear(); character = player.ContentId; territory = client.TerritoryType;
         }
+        var now = DateTimeOffset.UtcNow;
+        // The 16-slot read runs independently of either loot window. Do not throttle
+        // local choices with the slower roster scan: a roll can finish within a second.
+        native.Update(Ledger, Self, CreateNativeEntry, now);
         if (lastRead != 0 && Stopwatch.GetElapsedTime(lastRead).TotalSeconds < 1) return;
         lastRead = Stopwatch.GetTimestamp();
         PartyMembers = party.Select(m => new PlayerKey(m.Name.TextValue, m.World.RowId)).ToArray();
@@ -146,8 +171,7 @@ internal sealed class LootService : IDisposable
         }
         OtherMembers = others;
         foreach (var entry in Ledger.Entries.Where(e => e.IsOpen)) Ledger.CaptureRoster(entry, PartyMembers, OtherMembers, true);
-        native.Update(Ledger, Self, DateTimeOffset.UtcNow);
-        Ledger.Prune(DateTimeOffset.UtcNow);
+        Ledger.Prune(now);
     }
 
     public void Clear()
@@ -155,6 +179,7 @@ internal sealed class LootService : IDisposable
         Ledger.Clear(); PartyMembers = []; OtherMembers = []; Unattributed = 0;
         receivedMessages.Clear(); rejectionReasons.Clear(); observedKinds.Clear(); recordedRoll = false;
         native.Clear();
+        lastRead = 0;
     }
 
     public void Dispose()

@@ -19,17 +19,17 @@ internal sealed unsafe class NativeLootAddon(LootService loot, Configuration con
     private readonly List<List<TextNode>> headings = [];
     private readonly List<HorizontalLineNode> lines = [];
 
-    public void ShowItem(uint rawItemId, string name, bool alliance, bool duplicate)
+    public bool ShowItem(uint rawItemId, bool duplicate)
     {
-        var entry = loot.Ledger.Entries.LastOrDefault(e => e.RawItemId == rawItemId && e.IsOpen)
-            ?? loot.Ledger.Add(rawItemId, name, alliance, DateTimeOffset.UtcNow);
-        loot.CaptureRoster(entry);
-        if (duplicate) loot.Ledger.MarkAmbiguous(rawItemId);
+        var entry = loot.FindCurrentEntry(rawItemId, duplicate);
+        if (entry is null) return false;
+        if (duplicate) loot.Ledger.MarkAmbiguous(entry);
         entryId = entry.Id; lastRead = 0;
-        Size = new(alliance ? 1164 : 420, alliance ? 446 : 420);
+        Size = new(entry.Alliance ? 1164 : 420, entry.Alliance ? 446 : 420);
         if (columns.Count > 0) SetWindowSize(Size);
         foreach (var column in columns) { column.OptionsList = []; column.ResetScroll(); }
         Open();
+        return true;
     }
 
     protected override void OnSetup(AtkUnitBase* addon, Span<AtkValue> values)

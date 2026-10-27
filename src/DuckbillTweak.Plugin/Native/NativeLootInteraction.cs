@@ -5,7 +5,6 @@ using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using Dalamud.Game.Gui.ContextMenu;
 using Dalamud.Plugin.Services;
-using DuckbillTweak.Plugin.Shops;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
@@ -22,9 +21,7 @@ internal sealed unsafe class NativeLootInteraction : IDisposable
     private readonly IContextMenu contextMenu;
     private readonly Configuration config;
     private readonly NativeLootAddon popup;
-    private readonly IPartyList party;
     private readonly IGameGui gui;
-    private readonly MerchantService merchants;
     private readonly IPluginLog log;
     private readonly AddonController<AddonNeedGreed> controller;
     private readonly Dictionary<nint, IAddonEventHandle> handles = [];
@@ -35,12 +32,12 @@ internal sealed unsafe class NativeLootInteraction : IDisposable
     private (ushort AddonId, int Items, int Rows, int Nodes)? lastShape;
     private bool disposed;
 
-    public NativeLootInteraction(IAddonEventManager events, IAddonLifecycle lifecycle, IContextMenu contextMenu, IGameGui gui, IPartyList party,
-        Configuration config, NativeLootAddon popup, MerchantService merchants, IPluginLog log)
+    public NativeLootInteraction(IAddonEventManager events, IAddonLifecycle lifecycle, IContextMenu contextMenu, IGameGui gui,
+        Configuration config, NativeLootAddon popup, IPluginLog log)
     {
-        this.events = events; this.lifecycle = lifecycle; this.gui = gui; this.party = party;
+        this.events = events; this.lifecycle = lifecycle; this.gui = gui;
         this.contextMenu = contextMenu;
-        this.config = config; this.popup = popup; this.merchants = merchants; this.log = log;
+        this.config = config; this.popup = popup; this.log = log;
         controller = new AddonController<AddonNeedGreed> { AddonName = "NeedGreed", OnUpdate = Update, OnFinalize = _ => Reset() };
         lifecycle.RegisterListener(AddonEvent.PreReceiveEvent, "NeedGreed", ReceiveListEvent);
         contextMenu.OnMenuOpened += OnMenuOpened;
@@ -90,7 +87,12 @@ internal sealed unsafe class NativeLootInteraction : IDisposable
         var request = pending;
         if (request is null) return;
         pending = null;
-        if (Stopwatch.GetElapsedTime(request.Received).TotalSeconds > 1 || request.Generation != generation || request.AddonId != addon->Id ||
+        if (Stopwatch.GetElapsedTime(request.Received).TotalSeconds > 1)
+        {
+            log.Warning("Loot popup record could not be linked to a current reward: ItemId={Item}; Index={Index}", request.ItemId, request.Index);
+            return;
+        }
+        if (request.Generation != generation || request.AddonId != addon->Id ||
             request.Index < 0 || request.Index >= addon->NumItems || request.Index >= list->ListLength ||
             addon->Items[request.Index].ItemId != request.ItemId) return;
         try
@@ -99,7 +101,13 @@ internal sealed unsafe class NativeLootInteraction : IDisposable
             var copies = 0;
             for (var index = 0; index < addon->NumItems; index++)
                 if (addon->Items[index].ItemId == request.ItemId) copies++;
-            popup.ShowItem(request.ItemId, merchants.ItemDisplayName(request.ItemId), party.IsAlliance, copies > 1);
+            if (!popup.ShowItem(request.ItemId, copies > 1))
+            {
+                // Wait for Framework observation without creating an empty ledger entry.
+                // The original row/item/generation and timeout are checked again next update.
+                pending = request;
+                return;
+            }
             log.Information("Loot roll popup requested: ItemId={Item}; Index={Index}", request.ItemId, request.Index);
         }
         catch (Exception ex) { log.Error(ex, "Loot roll popup could not open for item {Item}", request.ItemId); }

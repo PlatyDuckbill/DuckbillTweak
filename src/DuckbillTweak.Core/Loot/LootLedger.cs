@@ -38,6 +38,11 @@ public sealed class LootLedger
         foreach (var entry in entries.Where(e => e.RawItemId == rawItemId && e.IsOpen)) entry.Ambiguous = true;
     }
 
+    public void MarkAmbiguous(LootEntry entry) => entry.Ambiguous = true;
+
+    // Keep a visible native reward available even after its result has been received.
+    public void ObservePresence(LootEntry entry, DateTimeOffset now) => entry.LastEventAt = now;
+
     public LootEntry Add(uint rawItemId, string name, bool alliance, DateTimeOffset now)
     {
         var duplicates = entries.Where(x => x.RawItemId == rawItemId && x.IsOpen).ToArray();
