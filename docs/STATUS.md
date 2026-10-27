@@ -3,7 +3,7 @@
 갱신: 2026-10-27 · 0.2.0.0 첫 공개. 아래 버전별 기록은 당시의 구현/검증 결과이며 현재 정책은 최신 기록을 따른다.
 
 - 0.2.0.0: 설치 설명/Changelog, 내장 한영 업데이트 내역, README/CHANGELOG/영문 릴리스 노트, Release 패키징/해시/추출 검사 추가. 사용자 제공 목록 이미지를512×512 투명 PNG로 반영했고 원본은assets/source에 보존했다. IconUrl은 버전 태그 경로를 사용한다.
-- 사용자 결정에 따라 Fisher/Tweak는 각각 전용 커스텀 저장소 URL로 배포한다. `repo/pluginmaster.json`에는 DuckbillTweak0.2.0.0 한 항목만 게시하며 Fisher는 변경하지 않는다. 통합은 추후 작업이다.
+- 사용자 요청으로 Fisher/Tweak 설치 안내를 DuckbillRepo 공용 URL로 통합했다. 원본은 단일 객체 `repo/release.json`으로 제공하며 기존 `repo/pluginmaster.json` URL 종료 절차를 진행한다. 실행 파일/기존 Release는 변경하지 않는다.
 - 이미지 반영 소스f19c07a의 candidate6을 고정했다. ZIP409,068바이트/SHA25690fb837c…8bef5bf6. v0.2.0.0 태그와 GitHub Release425486053을2026-10-27 13:38:24 UTC에 공개했다. ZIP/체크섬/태그 아이콘의 인증 없는 다운로드 HTTP200/해시 일치를 확인한 뒤 설치 목록을 작성했다. 실제 설치/고정 Release 기능 대표 실기 확인은 별도이며 상세는 RELEASE.md를 따른다.
 - 같은 Downloads의 DuckbillFisher는 읽기 전용으로 참고했다. SDK/API/게임 호환성 가드는 유지하며, 상점 체크 저장 정책은 변경하지 않는다.
 

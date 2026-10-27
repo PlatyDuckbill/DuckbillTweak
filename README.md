@@ -25,10 +25,11 @@
 Dalamud 설정의 커스텀 플러그인 저장소에 아래 URL을 입력하고 같은 줄의 **＋**를 누른 뒤 저장합니다. 플러그인 목록을 새로고침하고 **DuckbillTweak**를 검색해 설치합니다.
 
 ```text
-https://raw.githubusercontent.com/PlatyDuckbill/DuckbillTweak/main/repo/pluginmaster.json
+https://raw.githubusercontent.com/PlatyDuckbill/DuckbillRepo/main/pluginmaster.json
 ```
 
-이후 업데이트도 같은 설치 목록에서 받을 수 있습니다. DuckbillFisher는 기존 Fisher 전용 URL을 사용합니다.
+이 공용 저장소에서 **DuckbillTweak와 DuckbillFisher**를 각각 설치·업데이트할 수 있습니다.
+기존 Tweak/Fisher 개별 저장소 URL을 등록했다면 해당 행을 제거하고 위 공용 URL로 변경합니다. 플러그인을 삭제하거나 설정을 초기화할 필요는 없습니다.
 
 개발 DLL을 등록해 사용 중이라면 해당 등록을 비활성화한 뒤 배포판을 설치해 중복 로드를 피합니다. 기존 기능 설정은 유지됩니다.
 

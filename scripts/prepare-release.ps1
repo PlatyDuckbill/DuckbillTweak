@@ -88,6 +88,7 @@ try {
     $duckbillHash = (Get-FileHash -LiteralPath $duckbillZipPath -Algorithm SHA256).Hash.ToLowerInvariant()
     [IO.File]::WriteAllText((Join-Path $duckbillOutput "$duckbillAssetName.sha256"), "$duckbillHash  $duckbillAssetName`n", [Text.UTF8Encoding]::new($false))
     [IO.File]::WriteAllText((Join-Path $duckbillOutput 'pluginmaster.json'), (ConvertTo-Json -InputObject @($duckbillManifest) -Depth 20) + "`n", [Text.UTF8Encoding]::new($false))
+    [IO.File]::WriteAllText((Join-Path $duckbillOutput 'release.json'), (ConvertTo-Json -InputObject $duckbillManifest -Depth 20).Replace("`r`n", "`n") + "`n", [Text.UTF8Encoding]::new($false))
     [IO.File]::WriteAllText((Join-Path $duckbillOutput 'release-notes.md'), $duckbillReleaseMarkdown, [Text.UTF8Encoding]::new($false))
     $duckbillRecord = [ordered]@{ Version = $duckbillVersion; PreparedAtUtc = [DateTimeOffset]::UtcNow.ToString('O')
         SourceCommit = (git rev-parse HEAD); SourceDirty = [bool](git status --porcelain)
@@ -98,5 +99,5 @@ try {
     Write-Output "Prepared: $duckbillZipPath"
     Write-Output "SHA256: $duckbillHash"
     Write-Output "Review DLL: $(Join-Path $duckbillValidation 'DuckbillTweak.dll')"
-    Write-Output 'Nothing has been published. repo/pluginmaster.json was not modified.'
+    Write-Output 'Nothing has been published. repo/release.json was not modified. The legacy pluginmaster.json candidate is local only.'
 } finally { Pop-Location }
