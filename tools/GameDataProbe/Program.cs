@@ -23,6 +23,7 @@ if (args.Length >= 3 && args[0] == "native-contract")
         (0x12C1B59, [0x89, 0x84, 0xBE, 0xA0, 0x21, 0x00, 0x00]),
         (0x12C2D5F, [0x8B, 0xAC, 0x9E, 0xA0, 0x21, 0x00, 0x00]),
         (0x12C2BAB, [0x8B, 0x84, 0x19, 0x20, 0x03, 0x00, 0x00]),
+        (0x12C26CB, [0x88, 0x93, 0x18, 0x03, 0x00, 0x00]), // Selected currency tab.
     })
     {
         var section = gamePe.PEHeaders.SectionHeaders.Single(s => rva >= s.VirtualAddress && rva + bytes.Length <= s.VirtualAddress + s.SizeOfRawData);
@@ -99,7 +100,7 @@ Price DecodeCatalogCost(ExchangeCost cost)
 }
 if (args[1] == "items" && args.Length >= 3)
 {
-    foreach (var item in game.GetExcelSheet<Item>()!.Where(i => i.Name.ExtractText().Contains(args[2], StringComparison.Ordinal)))
+    foreach (var item in game.GetExcelSheet<Item>()!.Where(i => uint.TryParse(args[2], out var id) ? i.RowId == id : i.Name.ExtractText().Contains(args[2], StringComparison.Ordinal)))
         Console.WriteLine($"Item={item.RowId}; Name={item.Name.ExtractText()}; Category={item.ItemUICategory.RowId}/{item.ItemUICategory.ValueNullable?.Name.ExtractText()}; Search={item.ItemSearchCategory.RowId}; Action={item.ItemAction.RowId}/{item.ItemAction.ValueNullable?.Action.RowId}; ActionData={string.Join(',', item.ItemAction.ValueNullable?.Data.ToArray() ?? [])}; Additional={item.AdditionalData.RowType?.Name}/{item.AdditionalData.RowId}; Equip={item.EquipSlotCategory.RowId}");
 }
 else if (args[1] == "exchange-observed" && args.Length >= 4)
@@ -232,7 +233,7 @@ else if (args[1] == "shop-policy-audit")
     foreach (var entry in excludedUnlocks) Console.WriteLine($"Review={entry.Item.RowId}/{entry.Item.Name.ExtractText()}/{entry.Purpose}");
     foreach (var entry in classified.Where(x => x.Item.Name.ExtractText().Contains("강화약", StringComparison.Ordinal) ||
                  x.Item.RowId is 24337 or 14273 or 14274 or 14952 or 6954 or 6955 or 50847 or 4868 or 5890 or 7153 or 8837 or
-                     33328 or 9615 or 9852 or 17723 or 16784 or 49121 or 27593 or 50414 or 10128 or 30137 or 49806))
+                     33328 or 9615 or 9852 or 17723 or 16784 or 49121 or 27593 or 50414 or 10128 or 30137 or 49806 or 46825 or 49787))
         Console.WriteLine($"Item={entry.Item.RowId}/{entry.Item.Name.ExtractText()}; Purpose={entry.Purpose}; Excluded={ShopItemPolicy.Excluded(entry.Purpose)}");
     // Use the production filter/planner on the real 11-row coin exchange. No ownership is assumed.
     foreach (var shop in shops.Where(s => s.Item.Any(o => o.ItemCosts.Any(c => c.ItemCost.RowId == 50847))))

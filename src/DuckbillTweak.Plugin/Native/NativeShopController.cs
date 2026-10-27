@@ -190,7 +190,11 @@ internal sealed unsafe class NativeShopController : IDisposable
         categories = new DropDownNode<CategoryOption> { Position = new(310, 80), Size = new(122, 28),
             GetLabelFunction = c => c.Name, Options = [new(0, "모든 종류")] };
         categories.SelectedOption = categories.Options[0];
-        categories.OnOptionSelected = c => { categoryId = c.Id; filteredList?.ResetScroll(); lastRead = 0; };
+        categories.OnOptionSelected = c =>
+        {
+            if (categoryId != c.Id) { RestoreList(addon); merchants.ResetFilters(addon->Id); }
+            categoryId = c.Id; filteredList?.ResetScroll(); lastRead = 0;
+        };
         categories.AttachNode(&addon->AtkUnitBase);
         calculate = new TextButtonNode { Position = new(444, 80), Size = new(110, 28), String = "필요 재화",
             OnClick = () => currency.OpenForShop(addon->Id) };

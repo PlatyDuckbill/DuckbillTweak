@@ -29,6 +29,7 @@ internal sealed unsafe class NativeExchangeController : IDisposable
     private nint boundAddon;
     private long lastRead;
     private string context = "";
+    private string pageIdentity = "";
     private bool sync;
     private bool renderFailed;
     private (int Total, int Visible)? lastApplied;
@@ -72,6 +73,16 @@ internal sealed unsafe class NativeExchangeController : IDisposable
         if (!merchants.SessionReady || !addon->IsVisible || !Shape(addon)) { if (boundAddon == (nint)addon) Detach(addon); return; }
         if (boundAddon == 0) Attach(addon);
         if (missing is null) return;
+        var page = ReadPageIdentity(addon);
+        if (page is not null && page != pageIdentity)
+        {
+            if (pageIdentity.Length > 0)
+            {
+                Restore(addon); merchants.ClearDisplayedShop(addon->Id);
+                merchants.ResetFilters(addon->Id); lastRead = 0;
+            }
+            pageIdentity = page;
+        }
         var filters = merchants.FiltersFor(addon->Id);
         sync = true;
         if (missing.IsChecked != filters.HideOwned) missing.IsChecked = filters.HideOwned;
@@ -124,7 +135,7 @@ internal sealed unsafe class NativeExchangeController : IDisposable
     {
         rows = []; key = "";
         var sourceCount = NativeTreeFilter.SourceCount(list);
-        if (sourceCount < 0) return false;
+        if (sourceCount <= 0) return false; // Tab refresh briefly publishes an empty intermediate tree.
         if (name != "InclusionShop")
         {
             var shop = AgentShop.Instance();
@@ -297,7 +308,10 @@ internal sealed unsafe class NativeExchangeController : IDisposable
             for (var i = 0; i < shop->ItemReceiveCount; i++)
             {
                 ref var item = ref shop->ItemReceive[i];
-                if (item.ItemId != id.UInt || item.ItemIconId != icon.UInt) continue;
+                // AgentShop's presentation icon is not part of item identity. Currency
+                // shops can use a different icon value from their rendered tab records.
+                // A unique raw ID (including HQ) is required; duplicates still fail closed.
+                if (item.ItemId != id.UInt) continue;
                 failure = $"row {rowIndex}: duplicate agent item {id.UInt}";
                 if (source != -1) return false; // Ambiguous duplicate reward: retain the original list.
                 source = i;
@@ -317,6 +331,23 @@ internal sealed unsafe class NativeExchangeController : IDisposable
         var length = 0;
         while (length < 512 && pointer[length] != 0) length++;
         return length == 512 ? "" : Encoding.UTF8.GetString(new ReadOnlySpan<byte>(pointer, length));
+    }
+
+    private string? ReadPageIdentity(AtkUnitBase* addon)
+    {
+        if (name == "InclusionShop")
+        {
+            var agent = AgentInclusionShop.Instance();
+            if (agent is null || agent->AddonId != addon->Id || agent->Data is null) return null;
+            var data = agent->Data;
+            if (!data->IsShopReady || data->SelectedCategoryIndex >= data->CategoryCount || data->CategoryCount > data->Categories.Length) return null;
+            return $"{data->InclusionShopId}:{data->SelectedCategoryIndex}:{data->SelectedSubCategoryIndex}";
+        }
+        var shop = AgentShop.Instance();
+        if (shop is null || shop->AddonId != addon->Id) return null;
+        // KR setup RVA12C1416 and tab selection RVA12C26CB use this selected tab byte.
+        var tab = CurrencyShop ? *((byte*)addon + 0x318) : 0;
+        return tab is < 0 or > 3 ? null : $"{ReadShopName(shop)}:{tab}";
     }
 
     private void Attach(AtkUnitBase* addon)
@@ -360,7 +391,7 @@ internal sealed unsafe class NativeExchangeController : IDisposable
         foreach (var (id, y) in positions) { var node = addon->GetNodeById(id); if (node is not null) node->SetYFloat(y); }
         var list = addon->GetComponentListById(ListId); if (list is not null && list->OwnerNode is not null) list->SetSize(list->OwnerNode->Width, listHeight);
         addon->UpdateCollisionNodeList(false);
-        positions.Clear(); boundAddon = 0; context = ""; renderFailed = false; lastShape = null; lastFailure = null; lastReadFailure = null;
+        positions.Clear(); boundAddon = 0; context = ""; pageIdentity = ""; renderFailed = false; lastShape = null; lastFailure = null; lastReadFailure = null;
     }
     public void Dispose() { controller.Dispose(); if (boundAddon != 0) Detach((AtkUnitBase*)boundAddon); }
 }

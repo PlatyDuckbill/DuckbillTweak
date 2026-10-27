@@ -29,7 +29,6 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants) : Na
     public void OpenForShop(ushort addon)
     {
         if (!merchants.IsShopOpen(addon)) return;
-        merchants.ResetFilters(addon);
         categoryId = 0; tradeFilter = TradeFilter.All; sourceContext = ""; previousOffers = null;
         sourceAddon = addon; sourceSession = merchants.SessionGeneration; lastRead = 0;
         Open();
@@ -53,7 +52,8 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants) : Na
         consumables.OnClick = value => { if (!syncing) { merchants.FiltersFor(sourceAddon).HideConsumables = value; lastRead = 0; } };
         consumables.AttachNode(this);
         categories = new DropDownNode<CategoryOption> { Position = new(28, 84), Size = new(290, 28),
-            GetLabelFunction = item => item.Name, Options = [] };
+            GetLabelFunction = item => item.Name, Options = [new(0, "모든 품목 종류")] };
+        categories.SelectedOption = categories.Options[0];
         categories.OnOptionSelected = option => { if (!syncing) { categoryId = option.Id; lastRead = 0; } };
         categories.AttachNode(this);
         trade = new StringDropDownNode { Position = new(334, 84), Size = new(220, 28),

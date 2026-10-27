@@ -23,11 +23,15 @@ KR Populate RVA6A62C0의 6A631D는 원본 인덱스를 Renderer.ListItemIndex에
 
 ShopExchangeCurrency의 KR ULD는680×528, node20/component1022 TreeList, header13/구분선19이며 새로운 컨트롤은y92에 들어간다. AgentShop의 addon ID/수신 배열/3배 비용 배열 계약을 검증한다. 0.1.2.10부터는 원본 TreeList와 AgentShop의 전체 개수가 같다는 조건을 제거하고 아래 탭 매핑을 사용한다. 정보 미확인/필터 실패에서는 원본을 복구하고 체크박스를 잠그지 않아 해제할 수 있다.
 
-0.1.2.10 우주 화폐 탭 매핑: 실제 로그의 AgentShop51개에 대해 TreeList가 기타20개/장비31개로 나뉜다. 동일 KR 실행 파일의 refresh RVA12C17A0, 렌더12C2D10, 툴팁12C2B74를 정적으로 확인했다. 원본 행 UIntValues[1]은 compact index이며 addon+21A0의60칸 map을 통해 현재 페이지 품목 index로 연결한다. addon+3B38은 페이지 품목 수, addon+320+index×40의 첫 두 uint는 아이템ID/아이콘이다. AtkValues[3] 수량, [42A+index] 아이템ID, [D4+index] 아이콘과 교차 검증한다. 모든 범위/타입/중복을 검증하고 AgentShop에서 같은ID/아이콘인 유일한 품목만 연결한다. UIntValues[0]=0/[2]=0인 단일 보상 행만 지원하며 모호한 행은 추정하지 않는다. 원본 행 순서·map·UIntValues·구매 이벤트는 수정하지 않는다. 관리 카탈로그는 전체 AgentShop 페이지를 해석한 후 표시된 탭 인덱스만 선택한다. 계산과 숨김은 표시된 TreeList 행 순서를 사용한다.
+0.1.2.10 우주 화폐 탭 매핑: 실제 로그의 AgentShop51개에 대해 TreeList가 기타20개/장비31개로 나뉜다. 동일 KR 실행 파일의 refresh RVA12C17A0, 렌더12C2D10, 툴팁12C2B74를 정적으로 확인했다. 원본 행 UIntValues[1]은 compact index이며 addon+21A0의60칸 map을 통해 현재 페이지 품목 index로 연결한다. addon+3B38은 페이지 품목 수, addon+320+index×40의 첫 두 uint는 아이템ID/아이콘이다. AtkValues[3] 수량, [42A+index] 아이템ID, [D4+index] 아이콘과 교차 검증한다. 모든 범위/타입/중복을 검증하고 AgentShop에서는 raw Item ID가 유일한 품목만 연결한다(0.1.2.11 수정). UIntValues[0]=0/[2]=0인 단일 보상 행만 지원하며 모호한 행은 추정하지 않는다. 원본 행 순서·map·UIntValues·구매 이벤트는 수정하지 않는다. 관리 카탈로그는 전체 AgentShop 페이지를 해석한 후 표시된 탭 인덱스만 선택한다. 계산과 숨김은 표시된 TreeList 행 순서를 사용한다.
 
 이 추가 읽기는 기존 정확한 게임 SHA/MVID 가드 뒤의 UI update에서만 수행한다. native-contract 오프라인 검사는 map 기록 RVA12C1B59, 렌더 소비12C2D5F, 아이템ID 읽기12C2BAB의 원본 명령도 대조한다. 런타임 시그니처/후크/게임 입력을 추가하지 않았다.
 
-체크 상태는 Configuration v3에서 제거했다. MerchantService의 addon 수명별 메모리 상태 하나를 원본 상점/재화 창이 공유한다. 상점 Attach와 재화 OpenForShop에서 두 bool을 false로 초기화하고 finalize/기능 해제/세션 변경에서 제거한다. Refresh/탭 변경은 현재 열린 창의 상태를 유지한다. 재화 창을 새로 열면 상점 쪽도 함께 해제된다. 이름은 모두 '보유 수집품 제외'이며, 마테리아/소모품 등을 유지하는 기존 목적 분류와 짧은 툴팁은 그대로다.
+체크 상태는 Configuration v3에서 제거했다. MerchantService의 addon 수명별 메모리 상태 하나를 원본 상점/재화 창이 공유한다. 0.1.2.11 사용자 정정에 따라 상점 Attach와 실제 탭/분류 변경에서 두 bool을 false로 초기화하고 finalize/기능 해제/세션 변경에서 제거한다. 재화 OpenForShop은 기존 체크를 이어받는다. 같은 탭의 수량/잔액/목록 갱신은 상태를 유지한다. 이름은 모두 '보유 수집품 제외'이며, 마테리아/소모품 등을 유지하는 기존 목적 분류와 짧은 툴팁은 그대로다.
+
+0.1.2.11 실기 실패/수정: 코르보 서책과 우주 화폐의 'no unique agent item'은 AgentShop.ItemIconId와 addon이 렌더하는 icon까지 일치하도록 요구한 추가 조건에서 발생했다. 연결은 품질을 포함한 raw Item ID가 유일한지로 판단한다. addon 내부 AtkValues/record의 ID/아이콘 교차 검사, 범위/중복/map 검증은 유지한다. 아이콘은 표시 자료이며 품목 정체성 키가 아니다. 서책 실제18행의 연결/가격 복원과18→3행 필터 적용을 새 로그에서 확인했다. 원본 행/구매 인덱스는 그대로다.
+
+실제 탭은 화폐 교환 addon+318의 selected tab byte(0..3, setup RVA12C1416/선택12C26CB), InclusionShop은 선택한 category/subcategory/상점ID로 관측한다. 이름이 다른 item exchange 페이지도 구분한다. 단순 PreRefresh/원본 행 수 변화/재화 버튼은 초기화 계기로 사용하지 않는다. 중간0행 TreeList를 정상 계산 페이지로 발행하지 않는다. 대기 중 종류 드롭다운에도 '모든 품목 종류'를 표시한다.
 
 ### 이전 0.1.1.6/7 구현과 실패 원인
 
