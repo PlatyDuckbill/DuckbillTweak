@@ -7,6 +7,10 @@ namespace DuckbillTweak.Plugin.Shops;
 /// <summary>Sheet-only classification shared by native shop rows and the calculator.</summary>
 internal sealed class ShopItemClassifier
 {
+    // KR Item 28724 explicitly says specialist crafting actions consume it.
+    // It has no ItemAction/AdditionalData/recipe link: the broad Miscellany category
+    // cannot establish this purpose. Keep the reviewed exception out of name matching.
+    private const uint CraftersDelineation = 28724;
     private readonly HashSet<uint> exchangeItems;
     private readonly HashSet<uint> craftingIngredients;
     private readonly HashSet<uint> racingSupplies;
@@ -27,6 +31,7 @@ internal sealed class ShopItemClassifier
 
     public ShopItemPurpose Classify(Item item)
     {
+        if (item.RowId == CraftersDelineation) return ShopItemPurpose.Consumable;
         // Contracts are Miscellany but point to actual furniture/yard objects.
         // Treasure rank 0 is a real map, so inspect the reference type rather than its numeric value.
         var linked = item.AdditionalData.Is<HousingFurniture>() || item.AdditionalData.Is<HousingYardObject>()

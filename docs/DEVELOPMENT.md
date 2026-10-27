@@ -1,5 +1,7 @@
 # 구조와 참고 자료
 
+0.1.2.12 분류 근거: 설치된 KR Item28724는UICategory61/ItemSearchCategory60(둘 다 잡화),ItemAction0/AdditionalData0이며 전문화 기술 사용 시 소비된다는 설명을 가진다. 공개 시트의 일반 아이템 사용/제작 재료/교환 비용 링크로 표현되지 않는 용도이므로 Plugin 분류기에 검토된 기술 소모품 ID 예외 하나를 둔다. 한국어 이름/설명 문자열을 런타임 판단에 사용하거나 잡화 전체를 숨기지 않는다. 구형12659–12666은 시트의 실제 교환 비용 참조로 이미 ExchangeMaterial이다. Core 규칙/게임 메모리 읽기/외부 코드/종속성은 변경하지 않았다.
+
 0.1.2.10은 위에 기록된 고정 VanillaPlus StickyShopCategories의 열기/종료 수명을 재참고했으나, 사용자 요청에 따라 그 기능의 저장 동작은 채택하지 않았다. 외부 구현을 복사하지 않았다. 상점 체크는 메모리에만 공유하고 Configuration v3에는 기능 on/off만 남긴다. 우주 화폐 행 매핑은 로컬 KR 실행 파일의 refresh/renderer/tooltip을 직접 대조한 별도 구현이다. 추가 필드/명령의 근거와 읽기 범위는 NATIVE-UI.md에 기록했다.
 
 ## 코드 구조

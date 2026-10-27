@@ -101,7 +101,10 @@ Price DecodeCatalogCost(ExchangeCost cost)
 if (args[1] == "items" && args.Length >= 3)
 {
     foreach (var item in game.GetExcelSheet<Item>()!.Where(i => uint.TryParse(args[2], out var id) ? i.RowId == id : i.Name.ExtractText().Contains(args[2], StringComparison.Ordinal)))
-        Console.WriteLine($"Item={item.RowId}; Name={item.Name.ExtractText()}; Category={item.ItemUICategory.RowId}/{item.ItemUICategory.ValueNullable?.Name.ExtractText()}; Search={item.ItemSearchCategory.RowId}; Action={item.ItemAction.RowId}/{item.ItemAction.ValueNullable?.Action.RowId}; ActionData={string.Join(',', item.ItemAction.ValueNullable?.Data.ToArray() ?? [])}; Additional={item.AdditionalData.RowType?.Name}/{item.AdditionalData.RowId}; Equip={item.EquipSlotCategory.RowId}");
+    {
+        Console.WriteLine($"Item={item.RowId}; Name={item.Name.ExtractText()}; Category={item.ItemUICategory.RowId}/{item.ItemUICategory.ValueNullable?.Name.ExtractText()}; Search={item.ItemSearchCategory.RowId}/{item.ItemSearchCategory.ValueNullable?.Name.ExtractText()}; Action={item.ItemAction.RowId}/{item.ItemAction.ValueNullable?.Action.RowId}; ActionData={string.Join(',', item.ItemAction.ValueNullable?.Data.ToArray() ?? [])}; Additional={item.AdditionalData.RowType?.Name}/{item.AdditionalData.RowId}; Equip={item.EquipSlotCategory.RowId}");
+        if (args.Length > 3 && args[3] == "description") Console.WriteLine(item.Description.ExtractText());
+    }
 }
 else if (args[1] == "exchange-observed" && args.Length >= 4)
 {
@@ -233,8 +236,9 @@ else if (args[1] == "shop-policy-audit")
     foreach (var entry in excludedUnlocks) Console.WriteLine($"Review={entry.Item.RowId}/{entry.Item.Name.ExtractText()}/{entry.Purpose}");
     foreach (var entry in classified.Where(x => x.Item.Name.ExtractText().Contains("강화약", StringComparison.Ordinal) ||
                  x.Item.RowId is 24337 or 14273 or 14274 or 14952 or 6954 or 6955 or 50847 or 4868 or 5890 or 7153 or 8837 or
-                     33328 or 9615 or 9852 or 17723 or 16784 or 49121 or 27593 or 50414 or 10128 or 30137 or 49806 or 46825 or 49787))
-        Console.WriteLine($"Item={entry.Item.RowId}/{entry.Item.Name.ExtractText()}; Purpose={entry.Purpose}; Excluded={ShopItemPolicy.Excluded(entry.Purpose)}");
+                     33328 or 9615 or 9852 or 17723 or 16784 or 49121 or 27593 or 50414 or 10128 or 30137 or 49806 or 46825 or 49787 ||
+                 args.Skip(2).Any(value => uint.TryParse(value, out var id) && id == x.Item.RowId)))
+        Console.WriteLine($"Item={entry.Item.RowId}/{entry.Item.Name.ExtractText()}; Purpose={entry.Purpose}; Excluded={ShopItemPolicy.Excluded(entry.Purpose)}; HideWhenOwned={ShopItemPolicy.CanHideOwned(entry.Purpose)}");
     // Use the production filter/planner on the real 11-row coin exchange. No ownership is assumed.
     foreach (var shop in shops.Where(s => s.Item.Any(o => o.ItemCosts.Any(c => c.ItemCost.RowId == 50847))))
     {
