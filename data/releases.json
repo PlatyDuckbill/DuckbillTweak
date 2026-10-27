@@ -1,0 +1,20 @@
+[
+  {
+    "Version": "0.2.0.0",
+    "Date": "2026-10-27",
+    "Korean": [
+      "상점에서 보유한 장비·수집품을 제외하거나 수집할 품목 위주로 볼 수 있습니다.",
+      "현재 상점의 필요 재화와 부족분을 계산하고, 연동된 보관 기록도 확인할 수 있습니다.",
+      "입찰 아이템을 우클릭하면 참여자의 선택과 공개된 주사위 결과를 볼 수 있습니다.",
+      "PvP 전장에서 기본 대화 말풍선 설정을 따르는 말풍선을 켤 수 있습니다.",
+      "각 기능은 설정에서 따로 켜고 끌 수 있습니다."
+    ],
+    "English": [
+      "Filter owned equipment and collectibles, or focus shop lists on collection items.",
+      "Calculate the current shop's currency requirements and shortages, with linked storage records.",
+      "Right-click loot items to view participant choices and publicly received roll results.",
+      "Enable PvP chat bubbles using your game's chat bubble settings.",
+      "Turn each feature on or off independently in settings."
+    ]
+  }
+]

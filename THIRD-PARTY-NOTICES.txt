@@ -1,0 +1,13 @@
+DuckbillTweak third-party notices
+
+KamiToolKit
+https://github.com/MidoriKami/KamiToolKit
+Pinned revision: 1eaccb5c6d6fcc697f7e1b98b5528580f5edd201
+Copyright (c) 2024 MidoriKami
+License: MIT. The complete license is included as KamiToolKit.LICENSE.txt.
+The distributed KamiToolKit.dll and Assets files are built/copied from this revision.
+
+Special-currency mappings are maintained in data/special-currencies.kr.json and
+embedded in DuckbillTweak.dll. Game names, descriptions and icons are read from
+the installed game client and are not redistributed as an extracted game dataset.
+FINAL FANTASY XIV is owned by SQUARE ENIX. This plugin is not affiliated with it.

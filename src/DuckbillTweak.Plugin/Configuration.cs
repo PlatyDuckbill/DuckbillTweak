@@ -9,4 +9,5 @@ public sealed class Configuration : IPluginConfiguration
     public bool PvpBubbles { get; set; }
     public bool MerchantTools { get; set; }
     public bool LootRolls { get; set; }
+    public string LastSeenChangelogVersion { get; set; } = "";
 }

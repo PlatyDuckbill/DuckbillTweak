@@ -5,8 +5,9 @@ using KamiToolKit.Nodes;
 
 namespace DuckbillTweak.Plugin.Native;
 
-internal sealed unsafe class NativeSettingsAddon(Configuration config, Action save) : NativeAddon
+internal sealed unsafe class NativeSettingsAddon(Configuration config, Action save, Action openChangelog) : NativeAddon
 {
+    private TextButtonNode? changelogButton;
     protected override void OnSetup(AtkUnitBase* addon, Span<AtkValue> values)
     {
         AddToggle("PvP 전장 말풍선", 60, config.PvpBubbles, value => config.PvpBubbles = value);
@@ -15,7 +16,22 @@ internal sealed unsafe class NativeSettingsAddon(Configuration config, Action sa
         AddText("상점 안의 '보유 수집품 제외'와 '필요 재화'를 사용합니다.", 166);
         AddToggle("아이템별 입찰 숫자", 216, config.LootRolls, value => config.LootRolls = value);
         AddText("입찰 목록에서 우클릭 → '입찰 숫자 보기'를 선택합니다.", 244);
+        var unread = config.LastSeenChangelogVersion != ReleaseHistory.CurrentVersion;
+        changelogButton = new TextButtonNode { Position = new(28, 296), Size = new(190, 28),
+            String = unread ? "업데이트 내역 · NEW" : "업데이트 내역", OnClick = openChangelog };
+        changelogButton.AttachNode(this);
+        new TextNode { Position = new(360, 298), Size = new(190, 24), FontSize = 13,
+            AlignmentType = AlignmentType.Right, String = $"v{ReleaseHistory.CurrentVersion}" }.AttachNode(this);
     }
+
+    protected override void OnUpdate(AtkUnitBase* addon)
+    {
+        if (changelogButton is null) return;
+        var label = config.LastSeenChangelogVersion != ReleaseHistory.CurrentVersion ? "업데이트 내역 · NEW" : "업데이트 내역";
+        if (changelogButton.String != label) changelogButton.String = label;
+    }
+
+    protected override void OnFinalize(AtkUnitBase* addon) => changelogButton = null;
 
     private void AddToggle(string text, float y, bool value, Action<bool> changed)
     {

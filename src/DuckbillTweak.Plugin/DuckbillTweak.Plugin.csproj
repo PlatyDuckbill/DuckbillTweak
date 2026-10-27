@@ -2,11 +2,13 @@
   <PropertyGroup>
     <AssemblyName>DuckbillTweak</AssemblyName>
     <RootNamespace>DuckbillTweak.Plugin</RootNamespace>
-    <Version>0.1.2.12</Version>
+    <Version>0.2.0.0</Version>
     <Author>PlatyDuckbill</Author>
     <Name>DuckbillTweak</Name>
-    <Punchline>Small conveniences for FFXIV Korea.</Punchline>
-    <Description>Native game UI tweaks for FFXIV Korea: PvP chat bubbles following your game settings, merchant collection filters and a currency button, and per-item loot rolls on right-click. Open settings with /dbtw. Development build; representative in-game verification required.</Description>
+    <Punchline>Shop collection filters, currency planning and loot results for FFXIV Korea.</Punchline>
+    <Description>Small conveniences in the game's own UI, for FFXIV Korea.&#xA;&#xA;• Filter owned equipment and collectibles, or focus shop lists on collection items.&#xA;• Calculate the current shop's currency requirements and shortages, with linked storage records.&#xA;• Right-click loot items to view participant choices and publicly received roll results.&#xA;• Enable PvP chat bubbles using your game's chat bubble settings.&#xA;&#xA;Open settings: /dbtw or /duckbilltweak. Each feature starts disabled.&#xA;Release history: Settings → 업데이트 내역, or /dbtw changelog.&#xA;&#xA;Korean client and inspected Dalamud API 15 bindings only. Loot numbers appear when the game publishes results. Stored inventory records may be incomplete or out of date.</Description>
+    <Changelog>• Filter owned equipment and collectibles, or focus shop lists on collection items.&#xA;• Calculate the current shop's currency requirements and shortages, with linked storage records.&#xA;• Right-click loot items to view participant choices and publicly received roll results.&#xA;• Enable PvP chat bubbles using your game's chat bubble settings.&#xA;• Turn each feature on or off independently in settings.</Changelog>
+    <IconUrl Condition="Exists('../../assets/duckbilltweak-icon.png')">https://raw.githubusercontent.com/PlatyDuckbill/DuckbillTweak/v$(Version)/assets/duckbilltweak-icon.png</IconUrl>
     <RepoUrl>https://github.com/PlatyDuckbill/DuckbillTweak</RepoUrl>
     <Tags>tweaks;shop;collection;loot;pvp;한국어</Tags>
     <DalamudApiLevel>15</DalamudApiLevel>
@@ -19,8 +21,10 @@
     <ProjectReference Include="../DuckbillTweak.Core/DuckbillTweak.Core.csproj" />
     <ProjectReference Include="../../third_party/KamiToolKit/KamiToolKit.csproj" />
     <Content Include="../../third_party/KamiToolKit/LICENSE" Link="KamiToolKit.LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" />
     <!-- .kr is part of the dataset name, not a satellite resource culture. -->
     <EmbeddedResource Include="../../data/special-currencies.kr.json" LogicalName="DuckbillTweak.SpecialCurrencies" WithCulture="false" />
+    <EmbeddedResource Include="../../data/releases.json" LogicalName="DuckbillTweak.ReleaseHistory" WithCulture="false" />
   </ItemGroup>
   <Target Name="ValidateDalamudReference" BeforeTargets="ResolveAssemblyReferences">
     <Error Condition="!Exists('$(DalamudLibPath)/Dalamud.dll')" Text="Set DALAMUD_HOME to a complete KR Dalamud API 15 reference directory. See scripts/enter-dev.ps1." />

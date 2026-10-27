@@ -29,6 +29,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
     private readonly List<string> registeredCommands = [];
     private NativeCompatibility compatibility = new(false, 0, "UI 초기화 중");
     private NativeSettingsAddon? settings;
+    private NativeChangelogAddon? changelog;
     private NativeCurrencyAddon? currency;
     private NativeLootAddon? lootPopup;
     private NativeShopController? shop;
@@ -50,6 +51,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
         config = pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         if (config.Version is < 1 or > 3) throw new InvalidOperationException("Unsupported configuration version.");
         config.Version = 3;
+        config.LastSeenChangelogVersion ??= "";
         merchants = new(data, unlocks, inventory, client, player, conditions, target, gameGui, framework, log, config, pluginInterface);
         try { loot = new(chat, data, client, player, party, framework, config, log); }
         catch { merchants.Dispose(); throw; }
@@ -68,7 +70,8 @@ public sealed class Plugin : IAsyncDalamudPlugin
                 {
                     merchants.NativeOwnershipEnabled = true;
                     loot.NativeObservationEnabled = true;
-                    settings = new NativeSettingsAddon(config, Save) { InternalName = "DuckbillTweakSettings", Title = "DuckbillTweak", Size = new Vector2(580, 302) };
+                    changelog = new NativeChangelogAddon(config, Save) { InternalName = "DuckbillTweakChangelog", Title = "업데이트 내역", Size = new Vector2(650, 420) };
+                    settings = new NativeSettingsAddon(config, Save, () => changelog.Open()) { InternalName = "DuckbillTweakSettings", Title = "DuckbillTweak", Size = new Vector2(580, 348) };
                     currency = new NativeCurrencyAddon(merchants) { InternalName = "DuckbillTweakCurrency", Title = "필요 재화", Size = new Vector2(760, 586) };
                     lootPopup = new NativeLootAddon(loot, config) { InternalName = "DuckbillTweakRolls", Title = "입찰 현황", Size = new Vector2(420, 420) };
                     shop = new(merchants, currency, log);
@@ -98,7 +101,15 @@ public sealed class Plugin : IAsyncDalamudPlugin
         if (!compatibility.Supported) { chat.PrintError(compatibility.Reason); return; }
         _ = framework.Run(() => settings?.Open());
     }
-    private void OnCommand(string command, string arguments) => OpenSettings();
+    private void OnCommand(string command, string arguments)
+    {
+        if (arguments.Trim().Equals("changelog", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!compatibility.Supported) { chat.PrintError(compatibility.Reason); return; }
+            _ = framework.Run(() => changelog?.Open());
+        }
+        else OpenSettings();
+    }
 
     public async ValueTask DisposeAsync()
     {
@@ -114,6 +125,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
             merchants.Dispose(); loot.Dispose();
         });
         if (settings is not null) await settings.DisposeAsync();
+        if (changelog is not null) await changelog.DisposeAsync();
         if (currency is not null) await currency.DisposeAsync();
         if (lootPopup is not null) await lootPopup.DisposeAsync();
         if (toolkitInitialized) await KamiToolKitLibrary.DisposeAsync();

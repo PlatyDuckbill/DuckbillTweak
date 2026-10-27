@@ -72,6 +72,20 @@ if (args.Length >= 2 && args[0] == "resources")
             throw new InvalidDataException("KamiToolKit license notice missing.");
     }
     Console.WriteLine($"EmbeddedResource=DuckbillTweak.SpecialCurrencies; Bytes={payload.Length}; SourceMatch=True; Tokens={json.RootElement.GetProperty("items").EnumerateObject().Count()}");
+    var historyResource = metadata.ManifestResources.Select(metadata.GetManifestResource)
+        .Single(r => metadata.GetString(r.Name) == "DuckbillTweak.ReleaseHistory" && r.Implementation.IsNil);
+    var historyRva = checked(pe.PEHeaders.CorHeader!.ResourcesDirectory.RelativeVirtualAddress + (int)historyResource.Offset);
+    var historyReader = pe.GetSectionData(historyRva).GetReader();
+    var historyPayload = historyReader.ReadBytes(historyReader.ReadInt32());
+    if (!SHA256.HashData(historyPayload).AsSpan().SequenceEqual(SHA256.HashData(File.ReadAllBytes("data/releases.json"))))
+        throw new InvalidDataException("Embedded release history differs from source.");
+    using var history = JsonDocument.Parse(historyPayload);
+    var artifactVersion = metadata.GetAssemblyDefinition().Version.ToString(4);
+    var currentNotes = history.RootElement.EnumerateArray().Where(entry => entry.GetProperty("Version").GetString() == artifactVersion).ToArray();
+    if (currentNotes.Length != 1 || currentNotes[0].GetProperty("Korean").GetArrayLength() == 0 ||
+        currentNotes[0].GetProperty("English").GetArrayLength() != currentNotes[0].GetProperty("Korean").GetArrayLength())
+        throw new InvalidDataException("Release history must describe this artifact in both languages.");
+    Console.WriteLine($"EmbeddedResource=DuckbillTweak.ReleaseHistory; SourceMatch=True; Version={artifactVersion}; Entries={currentNotes[0].GetProperty("Korean").GetArrayLength()}");
     return 0;
 }
 
