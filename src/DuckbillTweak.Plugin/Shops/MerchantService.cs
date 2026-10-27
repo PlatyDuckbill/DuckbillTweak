@@ -36,6 +36,21 @@ internal sealed class MerchantService : IDisposable
     private readonly NativeOwnership nativeOwnership;
     private readonly StoredInventoryBridge storedInventory;
     private ushort displayedAddon;
+    // Shared only for the lifetime of an open source shop. Never serialized.
+    private readonly Dictionary<ushort, ShopFilter> shopFilters = [];
+    public ShopFilter FiltersFor(ushort addon)
+    {
+        if (!shopFilters.TryGetValue(addon, out var filters))
+            shopFilters[addon] = filters = new ShopFilter { HideOwned = false };
+        return filters;
+    }
+    public void ResetFilters(ushort addon)
+    {
+        var filters = FiltersFor(addon);
+        filters.HideOwned = false;
+        filters.HideConsumables = false;
+    }
+    public void ForgetFilters(ushort addon) => shopFilters.Remove(addon);
     private string displayedContext = "";
     private IReadOnlyList<Offer> displayedOffers = [];
     private IReadOnlyDictionary<CurrencyKey, long> displayedBalances = new Dictionary<CurrencyKey, long>();
@@ -344,6 +359,7 @@ internal sealed class MerchantService : IDisposable
 
     private void Reset()
     {
+        shopFilters.Clear();
         lastNativePage = null;
         SessionGeneration++;
         View = MerchantView.Empty; character = 0; territory = 0; lastNpc = 0; manual = false; manualRequest = null;

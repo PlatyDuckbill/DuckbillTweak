@@ -12,7 +12,7 @@ internal sealed unsafe class NativeSettingsAddon(Configuration config, Action sa
         AddToggle("PvP 전장 말풍선", 60, config.PvpBubbles, value => config.PvpBubbles = value);
         AddText("채널·색상·표시 방식은 캐릭터 설정의 대화 말풍선 설정을 따릅니다.", 88);
         AddToggle("상점 품목 필터와 필요 재화", 138, config.MerchantTools, value => config.MerchantTools = value);
-        AddText("상점 안의 '없는 것만 보기'와 '필요 재화'를 사용합니다.", 166);
+        AddText("상점 안의 '보유 수집품 제외'와 '필요 재화'를 사용합니다.", 166);
         AddToggle("아이템별 입찰 숫자", 216, config.LootRolls, value => config.LootRolls = value);
         AddText("입찰 목록에서 우클릭 → '입찰 숫자 보기'를 선택합니다.", 244);
     }

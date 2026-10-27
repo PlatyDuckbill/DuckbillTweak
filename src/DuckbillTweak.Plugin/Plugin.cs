@@ -48,11 +48,8 @@ public sealed class Plugin : IAsyncDalamudPlugin
         this.addonLifecycle = addonLifecycle;
         this.contextMenu = contextMenu;
         config = pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-        if (config.Version is < 1 or > 2) throw new InvalidOperationException("Unsupported configuration version.");
-        config.Version = 2;
-        config.ShopFilter ??= new(); config.ShopFilter.Categories ??= []; config.ShopFilter.CategoryHideOwned ??= [];
-        config.ShopFilter.Search ??= ""; config.MerchantCategoryHideOwned ??= []; config.ExchangeCategoryHideOwned ??= [];
-        if (!Enum.IsDefined(config.ShopFilter.Trade)) config.ShopFilter.Trade = Core.Shops.TradeFilter.All;
+        if (config.Version is < 1 or > 3) throw new InvalidOperationException("Unsupported configuration version.");
+        config.Version = 3;
         merchants = new(data, unlocks, inventory, client, player, conditions, target, gameGui, framework, log, config, pluginInterface);
         try { loot = new(chat, data, client, player, party, framework, config, log); }
         catch { merchants.Dispose(); throw; }
@@ -72,12 +69,12 @@ public sealed class Plugin : IAsyncDalamudPlugin
                     merchants.NativeOwnershipEnabled = true;
                     loot.NativeObservationEnabled = true;
                     settings = new NativeSettingsAddon(config, Save) { InternalName = "DuckbillTweakSettings", Title = "DuckbillTweak", Size = new Vector2(580, 302) };
-                    currency = new NativeCurrencyAddon(merchants, config, Save) { InternalName = "DuckbillTweakCurrency", Title = "필요 재화", Size = new Vector2(760, 586) };
+                    currency = new NativeCurrencyAddon(merchants) { InternalName = "DuckbillTweakCurrency", Title = "필요 재화", Size = new Vector2(760, 586) };
                     lootPopup = new NativeLootAddon(loot, config) { InternalName = "DuckbillTweakRolls", Title = "입찰 현황", Size = new Vector2(420, 420) };
-                    shop = new(merchants, config, Save, currency, log);
-                    exchanges.Add(new("InclusionShop", merchants, config, Save, currency, log));
-                    exchanges.Add(new("ShopExchangeItem", merchants, config, Save, currency, log));
-                    exchanges.Add(new("ShopExchangeCurrency", merchants, config, Save, currency, log));
+                    shop = new(merchants, currency, log);
+                    exchanges.Add(new("InclusionShop", merchants, currency, log));
+                    exchanges.Add(new("ShopExchangeItem", merchants, currency, log));
+                    exchanges.Add(new("ShopExchangeCurrency", merchants, currency, log));
                     lootInteraction = new(events, addonLifecycle, contextMenu, gui, party, config, lootPopup, merchants, log);
                     bubbles = new(framework, client, log, config, compatibility);
                 });

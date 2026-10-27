@@ -15,8 +15,6 @@ namespace DuckbillTweak.Plugin.Native;
 internal sealed unsafe class NativeShopController : IDisposable
 {
     private readonly MerchantService merchants;
-    private readonly Configuration config;
-    private readonly Action save;
     private readonly NativeCurrencyAddon currency;
     private readonly IPluginLog log;
     private readonly AddonController<AddonShop> controller;
@@ -40,9 +38,9 @@ internal sealed unsafe class NativeShopController : IDisposable
     private bool renderFailed;
     private (int Total, int Visible)? lastApplied;
 
-    public NativeShopController(MerchantService merchants, Configuration config, Action save, NativeCurrencyAddon currency, IPluginLog log)
+    public NativeShopController(MerchantService merchants, NativeCurrencyAddon currency, IPluginLog log)
     {
-        this.merchants = merchants; this.config = config; this.save = save; this.currency = currency; this.log = log;
+        this.merchants = merchants; this.currency = currency; this.log = log;
         controller = new AddonController<AddonShop> { AddonName = "Shop", OnUpdate = Update, OnFinalize = Detach,
             OnPreRefresh = addon =>
             {
@@ -78,7 +76,12 @@ internal sealed unsafe class NativeShopController : IDisposable
         if (!selling) { if (boundAddon == (nint)addon) Detach(addon); return; }
         if (boundAddon == 0) Attach(addon);
         if (filteredList is null || missing is null || categories is null) return;
-        var requested = config.HasOwnedFilter(categoryId) || categoryId != 0 || config.MerchantHideConsumables;
+        var filters = merchants.FiltersFor(addon->Id);
+        syncing = true;
+        if (missing.IsChecked != filters.HideOwned) missing.IsChecked = filters.HideOwned;
+        if (consumables is not null && consumables.IsChecked != filters.HideConsumables) consumables.IsChecked = filters.HideConsumables;
+        syncing = false;
+        var requested = filters.HideOwned || categoryId != 0 || filters.HideConsumables;
         if (!requested || renderFailed) RestoreList(addon);
         if (renderFailed) return;
         if (usingFilteredList)
@@ -90,7 +93,6 @@ internal sealed unsafe class NativeShopController : IDisposable
         }
         if (lastRead != 0 && Stopwatch.GetElapsedTime(lastRead).TotalMilliseconds < 300) return;
         lastRead = Stopwatch.GetTimestamp();
-        missing.IsEnabled = false;
         var agent = AgentShop.Instance();
         if (agent is null || agent->AddonId != addon->Id || agent->ItemReceive is null ||
             agent->ItemReceiveCount is < 0 or > 1000 || agent->ItemReceiveCount != list->ListLength ||
@@ -130,15 +132,10 @@ internal sealed unsafe class NativeShopController : IDisposable
             categories.SelectedOption = options.FirstOrDefault(o => o.Id == categoryId) ?? options[0];
             categoryId = categories.SelectedOption.Id;
         }
-        var hide = config.HideOwnedInCategory(categoryId);
-        syncing = true; missing.IsChecked = hide; syncing = false;
-        syncing = true;
-        if (consumables is not null && consumables.IsChecked != config.MerchantHideConsumables) consumables.IsChecked = config.MerchantHideConsumables;
-        syncing = false;
         missing.TextTooltip = merchants.OwnershipHelp;
         var filtered = next.Where(r => (categoryId == 0 || r.CategoryId == categoryId) &&
-            (!config.HideOwnedInCategory(r.CategoryId) || !merchants.CanHideOwned(r.RawItemId) || !r.OwnedAlready) &&
-            (!config.MerchantHideConsumables || !merchants.IsExcludedSupply(r.RawItemId))).ToArray();
+            (!filters.HideOwned || !merchants.CanHideOwned(r.RawItemId) || !r.OwnedAlready) &&
+            (!filters.HideConsumables || !merchants.IsExcludedSupply(r.RawItemId))).ToArray();
         // A filter setting alone must not replace the native list when it removes no rows.
         if (filtered.Length == next.Count) { RestoreList(addon); return; }
         var dataChanged = !rows.SequenceEqual(filtered);
@@ -151,7 +148,7 @@ internal sealed unsafe class NativeShopController : IDisposable
         var changed = !usingFilteredList || !filteredList.IsVisible || dataChanged;
         // Commit the replacement only after every visible row has rendered successfully.
         if (!usingFilteredList) { originalAlpha = list->OwnerNode->Color.A; originalInteraction = list->IsItemInteractionEnabled; }
-        if (!originalInput.Suppress(list, out var inputChanged)) { RestoreList(addon); missing.IsEnabled = false; return; }
+        if (!originalInput.Suppress(list, out var inputChanged)) { RestoreList(addon); return; }
         filteredList.IsVisible = true;
         usingFilteredList = true;
         list->OwnerNode->SetAlpha(0);
@@ -167,6 +164,7 @@ internal sealed unsafe class NativeShopController : IDisposable
     private void Attach(AddonShop* addon)
     {
         boundAddon = (nint)addon;
+        categoryId = 0; merchants.ResetFilters(addon->Id);
         var list = addon->BuyList;
         listY = list->OwnerNode->Y; listHeight = list->OwnerNode->Height;
         originalAlpha = list->OwnerNode->Color.A; originalInteraction = list->IsItemInteractionEnabled;
@@ -177,19 +175,17 @@ internal sealed unsafe class NativeShopController : IDisposable
         }
         list->OwnerNode->SetYFloat(listY + 28);
         list->SetSize(list->OwnerNode->Width, (ushort)(listHeight - 28));
-        missing = new CheckboxNode { Position = new(28, 84), Size = new(144, 24), String = "없는 것만 보기" };
+        missing = new CheckboxNode { Position = new(28, 84), Size = new(144, 24), String = ShopItemPolicy.OwnedFilterLabel };
         missing.OnClick = value =>
         {
             if (syncing) return;
             RestoreList(addon);
-            if (categoryId == 0) { config.MerchantHideOwned = value; config.MerchantCategoryHideOwned.Clear(); }
-            else config.MerchantCategoryHideOwned[categoryId] = value;
-            save(); lastRead = 0;
+            merchants.FiltersFor(addon->Id).HideOwned = value; lastRead = 0;
         };
         missing.AttachNode(&addon->AtkUnitBase);
-        consumables = new CheckboxNode { Position = new(174, 84), Size = new(132, 24), String = ShopItemPolicy.FilterLabel, IsChecked = config.MerchantHideConsumables,
+        consumables = new CheckboxNode { Position = new(174, 84), Size = new(132, 24), String = ShopItemPolicy.FilterLabel,
             TextTooltip = ShopItemPolicy.FilterHelp };
-        consumables.OnClick = value => { if (!syncing) { RestoreList(addon); config.MerchantHideConsumables = value; save(); lastRead = 0; } };
+        consumables.OnClick = value => { if (!syncing) { RestoreList(addon); merchants.FiltersFor(addon->Id).HideConsumables = value; lastRead = 0; } };
         consumables.AttachNode(&addon->AtkUnitBase);
         categories = new DropDownNode<CategoryOption> { Position = new(310, 80), Size = new(122, 28),
             GetLabelFunction = c => c.Name, Options = [new(0, "모든 종류")] };
@@ -249,6 +245,7 @@ internal sealed unsafe class NativeShopController : IDisposable
         RestoreList(addon);
         merchants.ClearDisplayedShop(addon->Id);
         currency.CloseForShop(addon->Id);
+        merchants.ForgetFilters(addon->Id);
         filteredList?.Dispose(); filteredList = null;
         missing?.Dispose(); missing = null; consumables?.Dispose(); consumables = null; categories?.Dispose(); categories = null; calculate?.Dispose(); calculate = null;
         foreach (var (id, y) in shifted) { var node = addon->GetNodeById(id); if (node is not null) node->SetYFloat(y); }

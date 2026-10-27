@@ -19,8 +19,6 @@ internal sealed unsafe class NativeExchangeController : IDisposable
 {
     private readonly string name;
     private readonly MerchantService merchants;
-    private readonly Configuration config;
-    private readonly Action save;
     private readonly NativeCurrencyAddon currency;
     private readonly IPluginLog log;
     private readonly AddonController controller;
@@ -45,9 +43,9 @@ internal sealed unsafe class NativeExchangeController : IDisposable
     private bool Shape(AtkUnitBase* addon) => addon->RootNode is not null && addon->RootNode->Width == (CurrencyShop ? 680 : 760) &&
         addon->RootNode->Height == (name == "InclusionShop" ? 586 : CurrencyShop ? 528 : 556) && addon->GetNodeById(ListId) is not null;
 
-    public NativeExchangeController(string name, MerchantService merchants, Configuration config, Action save, NativeCurrencyAddon currency, IPluginLog log)
+    public NativeExchangeController(string name, MerchantService merchants, NativeCurrencyAddon currency, IPluginLog log)
     {
-        this.name = name; this.merchants = merchants; this.config = config; this.save = save; this.currency = currency; this.log = log;
+        this.name = name; this.merchants = merchants; this.currency = currency; this.log = log;
         controller = new AddonController { AddonName = name, OnUpdate = Update, OnFinalize = Detach,
             OnPreRefresh = addon =>
             {
@@ -74,6 +72,11 @@ internal sealed unsafe class NativeExchangeController : IDisposable
         if (!merchants.SessionReady || !addon->IsVisible || !Shape(addon)) { if (boundAddon == (nint)addon) Detach(addon); return; }
         if (boundAddon == 0) Attach(addon);
         if (missing is null) return;
+        var filters = merchants.FiltersFor(addon->Id);
+        sync = true;
+        if (missing.IsChecked != filters.HideOwned) missing.IsChecked = filters.HideOwned;
+        if (consumables is not null && consumables.IsChecked != filters.HideConsumables) consumables.IsChecked = filters.HideConsumables;
+        sync = false;
         var list = addon->GetComponentListById(ListId);
         nativeFilter.FinishLayout(addon, list);
         if (renderFailed) Restore(addon);
@@ -90,23 +93,16 @@ internal sealed unsafe class NativeExchangeController : IDisposable
             }
         }
         if (list is null || !TryRead(addon, list, out var rows, out var key))
-        { Restore(addon); merchants.ClearDisplayedShop(addon->Id); missing.IsEnabled = false; if (consumables is not null) consumables.IsEnabled = false; return; }
+        { Restore(addon); merchants.ClearDisplayedShop(addon->Id); missing.TextTooltip = "상점 정보를 확인하는 중입니다. 잠시 후 다시 시도해 주세요."; return; }
         missing.IsEnabled = true;
         if (consumables is not null) consumables.IsEnabled = true;
         if (context != key) Restore(addon);
         context = key;
-        var defaultHide = name == "ShopExchangeItem"
-            ? config.ExchangeCategoryHideOwned.GetValueOrDefault($"exchange:{merchants.View.NpcId}", config.MerchantHideOwned)
-            : config.MerchantHideOwned;
-        var hide = config.ExchangeCategoryHideOwned.GetValueOrDefault(key, defaultHide);
-        sync = true; missing.IsChecked = hide; sync = false;
-        sync = true;
-        if (consumables is not null && consumables.IsChecked != config.MerchantHideConsumables) consumables.IsChecked = config.MerchantHideConsumables;
-        sync = false;
+        var hide = filters.HideOwned;
         missing.TextTooltip = merchants.OwnershipHelp;
-        if (!hide && !config.MerchantHideConsumables) { Restore(addon); return; }
-        var hidden = rows.Select(r => hide && r.AllOwned || config.MerchantHideConsumables && r.AllExcludedSupplies ||
-            hide && config.MerchantHideConsumables && r.AllOwnedOrSupply).ToArray();
+        if (!hide && !filters.HideConsumables) { Restore(addon); return; }
+        var hidden = rows.Select(r => hide && r.AllOwned || filters.HideConsumables && r.AllExcludedSupplies ||
+            hide && filters.HideConsumables && r.AllOwnedOrSupply).ToArray();
         if (!nativeFilter.Apply(addon, list, hidden, out var visible))
         {
             if (lastFailure != nativeFilter.Failure) log.Warning("{Shop} filter contract: {Reason}", name, nativeFilter.Failure);
@@ -133,10 +129,20 @@ internal sealed unsafe class NativeExchangeController : IDisposable
         {
             var shop = AgentShop.Instance();
             if (shop is null || shop->AddonId != addon->Id || shop->ItemReceive is null ||
-                shop->ItemReceiveCount != sourceCount || shop->ItemReceiveCount is < 0 or > 1000 ||
+                (!CurrencyShop && shop->ItemReceiveCount != sourceCount) || shop->ItemReceiveCount is < 0 or > 1000 ||
                 shop->ItemCost is null || shop->ItemCostCount != shop->ItemReceiveCount * 3)
             {
                 var reason = shop is null ? "agent unavailable" : $"agentMatch={shop->AddonId == addon->Id}; source={sourceCount}; receive={shop->ItemReceiveCount}; cost={shop->ItemCostCount}";
+                if (lastReadFailure != reason) log.Information("{Shop} snapshot waiting: {Reason}", name, reason);
+                lastReadFailure = reason;
+                return false;
+            }
+            // Currency exchange tabs expose a subset of AgentShop. Use the game's own
+            // row -> compact page entry -> item identity mapping, never row == agent index.
+            var sources = Enumerable.Range(0, sourceCount).ToArray();
+            if (CurrencyShop && !TryMapCurrencyRows(addon, list, shop, sources, out var mappingFailure))
+            {
+                var reason = "currency tab mapping: " + mappingFailure;
                 if (lastReadFailure != reason) log.Information("{Shop} snapshot waiting: {Reason}", name, reason);
                 lastReadFailure = reason;
                 return false;
@@ -164,12 +170,13 @@ internal sealed unsafe class NativeExchangeController : IDisposable
             for (var i = 0; i < shop->ItemReceiveCount; i++)
                 membership.Add($"{shop->ItemReceive[i].ItemId}:{shop->ItemCost[i * 3].ItemId}:{shop->ItemCost[i * 3 + 1].ItemId}:{shop->ItemCost[i * 3 + 2].ItemId}");
             var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(shopName + ":" + string.Join(";", membership.Order(StringComparer.Ordinal)))));
-            key = $"exchange:{merchants.View.NpcId}:{digest}";
+            key = $"exchange:{merchants.View.NpcId}:{digest}:{string.Join(',', sources)}";
             var offers = new List<Offer>();
             var balances = new Dictionary<CurrencyKey, long>();
             var ownedItems = new HashSet<uint>();
-            for (var i = 0; i < shop->ItemReceiveCount; i++)
+            for (var rowIndex = 0; rowIndex < sources.Length; rowIndex++)
             {
+                var i = sources[rowIndex];
                 ref var item = ref shop->ItemReceive[i];
                 var id = item.ItemId >= 1_000_000 ? item.ItemId - 1_000_000 : item.ItemId;
                 if (id == 0) return false;
@@ -190,10 +197,10 @@ internal sealed unsafe class NativeExchangeController : IDisposable
                 var hideOwned = owned && merchants.CanHideOwned(item.ItemId);
                 var supply = merchants.IsExcludedSupply(item.ItemId);
                 if (owned) ownedItems.Add(id);
-                rows.Add(new(i, item.ItemId, item.ItemIconId, merchants.ItemDisplayName(item.ItemId),
-                    string.Join(" / ", prices.Select(price => $"{price.Name} ×{price.Quantity:N0}")), item.OwnedItemCount.ToString("N0"), hideOwned, key, nativeFilter.IsEnabled(list, i), supply, hideOwned || supply));
+                rows.Add(new(rowIndex, item.ItemId, item.ItemIconId, merchants.ItemDisplayName(item.ItemId),
+                    string.Join(" / ", prices.Select(price => $"{price.Name} ×{price.Quantity:N0}")), item.OwnedItemCount.ToString("N0"), hideOwned, key, nativeFilter.IsEnabled(list, rowIndex), supply, hideOwned || supply));
                 if (resolved[i] is { } exchange && merchants.NativeReward(item.ItemId, exchange.Quantity, prices) is { } reward)
-                    offers.Add(merchants.DisplayedOffer($"{key}:{i}", [reward], prices, nativeFilter.IsEnabled(list, i)));
+                    offers.Add(merchants.DisplayedOffer($"{key}:{rowIndex}", [reward], prices, nativeFilter.IsEnabled(list, rowIndex)));
             }
             merchants.PublishDisplayedShop(addon->Id, key, offers, balances, ownedItems, rows.Count);
             return true;
@@ -254,6 +261,55 @@ internal sealed unsafe class NativeExchangeController : IDisposable
         return true;
     }
 
+    private static bool TryMapCurrencyRows(AtkUnitBase* addon, AtkComponentList* list, AgentShop* shop, int[] sources, out string failure)
+    {
+        // Inspected KR 2026.10.06: refresh RVA12C17A0, row render RVA12C2D10,
+        // tooltip RVA12C2B74. Compatibility's exact executable hash/MVID still applies.
+        // The 60-entry compact map is native addon state, not a filtered purchase index.
+        const int capacity = 60;
+        const int itemIdValue = 0x42A;
+        const int iconValue = 0xD4;
+        failure = "native value layout unavailable";
+        if (addon->AtkValues is null || addon->AtkValuesCount <= itemIdValue + capacity - 1 ||
+            addon->AtkValues[3].Type is not (AtkValueType.UInt or AtkValueType.Int)) return false;
+        var count = *(uint*)((byte*)addon + 0x3B38);
+        failure = $"page count mismatch: rows={sources.Length}; page={count}; values={addon->AtkValues[3].UInt}";
+        if (count is 0 or > capacity || addon->AtkValues[3].UInt != count || sources.Length > count) return false;
+        var tree = (AtkComponentTreeList*)list;
+        var used = new HashSet<int>();
+        for (var rowIndex = 0; rowIndex < sources.Length; rowIndex++)
+        {
+            var row = tree->Items[rowIndex].Value;
+            failure = $"row {rowIndex}: unsupported payload";
+            if (row is null || row->UIntValues.LongCount != 3 || row->UIntValues.First is null ||
+                row->UIntValues[0] != 0 || row->UIntValues[1] >= count || row->UIntValues[2] != 0) return false;
+            var entry = ((uint*)((byte*)addon + 0x21A0))[row->UIntValues[1]];
+            failure = $"row {rowIndex}: compact map outside page";
+            if (entry >= count) return false;
+            ref var id = ref addon->AtkValues[itemIdValue + entry];
+            ref var icon = ref addon->AtkValues[iconValue + entry];
+            var record = (uint*)((byte*)addon + 0x320 + entry * 0x40);
+            failure = $"row {rowIndex}: item identity mismatch";
+            if (id.Type is not (AtkValueType.UInt or AtkValueType.Int) ||
+                icon.Type is not (AtkValueType.UInt or AtkValueType.Int) ||
+                id.UInt == 0 || record[0] != id.UInt || record[1] != icon.UInt) return false;
+            var source = -1;
+            for (var i = 0; i < shop->ItemReceiveCount; i++)
+            {
+                ref var item = ref shop->ItemReceive[i];
+                if (item.ItemId != id.UInt || item.ItemIconId != icon.UInt) continue;
+                failure = $"row {rowIndex}: duplicate agent item {id.UInt}";
+                if (source != -1) return false; // Ambiguous duplicate reward: retain the original list.
+                source = i;
+            }
+            failure = $"row {rowIndex}: no unique agent item {id.UInt}";
+            if (source < 0 || !used.Add(source)) return false;
+            sources[rowIndex] = source;
+        }
+        failure = "";
+        return true;
+    }
+
     private static string ReadShopName(AgentShop* shop)
     {
         var pointer = shop->ShopName.Value;
@@ -268,20 +324,21 @@ internal sealed unsafe class NativeExchangeController : IDisposable
         var list = addon->GetComponentListById(ListId);
         if (list is null || list->OwnerNode is null || list->OwnerNode->Height < 100) return;
         boundAddon = (nint)addon; listHeight = list->OwnerNode->Height;
+        merchants.ResetFilters(addon->Id);
         foreach (var id in ShiftIds.Append(ListId))
         { var node = addon->GetNodeById(id); if (node is null) continue; positions[id] = node->Y; node->SetYFloat(node->Y + 28); }
         list->SetSize(list->OwnerNode->Width, (ushort)(listHeight - 28));
         var y = name == "InclusionShop" ? 118 : CurrencyShop ? 92 : 194;
-        missing = new CheckboxNode { Position = new(28, y), Size = new(200, 24), String = "없는 것만 보기" };
+        missing = new CheckboxNode { Position = new(28, y), Size = new(200, 24), String = ShopItemPolicy.OwnedFilterLabel };
         missing.OnClick = value =>
         {
-            if (!sync && context.Length > 0)
-            { Restore(addon); config.ExchangeCategoryHideOwned[context] = value; save(); lastRead = 0; }
+            if (!sync)
+            { Restore(addon); merchants.FiltersFor(addon->Id).HideOwned = value; lastRead = 0; }
         };
         missing.AttachNode(addon);
-        consumables = new CheckboxNode { Position = new(244, y), Size = new(190, 24), String = ShopItemPolicy.FilterLabel, IsChecked = config.MerchantHideConsumables,
+        consumables = new CheckboxNode { Position = new(244, y), Size = new(190, 24), String = ShopItemPolicy.FilterLabel,
             TextTooltip = ShopItemPolicy.FilterHelp };
-        consumables.OnClick = value => { if (!sync) { Restore(addon); config.MerchantHideConsumables = value; save(); lastRead = 0; } };
+        consumables.OnClick = value => { if (!sync) { Restore(addon); merchants.FiltersFor(addon->Id).HideConsumables = value; lastRead = 0; } };
         consumables.AttachNode(addon);
         calculate = new TextButtonNode { Position = new(CurrencyShop ? 476 : 556, y - 3), Size = new(176, 28), String = "필요 재화", OnClick = () => currency.OpenForShop(addon->Id) };
         calculate.AttachNode(addon);
@@ -298,6 +355,7 @@ internal sealed unsafe class NativeExchangeController : IDisposable
         if (boundAddon != (nint)addon) return;
         Restore(addon); merchants.ClearDisplayedShop(addon->Id);
         currency.CloseForShop(addon->Id);
+        merchants.ForgetFilters(addon->Id);
         missing?.Dispose(); missing = null; consumables?.Dispose(); consumables = null; calculate?.Dispose(); calculate = null;
         foreach (var (id, y) in positions) { var node = addon->GetNodeById(id); if (node is not null) node->SetYFloat(y); }
         var list = addon->GetComponentListById(ListId); if (list is not null && list->OwnerNode is not null) list->SetSize(list->OwnerNode->Width, listHeight);

@@ -1,5 +1,7 @@
 # 구조와 참고 자료
 
+0.1.2.10은 위에 기록된 고정 VanillaPlus StickyShopCategories의 열기/종료 수명을 재참고했으나, 사용자 요청에 따라 그 기능의 저장 동작은 채택하지 않았다. 외부 구현을 복사하지 않았다. 상점 체크는 메모리에만 공유하고 Configuration v3에는 기능 on/off만 남긴다. 우주 화폐 행 매핑은 로컬 KR 실행 파일의 refresh/renderer/tooltip을 직접 대조한 별도 구현이다. 추가 필드/명령의 근거와 읽기 범위는 NATIVE-UI.md에 기록했다.
+
 ## 코드 구조
 
 - `src/DuckbillTweak.Core`: 보유 상태, 품목 필터, 교환식 선택과 재화 합계, 전리품 관측 기록. 게임 의존성 없음.

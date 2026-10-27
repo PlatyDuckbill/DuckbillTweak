@@ -4,6 +4,7 @@ public enum ShopItemPurpose { Other, Equipment, Collectible, Consumable, Materia
 
 public static class ShopItemPolicy
 {
+    public const string OwnedFilterLabel = "보유 수집품 제외";
     public const string FilterLabel = "수집 위주 보기";
     public const string OwnedFilterHelp = "보유·등록한 장비와 수집품을 숨깁니다.\n소모품·재료·하우징은 그대로 표시합니다.";
     public const string FilterHelp = "장비와 등록 수집품 위주로 표시합니다.\n소모품·재료·마테리아·하우징 등을 숨깁니다.";

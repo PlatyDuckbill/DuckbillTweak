@@ -7,7 +7,7 @@ using KamiToolKit.Nodes;
 
 namespace DuckbillTweak.Plugin.Native;
 
-internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Configuration config, Action save) : NativeAddon
+internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants) : NativeAddon
 {
     private CheckboxNode? missing;
     private CheckboxNode? consumables;
@@ -20,6 +20,7 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
     private IReadOnlyList<Offer>? previousOffers;
     private long lastRead;
     private uint categoryId;
+    private TradeFilter tradeFilter;
     private bool syncing;
     private ushort sourceAddon;
     private long sourceSession;
@@ -28,8 +29,8 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
     public void OpenForShop(ushort addon)
     {
         if (!merchants.IsShopOpen(addon)) return;
-        if (sourceAddon != addon || sourceSession != merchants.SessionGeneration)
-        { categoryId = 0; sourceContext = ""; previousOffers = null; }
+        merchants.ResetFilters(addon);
+        categoryId = 0; tradeFilter = TradeFilter.All; sourceContext = ""; previousOffers = null;
         sourceAddon = addon; sourceSession = merchants.SessionGeneration; lastRead = 0;
         Open();
     }
@@ -44,12 +45,12 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
     protected override void OnSetup(AtkUnitBase* addon, Span<AtkValue> values)
     {
         merchants.Visible = true;
-        missing = new CheckboxNode { Position = new(28, 50), Size = new(200, 24), String = "없는 것만 계산", IsChecked = config.ShopFilter.HideOwned };
-        missing.OnClick = value => { if (!syncing) { config.ShopFilter.HideOwned = value; save(); lastRead = 0; } };
+        missing = new CheckboxNode { Position = new(28, 50), Size = new(200, 24), String = ShopItemPolicy.OwnedFilterLabel, IsChecked = merchants.FiltersFor(sourceAddon).HideOwned };
+        missing.OnClick = value => { if (!syncing) { merchants.FiltersFor(sourceAddon).HideOwned = value; lastRead = 0; } };
         missing.AttachNode(this);
-        consumables = new CheckboxNode { Position = new(260, 50), Size = new(220, 24), String = ShopItemPolicy.FilterLabel, IsChecked = config.MerchantHideConsumables,
+        consumables = new CheckboxNode { Position = new(260, 50), Size = new(220, 24), String = ShopItemPolicy.FilterLabel, IsChecked = merchants.FiltersFor(sourceAddon).HideConsumables,
             TextTooltip = ShopItemPolicy.FilterHelp };
-        consumables.OnClick = value => { if (!syncing) { config.MerchantHideConsumables = value; save(); lastRead = 0; } };
+        consumables.OnClick = value => { if (!syncing) { merchants.FiltersFor(sourceAddon).HideConsumables = value; lastRead = 0; } };
         consumables.AttachNode(this);
         categories = new DropDownNode<CategoryOption> { Position = new(28, 84), Size = new(290, 28),
             GetLabelFunction = item => item.Name, Options = [] };
@@ -57,16 +58,16 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
         categories.AttachNode(this);
         trade = new StringDropDownNode { Position = new(334, 84), Size = new(220, 28),
             Options = ["거래 여부 전체", "거래 가능", "거래 불가"] };
-        trade.SelectedOption = trade.Options[(int)config.ShopFilter.Trade];
-        trade.OnOptionSelected = option => { if (!syncing) { config.ShopFilter.Trade = (TradeFilter)trade.Options.IndexOf(option); save(); lastRead = 0; } };
+        trade.SelectedOption = trade.Options[(int)tradeFilter];
+        trade.OnOptionSelected = option => { if (!syncing) { tradeFilter = (TradeFilter)trade.Options.IndexOf(option); lastRead = 0; } };
         trade.AttachNode(this);
         new TextButtonNode { Position = new(588, 84), Size = new(132, 28), String = "전체 보기", OnClick = () =>
         {
             syncing = true;
-            config.ShopFilter.HideOwned = false; config.ShopFilter.Trade = TradeFilter.All; categoryId = 0;
-            config.MerchantHideConsumables = false; consumables.IsChecked = false;
+            merchants.ResetFilters(sourceAddon); tradeFilter = TradeFilter.All; categoryId = 0;
+            consumables.IsChecked = false;
             missing.IsChecked = false; trade.SelectedOption = trade.Options[0];
-            categories.SelectedOption = categories.Options.FirstOrDefault(); syncing = false; save(); lastRead = 0;
+            categories.SelectedOption = categories.Options.FirstOrDefault(); syncing = false; lastRead = 0;
         } }.AttachNode(this);
         summary = Label("", 28, 118, 692);
         notice = Label("", 28, 146, 692, fontSize: 13);
@@ -105,6 +106,12 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
         totals.Update(); items.Update();
         if (lastRead != 0 && Stopwatch.GetElapsedTime(lastRead).TotalMilliseconds < 500) return;
         lastRead = Stopwatch.GetTimestamp();
+        var shared = merchants.FiltersFor(sourceAddon);
+        syncing = true;
+        if (missing is not null && missing.IsChecked != shared.HideOwned) missing.IsChecked = shared.HideOwned;
+        if (consumables is not null && consumables.IsChecked != shared.HideConsumables) consumables.IsChecked = shared.HideConsumables;
+        if (trade is not null && trade.SelectedOption != trade.Options[(int)tradeFilter]) trade.SelectedOption = trade.Options[(int)tradeFilter];
+        syncing = false;
         if (!merchants.TryGetCalculation(sourceAddon, out var view, out var context))
         {
             summary.String = "현재 상점의 품목 정보를 확인하는 중입니다.";
@@ -116,9 +123,6 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
             return;
         }
         if (sourceContext != context) { sourceContext = context; categoryId = 0; previousOffers = null; totals.ResetScroll(); items.ResetScroll(); }
-        syncing = true;
-        if (consumables is not null && consumables.IsChecked != config.MerchantHideConsumables) consumables.IsChecked = config.MerchantHideConsumables;
-        syncing = false;
         if (missing is not null) missing.TextTooltip = merchants.OwnershipHelp;
         if (!ReferenceEquals(previousOffers, view.Offers))
         {
@@ -131,8 +135,8 @@ internal sealed unsafe class NativeCurrencyAddon(MerchantService merchants, Conf
             categoryId = categories.SelectedOption.Id;
             syncing = false;
         }
-        var filter = new ShopFilter { HideOwned = config.ShopFilter.HideOwned, Trade = config.ShopFilter.Trade,
-            HideConsumables = config.MerchantHideConsumables,
+        var filter = new ShopFilter { HideOwned = shared.HideOwned, Trade = tradeFilter,
+            HideConsumables = shared.HideConsumables,
             FilterCategories = categoryId != 0, Categories = categoryId == 0 ? [] : [categoryId] };
         var offers = view.Offers.Where(o => filter.Matches(o, merchants.CalculationOwnership)).ToArray();
         // These offers came from the currently displayed native rows. A disabled row

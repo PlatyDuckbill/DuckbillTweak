@@ -21,7 +21,13 @@
 
 KR Populate RVA6A62C0의 6A631D는 원본 인덱스를 Renderer.ListItemIndex에 저장하며 6A6405–6A6412에서도 같은 인덱스와 현재 행 렌더러를 populator에 전달한다. 이 경로와 native 수량·미리보기·구매 이벤트를 그대로 사용하고 구매 명령/콜백을 생성하지 않는다. 목록 계산/스크롤 보정은 설치된 바인딩을 사용한다. 새 런타임 주소/후크는 추가하지 않았다.
 
-ShopExchangeCurrency의 KR ULD는680×528, node20/component1022 TreeList, header13/구분선19이며 새로운 컨트롤은y92에 들어간다. AgentShop의 addon ID/수신 배열/3배 비용 배열 일치를 확인한 현재 탭만 계산한다. 일치하지 않으면 이유/개수만 로그에 남기며 다른 목록으로 추정하지 않는다. 필터 적용 실패에서는 원본을 복구하고 체크박스를 잠그지 않아 해제할 수 있다.
+ShopExchangeCurrency의 KR ULD는680×528, node20/component1022 TreeList, header13/구분선19이며 새로운 컨트롤은y92에 들어간다. AgentShop의 addon ID/수신 배열/3배 비용 배열 계약을 검증한다. 0.1.2.10부터는 원본 TreeList와 AgentShop의 전체 개수가 같다는 조건을 제거하고 아래 탭 매핑을 사용한다. 정보 미확인/필터 실패에서는 원본을 복구하고 체크박스를 잠그지 않아 해제할 수 있다.
+
+0.1.2.10 우주 화폐 탭 매핑: 실제 로그의 AgentShop51개에 대해 TreeList가 기타20개/장비31개로 나뉜다. 동일 KR 실행 파일의 refresh RVA12C17A0, 렌더12C2D10, 툴팁12C2B74를 정적으로 확인했다. 원본 행 UIntValues[1]은 compact index이며 addon+21A0의60칸 map을 통해 현재 페이지 품목 index로 연결한다. addon+3B38은 페이지 품목 수, addon+320+index×40의 첫 두 uint는 아이템ID/아이콘이다. AtkValues[3] 수량, [42A+index] 아이템ID, [D4+index] 아이콘과 교차 검증한다. 모든 범위/타입/중복을 검증하고 AgentShop에서 같은ID/아이콘인 유일한 품목만 연결한다. UIntValues[0]=0/[2]=0인 단일 보상 행만 지원하며 모호한 행은 추정하지 않는다. 원본 행 순서·map·UIntValues·구매 이벤트는 수정하지 않는다. 관리 카탈로그는 전체 AgentShop 페이지를 해석한 후 표시된 탭 인덱스만 선택한다. 계산과 숨김은 표시된 TreeList 행 순서를 사용한다.
+
+이 추가 읽기는 기존 정확한 게임 SHA/MVID 가드 뒤의 UI update에서만 수행한다. native-contract 오프라인 검사는 map 기록 RVA12C1B59, 렌더 소비12C2D5F, 아이템ID 읽기12C2BAB의 원본 명령도 대조한다. 런타임 시그니처/후크/게임 입력을 추가하지 않았다.
+
+체크 상태는 Configuration v3에서 제거했다. MerchantService의 addon 수명별 메모리 상태 하나를 원본 상점/재화 창이 공유한다. 상점 Attach와 재화 OpenForShop에서 두 bool을 false로 초기화하고 finalize/기능 해제/세션 변경에서 제거한다. Refresh/탭 변경은 현재 열린 창의 상태를 유지한다. 재화 창을 새로 열면 상점 쪽도 함께 해제된다. 이름은 모두 '보유 수집품 제외'이며, 마테리아/소모품 등을 유지하는 기존 목적 분류와 짧은 툴팁은 그대로다.
 
 ### 이전 0.1.1.6/7 구현과 실패 원인
 
