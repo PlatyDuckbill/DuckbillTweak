@@ -1,5 +1,23 @@
 # 배포 확인
 
+## 0.2.0.3 · 상점 마우스 판정과 일반 채팅 말풍선 순서
+
+사용자가 말풍선 코드 전면 검수 후 공개 배포를 명시 요청했다. 원래 말풍선 발생 원인은 미확정이며 겹침 재현이 되지 않아 수정 후 실기를 완료한 것으로 처리하지 않는다. 상점은 사용자 테스트에서 정상으로 보인다는 보고가 있으나 고정 Release ZIP 전체의 InGameVerified=false를 유지한다.
+
+| 항목 | 값 |
+|---|---|
+| 소스 | `e1cb3d3e83b30358aee04fedaea5c3e87bc91ef9` |
+| 고정 후보 | `artifacts/release/0.2.0.3/candidate1` · SourceDirty=false |
+| ZIP | `DuckbillTweak-0.2.0.3.zip` · 417,990바이트/15파일 |
+| SHA256 | `72883c85af9c022e184e7b19d541ca11d08e3f5ca21b51fa3511e30a45ba9a73` |
+| 공개 Release | ID426628923 · `v0.2.0.3` · draft=false/prerelease=false |
+| 공개 시각 | 2026-10-28T12:16:59Z / 21:16:59 KST |
+| 실기 | 말풍선 미확인 · InGameVerified=false |
+
+[공개 릴리스](https://github.com/PlatyDuckbill/DuckbillTweak/releases/tag/v0.2.0.3). Release 빌드 경고·오류0, 추출15파일 해시·실제 DLL 내장 재화708바이트/28매핑·한영3항목·manifest/참조 버전 일치. 정확한 KR 게임SHA/지원 두 런타임 각각3모듈 조합/원본10명령 일치. 전체 메타데이터 차이는 이전 배포 보고서와 같으며 새 참조10개가 두 런타임 모두 일치하고 누락0이다. 자동 테스트/게임 조작 없음. 교차 레이어 이동은 전용 함수로 먼저 이전 목록을 정리하고 같은 레이어에서만 순서를 조정한다.
+
+초안 자산 digest/크기·태그 소스를 대조한 뒤 고정 ZIP을 재빌드 없이 공개했다. 인증 없는 ZIP/체크섬/태그아이콘 다운로드HTTP200/원본SHA 일치를 확인한 후 설치 원본0.2.0.3을 작성했다. LastUpdate는 실제 공개 시각으로 설정했다. 게시 근거는`.cache/publication-0.2.0.3/`에 보관한다. 공용 목록 동기화와 실제 업데이트 후 인게임 확인은 별도 기록한다. 기존 태그·Release·DuckbillFisher 저장소는 변경하지 않았다.
+
 ## 0.2.0.2 · 입찰 창 지연 열기 수정
 
 사용자가 인게임 확인 전 공개 배포를 명시 요청했다. 확인된candidate1을 재빌드하지 않고 게시했으며 InGameVerified=false를 유지한다.
