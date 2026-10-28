@@ -1,5 +1,19 @@
 [
   {
+    "Version": "0.2.0.3",
+    "Date": "2026-10-28",
+    "Korean": [
+      "상점 필터와 탭 전환 후 아이템 설명이나 우클릭 메뉴가 나타나지 않던 문제를 수정했습니다.",
+      "일반 채팅의 기본 말풍선이 이름표 뒤로 가려지지 않도록 표시 순서를 보정합니다. 별도 설정은 필요하지 않습니다.",
+      "말풍선 겹침 문제는 수정 후 인게임 확인이 아직 필요합니다."
+    ],
+    "English": [
+      "Fix missing item tooltips and context menus after filtering shop lists or switching tabs.",
+      "Keep native chat bubbles in front of nameplates, including in normal chat, without an additional setting.",
+      "The chat-bubble overlap fix still needs in-game verification."
+    ]
+  },
+  {
     "Version": "0.2.0.2",
     "Date": "2026-10-28",
     "Korean": [

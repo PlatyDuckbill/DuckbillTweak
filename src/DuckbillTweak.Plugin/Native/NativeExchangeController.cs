@@ -21,8 +21,9 @@ internal sealed unsafe class NativeExchangeController : IDisposable
     private readonly MerchantService merchants;
     private readonly NativeCurrencyAddon currency;
     private readonly IPluginLog log;
+    private readonly NativeCollisionRefresh collisions;
     private readonly AddonController controller;
-    private readonly NativeTreeFilter nativeFilter = new();
+    private readonly NativeTreeFilter nativeFilter;
     private CheckboxNode? missing;
     private CheckboxNode? consumables;
     private TextButtonNode? calculate;
@@ -44,9 +45,11 @@ internal sealed unsafe class NativeExchangeController : IDisposable
     private bool Shape(AtkUnitBase* addon) => addon->RootNode is not null && addon->RootNode->Width == (CurrencyShop ? 680 : 760) &&
         addon->RootNode->Height == (name == "InclusionShop" ? 586 : CurrencyShop ? 528 : 556) && addon->GetNodeById(ListId) is not null;
 
-    public NativeExchangeController(string name, MerchantService merchants, NativeCurrencyAddon currency, IPluginLog log)
+    public NativeExchangeController(string name, MerchantService merchants, NativeCurrencyAddon currency, IPluginLog log, IAddonLifecycle lifecycle)
     {
         this.name = name; this.merchants = merchants; this.currency = currency; this.log = log;
+        collisions = new(lifecycle, name);
+        nativeFilter = new(collisions);
         controller = new AddonController { AddonName = name, OnUpdate = Update, OnFinalize = Detach,
             OnPreRefresh = addon =>
             {
@@ -390,8 +393,9 @@ internal sealed unsafe class NativeExchangeController : IDisposable
         missing?.Dispose(); missing = null; consumables?.Dispose(); consumables = null; calculate?.Dispose(); calculate = null;
         foreach (var (id, y) in positions) { var node = addon->GetNodeById(id); if (node is not null) node->SetYFloat(y); }
         var list = addon->GetComponentListById(ListId); if (list is not null && list->OwnerNode is not null) list->SetSize(list->OwnerNode->Width, listHeight);
-        addon->UpdateCollisionNodeList(false);
+        collisions.Request(addon);
+        collisions.Clear();
         positions.Clear(); boundAddon = 0; context = ""; pageIdentity = ""; renderFailed = false; lastShape = null; lastFailure = null; lastReadFailure = null;
     }
-    public void Dispose() { controller.Dispose(); if (boundAddon != 0) Detach((AtkUnitBase*)boundAddon); }
+    public void Dispose() { controller.Dispose(); if (boundAddon != 0) Detach((AtkUnitBase*)boundAddon); collisions.Dispose(); }
 }

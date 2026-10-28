@@ -4,7 +4,7 @@ using KamiToolKit.BaseTypes.ComponentNode;
 namespace DuckbillTweak.Plugin.Native;
 
 /// <summary>Keep source indices intact while compacting the game's pooled row renderers.</summary>
-internal sealed unsafe class NativeTreeFilter
+internal sealed unsafe class NativeTreeFilter(NativeCollisionRefresh collisions)
 {
     private sealed record SavedRow(nint Item, ushort Height, bool Hidden, bool Disabled, nint Renderer, int Pool);
     private readonly List<SavedRow> saved = [];
@@ -171,20 +171,21 @@ internal sealed unsafe class NativeTreeFilter
             node->ToggleVisibility(show);
             changed = true;
         }
-        if (changed) addon->UpdateCollisionNodeList(false);
+        if (changed) collisions.Request(addon);
     }
 
-    private static void Relayout(AtkUnitBase* addon, AtkComponentTreeList* tree)
+    private void Relayout(AtkUnitBase* addon, AtkComponentTreeList* tree)
     {
         // Population still receives the original source index. Quantity, preview and
         // purchase events identify the original item, never its filtered position.
         tree->CalculateVisibleItemHeightAndCount(&tree->VisibleItemHeight, &tree->VisibleItemCount);
         tree->RecalculateVisibleItems(false);
-        addon->UpdateCollisionNodeList(false);
+        collisions.Request(addon);
     }
 
     public void Restore(AtkUnitBase* addon, AtkComponentList* list)
     {
+        var relayout = false;
         if (saved.Count > 0 && SourceCount(list) >= 0)
         {
             var tree = (AtkComponentTreeList*)list;
@@ -202,13 +203,35 @@ internal sealed unsafe class NativeTreeFilter
                 item->State = previous.Disabled ? item->State | TreeListItemState.Disabled : item->State & ~TreeListItemState.Disabled;
                 restored = true;
             }
-            if (restored)
-            {
-                foreach (var (address, show) in visibility) ((AtkComponentListItemRenderer*)address)->OwnerNode->ToggleVisibility(show);
-                Relayout(addon, tree);
-            }
+            relayout = restored;
         }
+        // Pools can survive a tab refresh even when every source row is replaced.
+        // Never dereference a saved renderer unless it still belongs to a live pool.
+        if (visibility.Count > 0 && list is not null && list->CategoryItemRendererList is not null && list->NumCategoryRenderers <= 32)
+        {
+            for (var p = 0; p < list->NumCategoryRenderers; p++)
+            {
+                ref var category = ref list->CategoryItemRendererList[p];
+                if (category.NodeCount > 1000 || (category.NodeCount > 0 && category.NodeList is null)) continue;
+                RestoreVisibility(category.AtkComponentListItemRenderer);
+                for (var j = 0; j < category.NodeCount; j++)
+                {
+                    var node = &category.NodeList[j];
+                    if ((ushort)node->Type >= 1000) RestoreVisibility((AtkComponentListItemRenderer*)node->Component);
+                }
+            }
+            collisions.Request(addon);
+        }
+        // Restore our visibility changes before the native layout decides which
+        // pooled rows belong to the current (possibly scrolled) viewport.
+        if (relayout) Relayout(addon, (AtkComponentTreeList*)list);
         Clear();
+    }
+
+    private void RestoreVisibility(AtkComponentListItemRenderer* renderer)
+    {
+        if (renderer is not null && visibility.TryGetValue((nint)renderer, out var show) && renderer->OwnerNode is not null)
+            renderer->OwnerNode->ToggleVisibility(show);
     }
 
     private void Clear()

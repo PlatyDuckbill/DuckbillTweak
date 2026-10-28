@@ -36,6 +36,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
     private readonly List<NativeExchangeController> exchanges = [];
     private NativeLootInteraction? lootInteraction;
     private NativePvpBubbles? bubbles;
+    private NativeBubbleOrder? bubbleOrder;
     private bool toolkitInitialized;
     private bool disposed;
 
@@ -75,12 +76,13 @@ public sealed class Plugin : IAsyncDalamudPlugin
                     settings = new NativeSettingsAddon(config, Save, () => changelog.Open()) { InternalName = "DuckbillTweakSettings", Title = "DuckbillTweak", Size = new Vector2(580, 348) };
                     currency = new NativeCurrencyAddon(merchants) { InternalName = "DuckbillTweakCurrency", Title = "필요 재화", Size = new Vector2(760, 586) };
                     lootPopup = new NativeLootAddon(loot, config) { InternalName = "DuckbillTweakRolls", Title = "입찰 현황", Size = new Vector2(420, 420) };
-                    shop = new(merchants, currency, log);
-                    exchanges.Add(new("InclusionShop", merchants, currency, log));
-                    exchanges.Add(new("ShopExchangeItem", merchants, currency, log));
-                    exchanges.Add(new("ShopExchangeCurrency", merchants, currency, log));
+                    shop = new(merchants, currency, log, addonLifecycle);
+                    exchanges.Add(new("InclusionShop", merchants, currency, log, addonLifecycle));
+                    exchanges.Add(new("ShopExchangeItem", merchants, currency, log, addonLifecycle));
+                    exchanges.Add(new("ShopExchangeCurrency", merchants, currency, log, addonLifecycle));
                     lootInteraction = new(events, addonLifecycle, contextMenu, gui, config, lootPopup, log);
                     bubbles = new(framework, client, log, config, compatibility);
+                    bubbleOrder = new(framework, client, compatibility);
                 });
             }
             else log.Warning("Native UI disabled: {Reason}", compatibility.Reason);
@@ -121,7 +123,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
         foreach (var command in registeredCommands) commands.RemoveHandler(command);
         await framework.Run(() =>
         {
-            bubbles?.Dispose(); lootInteraction?.Dispose(); shop?.Dispose();
+            bubbleOrder?.Dispose(); bubbles?.Dispose(); lootInteraction?.Dispose(); shop?.Dispose();
             foreach (var exchange in exchanges) exchange.Dispose();
             merchants.Dispose(); loot.Dispose();
         });

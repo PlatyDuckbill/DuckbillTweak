@@ -17,6 +17,7 @@ internal sealed unsafe class NativeShopController : IDisposable
     private readonly MerchantService merchants;
     private readonly NativeCurrencyAddon currency;
     private readonly IPluginLog log;
+    private readonly NativeCollisionRefresh collisions;
     private readonly AddonController<AddonShop> controller;
     private readonly NativeListInput originalInput = new();
     private CheckboxNode? missing;
@@ -38,9 +39,10 @@ internal sealed unsafe class NativeShopController : IDisposable
     private bool renderFailed;
     private (int Total, int Visible)? lastApplied;
 
-    public NativeShopController(MerchantService merchants, NativeCurrencyAddon currency, IPluginLog log)
+    public NativeShopController(MerchantService merchants, NativeCurrencyAddon currency, IPluginLog log, IAddonLifecycle lifecycle)
     {
         this.merchants = merchants; this.currency = currency; this.log = log;
+        collisions = new(lifecycle, "Shop");
         controller = new AddonController<AddonShop> { AddonName = "Shop", OnUpdate = Update, OnFinalize = Detach,
             OnPreRefresh = addon =>
             {
@@ -89,7 +91,7 @@ internal sealed unsafe class NativeShopController : IDisposable
             if (!originalInput.Suppress(list, out var dirty)) { RestoreList(addon); return; }
             filteredList.Update();
             list->OwnerNode->SetAlpha(0); list->IsItemInteractionEnabled = false;
-            if (dirty) addon->UpdateCollisionNodeList(false);
+            if (dirty) collisions.Request(&addon->AtkUnitBase);
         }
         if (lastRead != 0 && Stopwatch.GetElapsedTime(lastRead).TotalMilliseconds < 300) return;
         lastRead = Stopwatch.GetTimestamp();
@@ -153,7 +155,7 @@ internal sealed unsafe class NativeShopController : IDisposable
         usingFilteredList = true;
         list->OwnerNode->SetAlpha(0);
         list->IsItemInteractionEnabled = false;
-        if (changed || inputChanged) addon->UpdateCollisionNodeList(false);
+        if (changed || inputChanged) collisions.Request(&addon->AtkUnitBase);
         if (lastApplied != (next.Count, filtered.Length))
         {
             log.Information("Shop filter applied: Rows={Rows}; Visible={Visible}", next.Count, filtered.Length);
@@ -240,7 +242,7 @@ internal sealed unsafe class NativeShopController : IDisposable
         usingFilteredList = false;
         lastApplied = null;
         if (filteredList is not null) filteredList.IsVisible = false;
-        if (changed) addon->UpdateCollisionNodeList(false);
+        if (changed) collisions.Request(&addon->AtkUnitBase);
     }
 
     private void Detach(AddonShop* addon)
@@ -256,9 +258,10 @@ internal sealed unsafe class NativeShopController : IDisposable
         shifted.Clear();
         if (addon->BuyList is not null && addon->BuyList->OwnerNode is not null)
         { addon->BuyList->OwnerNode->SetYFloat(listY); addon->BuyList->SetSize(addon->BuyList->OwnerNode->Width, listHeight); }
-        addon->UpdateCollisionNodeList(false);
+        collisions.Request(&addon->AtkUnitBase);
+        collisions.Clear();
         boundAddon = 0; rows = []; lastRead = 0; renderFailed = false;
     }
 
-    public void Dispose() { controller.Dispose(); if (boundAddon != 0) Detach((AddonShop*)boundAddon); }
+    public void Dispose() { controller.Dispose(); if (boundAddon != 0) Detach((AddonShop*)boundAddon); collisions.Dispose(); }
 }
