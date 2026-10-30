@@ -13,11 +13,12 @@
 | 공개 Release | ID428917707 · `v0.2.0.4` · draft=false/prerelease=false |
 | 공개 시각 | 2026-10-30T10:48:53Z / 19:48:53 KST |
 | 설치 원본 | `repo/release.json` · 0.2.0.4/API15 · LastUpdate1793324933 |
+| 공용 동기화 | [workflow41043625095](https://github.com/PlatyDuckbill/DuckbillRepo/actions/runs/41043625095) 성공 · 공용원본`0133abd67bff2afad3d7bf0438e5670ab24a02b0` |
 | 실기 | 새 런타임 로드·대표 기능 확인 대기 · InGameVerified=false |
 
 [공개 릴리스](https://github.com/PlatyDuckbill/DuckbillTweak/releases/tag/v0.2.0.4). 정규 Release 빌드 경고·오류0, 추출15파일 해시·실제 DLL 재화708바이트/28매핑·내장 한영 안내·manifest/참조 버전 일치. 고정 산출물의291타입/1,172멤버 전체 메타데이터는 조사한 Debug 결과와 동일하며 기존 차이/상위 참조의 별도 검토 근거를 유지한다. 새 dal4kr15.0.3.9 및 기존 두 런타임 각각 정확한 KR 게임SHA/원본10명령/세 모듈 조합 일치를 확인했다. SDK/API/lock/KamiToolKit 원본/게임 가드 변경과 자동 테스트·게임 조작은 없다.
 
-소스push/태그대상/초안 자산digest·크기를 대조한 뒤 고정 ZIP을 공개했다. 인증 없는 ZIP/체크섬/태그아이콘HTTP200·원본해시 일치를 확인한 후 설치 원본을 작성했고 LastUpdate는 실제 공개 시각으로 설정했다. 게시 근거는`.cache/publication-0.2.0.4/`에 보관한다. 공용 목록 동기화는 진행 중이며 실제 Dalamud 업데이트·인게임 성공과 구분한다. 기존 태그/Release와DuckbillFisher 저장소는 변경하지 않았다.
+소스push/태그대상/초안 자산digest·크기를 대조한 뒤 고정 ZIP을 공개했다. 인증 없는 ZIP/체크섬/태그아이콘HTTP200·원본해시 일치를 확인한 후 설치 원본을 작성했고 LastUpdate는 실제 공개 시각으로 설정했다. 게시 근거는`.cache/publication-0.2.0.4/`에 보관한다. 설치 원본325264a push와 공용동기화41043625095 성공 후2026-10-30T10:50:36Z에 고정 공용 커밋 및 기존 [공용 설치 URL](https://raw.githubusercontent.com/PlatyDuckbill/DuckbillRepo/main/pluginmaster.json) 모두 익명HTTP200/0.2.0.4/API15/22필드 원본 일치를 확인했다. 다른Fisher항목은0.6.0.0을 유지한다. 공개 배포·공용 목록 반영은 완료이며 실제 Dalamud 업데이트·인게임 성공과 구분한다. 기존 태그/Release와DuckbillFisher 저장소는 변경하지 않았다.
 
 ## 0.2.0.3 · 상점 마우스 판정과 일반 채팅 말풍선 순서
 
