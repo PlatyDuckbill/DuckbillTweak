@@ -5,9 +5,30 @@
 ## 고정 환경
 
 - 게임: KR2026.10.06.0000.0000. 실행 파일 SHA-256: DB9824EFAC6D5370AB64B02353E882931DDA447E160EE1A5D9E5DCBA43695728.
-- 런타임: 아래0.2.0.1의 검증된 wasdcxz15.0.3.9/dal4kr15.0.3.7 세 모듈 조합. 버전 번호만으로 허용하지 않는다.
+- 런타임: 검토한 wasdcxz15.0.3.9/dal4kr15.0.3.7/dal4kr15.0.3.9의 세 모듈 조합. 버전 번호만으로 허용하지 않는다. 새 dal4kr15.0.3.9 지원은 아직 미배포다.
 - KamiToolKit: MIT, revision1eaccb5c6d6fcc697f7e1b98b5528580f5edd201. 소스 수정 없이 submodule로 빌드하며 라이선스를 출력에 포함한다.
 - SDK/API 버전은 변경하지 않았다. NativeCompatibility가 게임 해시와 로드된 세 모듈의 MVID/디스크 SHA256 조합을 확인한다. 틀리면 사용자 명령에 미지원 사유만 출력한다.
+
+### 2026-10-30 dal4kr15.0.3.9 추가
+
+제보된 Dalamud15.0.3.9/FFCS MVID `0b9687ac-66d1-439f-8785-f7fff74f3d38`는 [dal4kr 배포 revision6f0bb791](https://github.com/dal4kr/Dalamud.Resources/commit/6f0bb791f643566169bb09c6f384a7bb387e47e6)의 실제 DLL과 일치한다. 해당 배포는2026-10-29T14:01:21Z(한국 시각23:01:21)에15.0.3.7에서15.0.3.9로 갱신됐다. SupportedGameVer는2026.10.06.0000.0000으로 동일하다. 기존 wasdcxz15.0.3.9와 같은 버전 표기여도 별개 빌드이며 이전 두 프로필 어느 쪽에도 해당하지 않았다. 실제 친구 PC의 전체 모듈 해시/설치 버전까지 확인한 것은 아니다.
+
+조사 원본은 [고정 Release.zip](https://raw.githubusercontent.com/dal4kr/Dalamud.Resources/6f0bb791f643566169bb09c6f384a7bb387e47e6/Dalamud/latest/Release.zip), 51,025,094바이트/SHA256 `794AE27BC9B560D385A96022E2C35D32CCB1776411A3BC972AFD90166ED75E42`다. `.cache/native-dal4kr-15.0.3.9/runtime`에만 추출했으며 게임/런처 DLL이나 DuckbillFisher 원본은 변경하지 않았다. DLL의 InformationalVersion은 Dalamud `15.0.3.9+ffe397272e589180ddb6d2718635636c02558c83`, FFCS/Interop `1.0.0+ceaa4c9912e295f99f46e1013fe7243bee1235c2`다. 원본 commit_hash.txt에는 Dalamud revision 뒤에 `-dirty`가 있어 완전한 소스 재현을 주장하지 않으며, 지원 근거는 고정 ZIP의 실제 바이트·메타데이터다. Dalamud는AGPL-3.0, FFCS/Interop은MIT이며 SDK DLL은 조사/참조용으로만 사용한다. 제품에 DLL/외부 구현 소스를 복제하지 않았다.
+
+| 모듈 | AssemblyVersion | MVID | SHA256 |
+|---|---|---|---|
+| Dalamud | 15.0.3.9 | 396f9566-f391-4d29-8022-f414a19bbfc7 | 0E5FBEF4B66B90D9C5C82B890338D07689F9BB7EB8AEAB6287A4FB2AA645EBA6 |
+| FFXIVClientStructs | 7.57.0.9758 | 0b9687ac-66d1-439f-8785-f7fff74f3d38 | 271A16276655A828DAE7A8AC213B3890B2B328A12B1FAB2B936E070931A5D7E1 |
+| InteropGenerator.Runtime | 1.0.0.0 | fe8269c0-eb0a-43d0-9032-c90f44f3136c | 4FACB44948B84BDB7A8FE9E336A390D92E4EF58684609F04B0F54A349B161A7B |
+
+실제 최종 Debug DLL과 고정 KamiToolKit의 참조를 고정 컴파일 참조wasdcxz15.0.3.7과 비교했다. 핵심245타입 중238개 동일/7개 차이, 관리형 포함291타입 중277개 동일/14개 차이다. 참조1,172멤버(핵심1,056개) 누락0이며 바뀐 참조는 아래 기존3개뿐이다. 비교 스크립트는 차이/상위 참조를 보고하고 실패하므로 자동 통과로 기록하지 않는다.
+
+- `ImRaii.FontDisposable.InternalPush`: 폰트 처리 IL 차이이며 Tweak의 네이티브 UI에서는 호출하지 않는다. 기존 dal4kr에서 보였던 AddonArgs/지도 타입 차이는 사라져 컴파일 기준 및 지원 wasdcxz15.0.3.9와 동일해졌다.
+- `ItemOrderModule.GetActiveRetainerSorter`, `RaptureAtkModule.ChangeUiMode`, `AtkUnitBase.UnsubscribeAtkArrayData`와 `IconSubFolder` 상수는 이미 검토한 dal4kr15.0.3.7과 동일하다. 미사용 함수와 한국/중국 아이콘 enum 차이의 기존 근거를 따른다.
+- `RaptureHotbarModule.ExecuteSlot`은 기존 dal4kr와 동일한 참조 차이다. 고정 KamiToolKit의 생성하지 않는 HotbarNode에만 있고 Tweak은 실행하지 않는다. `NumberArrayData`의 미사용4함수 추가는 기존 지원 wasdcxz15.0.3.9와 전체 기술 정보가 동일하다.
+- Lumina/Lumina.Excel은 기존 지원 dal4kr15.0.3.7과 파일 SHA256 자체가 같다. 따라서7개 시트의 typeHash 차이와 직접 참조 Item.AdditionalData/PreHandler.Target 차이는 기존 검토 그대로다. Lumina1.0.0.0 표기에 대한 상위 AssemblyRef2개도 그대로이며 새 호스트에서의 해결은 실제 로드 확인 대상으로 남긴다.
+
+`15.0.3.9-dal4kr` 프로필은 위 세 모듈의 정확한 MVID/SHA256 전체 조합으로만 선택한다. 게임SHA, 각 화면 형태/품목/원본 행 검증은 유지한다. SDK/API/컴파일 참조/lock/submodule 변경은 없다. 새 조합과 기존 두 조합 각각 같은 KR 실행 파일 SHA/원본10명령/모듈 조합 일치를 오프라인으로 확인했다. 보고서는 `.cache/native-dal4kr-15.0.3.9/final-comparison.json`이다. 실제 게임 로드·화면 성공이나 공개 배포는 아직 확인/수행하지 않았다.
 
 ### 0.2.0.1 한국 Dalamud 배포판 차이 대응 (2026-10-28)
 

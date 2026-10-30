@@ -1,5 +1,15 @@
 [
   {
+    "Version": "0.2.0.4",
+    "Date": "2026-10-30",
+    "Korean": [
+      "dal4kr 15.0.3.9 환경에서 UI 참조 미지원 경고로 설정과 기능이 차단되던 문제를 수정했습니다."
+    ],
+    "English": [
+      "Restore settings and features on the updated dal4kr 15.0.3.9 Korean Dalamud distribution."
+    ]
+  },
+  {
     "Version": "0.2.0.3",
     "Date": "2026-10-28",
     "Korean": [
