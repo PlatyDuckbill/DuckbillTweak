@@ -1,5 +1,24 @@
 # 배포 확인
 
+## 0.2.0.4 · dal4kr15.0.3.9 UI 참조 차단 대응
+
+사용자가 문제 대응 후 버전 상승·공개 배포를 명시 요청했다. 고정 후보를 재빌드 없이 게시했으며 실제 새 런타임 로드·화면 확인은 대기이므로 InGameVerified=false를 유지한다.
+
+| 항목 | 값 |
+|---|---|
+| 소스 | `02cfa4d8c1effc384d8358bdd1f8a403a59971c0` |
+| 고정 후보 | `artifacts/release/0.2.0.4/candidate1` · SourceDirty=false |
+| ZIP | `DuckbillTweak-0.2.0.4.zip` · 418,391바이트/15파일 |
+| SHA256 | `4f060667001fb5bc80b0d7931bf5be6ad8c251b1e2bb80b23f22d9e202dc82c6` |
+| 공개 Release | ID428917707 · `v0.2.0.4` · draft=false/prerelease=false |
+| 공개 시각 | 2026-10-30T10:48:53Z / 19:48:53 KST |
+| 설치 원본 | `repo/release.json` · 0.2.0.4/API15 · LastUpdate1793324933 |
+| 실기 | 새 런타임 로드·대표 기능 확인 대기 · InGameVerified=false |
+
+[공개 릴리스](https://github.com/PlatyDuckbill/DuckbillTweak/releases/tag/v0.2.0.4). 정규 Release 빌드 경고·오류0, 추출15파일 해시·실제 DLL 재화708바이트/28매핑·내장 한영 안내·manifest/참조 버전 일치. 고정 산출물의291타입/1,172멤버 전체 메타데이터는 조사한 Debug 결과와 동일하며 기존 차이/상위 참조의 별도 검토 근거를 유지한다. 새 dal4kr15.0.3.9 및 기존 두 런타임 각각 정확한 KR 게임SHA/원본10명령/세 모듈 조합 일치를 확인했다. SDK/API/lock/KamiToolKit 원본/게임 가드 변경과 자동 테스트·게임 조작은 없다.
+
+소스push/태그대상/초안 자산digest·크기를 대조한 뒤 고정 ZIP을 공개했다. 인증 없는 ZIP/체크섬/태그아이콘HTTP200·원본해시 일치를 확인한 후 설치 원본을 작성했고 LastUpdate는 실제 공개 시각으로 설정했다. 게시 근거는`.cache/publication-0.2.0.4/`에 보관한다. 공용 목록 동기화는 진행 중이며 실제 Dalamud 업데이트·인게임 성공과 구분한다. 기존 태그/Release와DuckbillFisher 저장소는 변경하지 않았다.
+
 ## 0.2.0.3 · 상점 마우스 판정과 일반 채팅 말풍선 순서
 
 사용자가 말풍선 코드 전면 검수 후 공개 배포를 명시 요청했다. 원래 말풍선 발생 원인은 미확정이며 겹침 재현이 되지 않아 수정 후 실기를 완료한 것으로 처리하지 않는다. 상점은 사용자 테스트에서 정상으로 보인다는 보고가 있으나 고정 Release ZIP 전체의 InGameVerified=false를 유지한다.

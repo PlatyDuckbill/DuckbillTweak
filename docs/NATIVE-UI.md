@@ -5,7 +5,7 @@
 ## 고정 환경
 
 - 게임: KR2026.10.06.0000.0000. 실행 파일 SHA-256: DB9824EFAC6D5370AB64B02353E882931DDA447E160EE1A5D9E5DCBA43695728.
-- 런타임: 검토한 wasdcxz15.0.3.9/dal4kr15.0.3.7/dal4kr15.0.3.9의 세 모듈 조합. 버전 번호만으로 허용하지 않는다. 새 dal4kr15.0.3.9 지원은 아직 미배포다.
+- 런타임: 검토한 wasdcxz15.0.3.9/dal4kr15.0.3.7/dal4kr15.0.3.9의 세 모듈 조합. 버전 번호만으로 허용하지 않는다. 새 dal4kr15.0.3.9 지원은0.2.0.4부터 제공한다.
 - KamiToolKit: MIT, revision1eaccb5c6d6fcc697f7e1b98b5528580f5edd201. 소스 수정 없이 submodule로 빌드하며 라이선스를 출력에 포함한다.
 - SDK/API 버전은 변경하지 않았다. NativeCompatibility가 게임 해시와 로드된 세 모듈의 MVID/디스크 SHA256 조합을 확인한다. 틀리면 사용자 명령에 미지원 사유만 출력한다.
 
@@ -28,7 +28,7 @@
 - `RaptureHotbarModule.ExecuteSlot`은 기존 dal4kr와 동일한 참조 차이다. 고정 KamiToolKit의 생성하지 않는 HotbarNode에만 있고 Tweak은 실행하지 않는다. `NumberArrayData`의 미사용4함수 추가는 기존 지원 wasdcxz15.0.3.9와 전체 기술 정보가 동일하다.
 - Lumina/Lumina.Excel은 기존 지원 dal4kr15.0.3.7과 파일 SHA256 자체가 같다. 따라서7개 시트의 typeHash 차이와 직접 참조 Item.AdditionalData/PreHandler.Target 차이는 기존 검토 그대로다. Lumina1.0.0.0 표기에 대한 상위 AssemblyRef2개도 그대로이며 새 호스트에서의 해결은 실제 로드 확인 대상으로 남긴다.
 
-`15.0.3.9-dal4kr` 프로필은 위 세 모듈의 정확한 MVID/SHA256 전체 조합으로만 선택한다. 게임SHA, 각 화면 형태/품목/원본 행 검증은 유지한다. SDK/API/컴파일 참조/lock/submodule 변경은 없다. 새 조합과 기존 두 조합 각각 같은 KR 실행 파일 SHA/원본10명령/모듈 조합 일치를 오프라인으로 확인했다. 보고서는 `.cache/native-dal4kr-15.0.3.9/final-comparison.json`이다. 실제 게임 로드·화면 성공이나 공개 배포는 아직 확인/수행하지 않았다.
+`15.0.3.9-dal4kr` 프로필은 위 세 모듈의 정확한 MVID/SHA256 전체 조합으로만 선택한다. 게임SHA, 각 화면 형태/품목/원본 행 검증은 유지한다. SDK/API/컴파일 참조/lock/submodule 변경은 없다. 새 조합과 기존 두 조합 각각 같은 KR 실행 파일 SHA/원본10명령/모듈 조합 일치를 오프라인으로 확인했다. 보고서는 `.cache/native-dal4kr-15.0.3.9/final-comparison.json`이다. 실제 게임 로드·화면 확인은 대기다. 사용자 요청으로 게시한0.2.0.4 고정 Release DLL에서도 전체 메타데이터가 조사 결과와 같음을 확인했으며 게시 근거는 [배포 확인](RELEASE.md)을 따른다.
 
 ### 0.2.0.1 한국 Dalamud 배포판 차이 대응 (2026-10-28)
 
