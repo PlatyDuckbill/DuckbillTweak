@@ -1,5 +1,21 @@
 # 배포 확인
 
+## 0.2.2.1 · 감정표현 따라하기 방향 선택과 판정 수정
+
+테스트 대상이 없어 사용자가 코드 점검 후 배포를 명시 요청했다("너가 코드로 한 번만 점검해주고 배포하자"). 고정 후보를 재빌드 없이 게시했으며 InGameVerified=false를 유지한다. "지금 방향 그대로"(실행 순간 타겟 비우기)가 실제로 방향을 유지하는지는 방향 로그(`Emote follow facing`)로 확인 대기다. 변경 근거는 [계획 기록](PLANS.md)의 0.2.2.0 배포 후 코드 점검 수정을 따른다.
+
+| 항목 | 값 |
+|---|---|
+| 소스 | `159736d3bc68e46d135c28bdc5310aeb564f9a76` |
+| 고정 후보 | `artifacts/release/0.2.2.1/candidate1` · SourceDirty=false |
+| ZIP | `DuckbillTweak-0.2.2.1.zip` · 457,244바이트/15파일 |
+| SHA256 | `f3458e2ee658ac4cd59c9b0d49f7d6161280a3bc5862199fba7665719f5fdcdd` |
+| 공개 Release | ID439649656 · `v0.2.2.1` · draft=false/prerelease=false |
+| 공개 시각 | 2026-11-09T21:11:03Z / 2026-11-10 06:11:03 KST |
+| 설치 원본 | `repo/release.json` · 0.2.2.1/API15 · LastUpdate1794226263 |
+| 실기 | 고정 ZIP·방향 유지·재실행 대기 미확인 · InGameVerified=false |
+
+[공개 릴리스](https://github.com/PlatyDuckbill/DuckbillTweak/releases/tag/v0.2.2.1). Release 빌드 경고·오류0, 내장 한영 안내·manifest 일치, Release DLL에 조사 도구 문자열 없음. 업로드 자산 digest/크기와 태그 대상 커밋을 대조한 뒤 공개했다. 인증 없는 ZIP/체크섬/태그 아이콘 HTTP200·원본 해시 일치를 확인한 후 설치 원본을 작성했다. 게시 근거는 `.cache/publication-0.2.2.1/`에 보관한다.
 ## 0.2.2.0 · 감정표현 따라하기와 색 선택 창 수정
 
 사용자가 최신 따라하기 보완(박자 기준·종족별 길이·꺼지는 감정표현 재시도)의 인게임 확인 전에 배포를 명시 요청했다("나머진 해보면서 할게"). 고정 후보를 재빌드 없이 게시했으며 InGameVerified=false를 유지한다. 따라하기 1차 구현과 색 선택 창 수정의 개발판 확인 범위는 [계획 기록](PLANS.md)을 따른다.
