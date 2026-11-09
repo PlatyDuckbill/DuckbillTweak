@@ -30,6 +30,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
 #if DEBUG
     private readonly PositionalProbe probe;
     private readonly EmoteProbe emoteProbe;
+    private readonly EmoteSyncExperiment emoteSync;
 #endif
     private readonly IGameInteropProvider interop;
     private readonly IFlyTextGui flyText;
@@ -69,6 +70,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
 #if DEBUG
         probe = new(interop, flyText, objects, data, log, framework);
         emoteProbe = new(framework, objects, target, log);
+        emoteSync = new(framework, objects, target, chat, log);
 #endif
         config = pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         if (config.Version is < 1 or > 3) throw new InvalidOperationException("Unsupported configuration version.");
@@ -180,6 +182,13 @@ public sealed class Plugin : IAsyncDalamudPlugin
                 var enabled = emoteProbe.Toggle();
                 chat.Print(enabled ? "감정표현 조사 로그 켜짐: dalamud.log에 [EmoteProbe]로 기록합니다." : "감정표현 조사 로그 꺼짐.", "DuckbillTweak");
             });
+        else if (argument.StartsWith("emotesync", StringComparison.OrdinalIgnoreCase))
+        {
+            // Research experiment (Debug builds only): "/dbtw emotesync [leadMs]".
+            var parts = argument.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var lead = parts.Length > 1 && int.TryParse(parts[1], out var value) ? value : 0;
+            _ = framework.Run(() => emoteSync.Start(lead));
+        }
 #endif
         else OpenSettings();
     }
@@ -194,7 +203,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
         await framework.Run(() =>
         {
 #if DEBUG
-            probe.Dispose(); emoteProbe.Dispose();
+            probe.Dispose(); emoteProbe.Dispose(); emoteSync.Dispose();
 #endif
             positional?.Dispose(); bubbleOrder?.Dispose(); bubbles?.Dispose(); lootInteraction?.Dispose(); shop?.Dispose();
             foreach (var exchange in exchanges) exchange.Dispose();
