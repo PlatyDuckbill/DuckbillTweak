@@ -1,3 +1,4 @@
+using System.Numerics;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.Gui.ContextMenu;
@@ -49,6 +50,11 @@ internal sealed unsafe class EmoteFollow : IDisposable
     private bool armed;
     private uint territory;
     private readonly List<double> samples = [];
+    private Vector3 firedPosition;
+    private bool toggleRetried;
+
+    /// <summary>User setting: run ahead of our own screen by this much so other players see us on the beat.</summary>
+    private double Offset => Math.Clamp(config.EmoteFollowOffsetMs, 0, 500) / 1000.0;
 
     public EmoteFollow(IContextMenu contextMenu, IFramework framework, IObjectTable objects, IClientState client,
         ICondition conditions, IDataManager data, IChatGui chat, IPluginLog log, Configuration config, Action save)
@@ -85,7 +91,7 @@ internal sealed unsafe class EmoteFollow : IDisposable
         targetId = objectId; emoteId = id; emoteName = name;
         leadMeasured = config.EmoteLeadMs.TryGetValue(id, out var ms);
         lead = leadMeasured ? ms / 1000.0 : DefaultLead;
-        attempts = 0; samples.Clear(); armed = false; previousDelay = double.NaN;
+        attempts = 0; samples.Clear(); armed = false; previousDelay = double.NaN; toggleRetried = false;
         started = Environment.TickCount64; territory = client.TerritoryType;
         framework.Update += OnUpdate;
         if (leadMeasured) stage = Stage.Scheduled;
@@ -122,13 +128,28 @@ internal sealed unsafe class EmoteFollow : IDisposable
         {
             case Stage.Priming:
             case Stage.Verifying:
-                if (selfNative->EmoteController.EmoteId != emoteId && now - firedAt > 500)
-                { Stop("직접 움직이거나 다른 동작을 해서 따라하기를 멈췄습니다."); return; }
+                if (selfNative->EmoteController.EmoteId != emoteId)
+                {
+                    var moved = Vector3.Distance(self.Position, firedPosition) > 0.05f;
+                    // Some emotes end instead of restarting when executed again while playing. If we did not move,
+                    // we are idle now: execute again (priming) or wait for the next beat from idle (verifying), once.
+                    if (!moved && !toggleRetried && now - firedAt < 1500)
+                    {
+                        toggleRetried = true;
+                        log.Information("Emote follow: emote {Emote} ended on re-execution; retrying from idle", emoteId);
+                        if (stage == Stage.Priming) Fire();
+                        else { stage = Stage.Scheduled; armed = false; previousDelay = double.NaN; }
+                        return;
+                    }
+                    if (moved || now - firedAt > 500) { Stop("직접 움직이거나 다른 동작을 해서 따라하기를 멈췄습니다."); return; }
+                    return;
+                }
                 if (EmoteAnimation.Dominant(selfNative) is not { } selfLoop) return;
-                // Our new loop: a different control than before the execution, fully weighted, same length as the target's.
-                var isNewLoop = selfLoop.Control != previousControl && selfLoop.Weight > 0.99f
-                    && Math.Abs(selfLoop.Duration - targetLoop.Duration) < 0.05f && Math.Abs(selfLoop.Speed - 1) < 0.01f;
+                // Our new loop: a different control than before the execution, fully weighted, normal speed.
+                var isNewLoop = selfLoop.Control != previousControl && selfLoop.Weight > 0.99f && Math.Abs(selfLoop.Speed - 1) < 0.01f;
                 if (!isNewLoop) return;
+                // Race-specific animations can differ in length; then only the start can be aligned.
+                var sameLength = Math.Abs(selfLoop.Duration - targetLoop.Duration) < 0.05f;
                 if (stage == Stage.Priming)
                 {
                     var loopStart = now - selfLoop.LocalTime * 1000;
@@ -139,15 +160,23 @@ internal sealed unsafe class EmoteFollow : IDisposable
                     log.Information("Emote follow measured lead: Emote={Emote}; Lead={Lead:F3}", emoteId, lead);
                     return;
                 }
+                if (!sameLength)
+                {
+                    log.Information("Emote follow: loop length differs (self {Self:F3}s, target {Target:F3}s); start aligned only",
+                        selfLoop.Duration, targetLoop.Duration);
+                    Stop("종족마다 동작 길이가 달라 시작만 맞췄습니다. 반복할수록 조금씩 어긋날 수 있습니다.");
+                    return;
+                }
                 if (verifyFrom == 0) verifyFrom = now + 300; // let the blend settle
                 if (now < verifyFrom) return;
                 samples.Add(EmoteSyncTiming.PhaseDifference(selfLoop.LocalTime, targetLoop.LocalTime, targetLoop.Duration));
                 if (samples.Count < 3) { verifyFrom = now + 250; return; }
-                var difference = samples.Average();
+                // We intentionally run ahead by the user's offset (to look right on other players' screens).
+                var difference = samples.Average() - Offset;
                 lead = EmoteSyncTiming.CorrectLead(lead, difference);
                 Remember();
-                log.Information("Emote follow result: Emote={Emote}; DifferenceMs={Difference:F0}; Attempt={Attempt}; NewLead={Lead:F3}",
-                    emoteId, difference * 1000, attempts, lead);
+                log.Information("Emote follow result: Emote={Emote}; DifferenceMs={Difference:F0}; OffsetMs={Offset}; Attempt={Attempt}; NewLead={Lead:F3}",
+                    emoteId, difference * 1000, config.EmoteFollowOffsetMs, attempts, lead);
                 if (Math.Abs(difference) <= Tolerance) { Stop(null); return; }
                 if (attempts >= MaxAttempts) { Stop($"따라하기: {Math.Abs(difference) * 1000:F0}ms 차이가 남았습니다."); return; }
                 stage = Stage.Scheduled; armed = false; previousDelay = double.NaN; samples.Clear();
@@ -155,7 +184,7 @@ internal sealed unsafe class EmoteFollow : IDisposable
 
             case Stage.Scheduled:
             {
-                var delay = EmoteSyncTiming.DelayUntilFire(targetLoop.Remaining, targetLoop.Duration, lead);
+                var delay = EmoteSyncTiming.DelayUntilFire(targetLoop.Remaining, targetLoop.Duration, lead + Offset);
                 // Fire on the approach; a jump upward means the fire point passed between frames, so fire now (<= 1 frame late).
                 var passed = !double.IsNaN(previousDelay) && delay > previousDelay + targetLoop.Duration / 2;
                 previousDelay = delay;
@@ -176,6 +205,7 @@ internal sealed unsafe class EmoteFollow : IDisposable
             return false;
         }
         firedAt = Environment.TickCount64;
+        firedPosition = objects.LocalPlayer?.Position ?? Vector3.Zero;
         attempts++;
         verifyFrom = 0;
         samples.Clear();

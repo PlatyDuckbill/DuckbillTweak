@@ -9,6 +9,14 @@ namespace DuckbillTweak.Plugin.Native;
 internal sealed unsafe class NativeSettingsAddon(Configuration config, Action save, Action openChangelog, Action openColors, bool executableMatches) : NativeAddon
 {
     private TextButtonNode? changelogButton;
+
+    // Emote follow timing: how much earlier than our own screen to start (other players see us after our latency).
+    private sealed record FollowTiming(string Label, int Ms);
+    private static readonly FollowTiming[] FollowTimings =
+    [
+        new("박자: 내 화면 기준", 0), new("박자: 중간 (40ms)", 40),
+        new("박자: 다른 사람 화면 기준 (80ms)", 80), new("박자: 더 앞당김 (120ms)", 120),
+    ];
     protected override void OnSetup(AtkUnitBase* addon, Span<AtkValue> values)
     {
         AddToggle("PvP 전장 말풍선", 60, config.PvpBubbles, value => config.PvpBubbles = value);
@@ -23,14 +31,22 @@ internal sealed unsafe class NativeSettingsAddon(Configuration config, Action sa
         new TextButtonNode { Position = new(400, 292), Size = new(140, 28), String = "세부 설정", OnClick = openColors }.AttachNode(this);
         AddText(executableMatches ? "일반 콘텐츠에서 데미지 텍스트에 측면·후방 성공/실패와 콤보 실패를 아이콘과 색으로 표시합니다. 항목별 켜기와 아이콘·색은 '세부 설정'에서 정합니다." :
             "현재 게임 버전에서는 확인 전이라 동작하지 않습니다. 플러그인 업데이트를 기다려 주세요.", 322);
-        AddToggle("감정표현 따라하기", 372, config.EmoteFollow, value => config.EmoteFollow = value);
-        AddText("춤처럼 반복하는 감정표현 중인 캐릭터를 우클릭해 '따라하기'를 고르면 상대의 동작 주기에 맞춰 같은 감정표현을 실행합니다.", 400);
+        AddToggle("감정표현 따라하기", 372, config.EmoteFollow, value => config.EmoteFollow = value, 250);
+        AddText("반복 감정표현 중인 캐릭터를 우클릭 → '따라하기'. 내 화면은 바로 재생되고 다른 사람에게는 내 인터넷 지연만큼 늦게 보이므로, 박자 기준을 고를 수 있습니다.", 400);
         var unread = config.LastSeenChangelogVersion != ReleaseHistory.CurrentVersion;
         changelogButton = new TextButtonNode { Position = new(28, 456), Size = new(190, 28),
             String = unread ? "업데이트 내역 · NEW" : "업데이트 내역", OnClick = openChangelog };
         changelogButton.AttachNode(this);
         new TextNode { Position = new(360, 458), Size = new(190, 24), FontSize = 13,
             AlignmentType = AlignmentType.Right, String = $"v{ReleaseHistory.CurrentVersion}" }.AttachNode(this);
+        // Attached last so the opened list draws above the text below it.
+        var timing = new StringDropDownNode { Position = new(290, 370), Size = new(250, 28), Options = [.. FollowTimings.Select(t => t.Label)] };
+        timing.SelectedOption = (FollowTimings.FirstOrDefault(t => t.Ms == config.EmoteFollowOffsetMs) ?? FollowTimings[0]).Label;
+        timing.OnOptionSelected = label =>
+        {
+            if (FollowTimings.FirstOrDefault(t => t.Label == label) is { } choice) { config.EmoteFollowOffsetMs = choice.Ms; save(); }
+        };
+        timing.AttachNode(this);
     }
 
     protected override void OnUpdate(AtkUnitBase* addon)

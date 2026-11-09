@@ -36,5 +36,7 @@ public sealed class Configuration : IPluginConfiguration
     public bool EmoteFollow { get; set; }
     /// <summary>Measured per-emote lead (ms) from executing to our loop restarting; refined after each sync.</summary>
     public Dictionary<uint, int> EmoteLeadMs { get; set; } = [];
+    /// <summary>How much earlier than our own screen to start (ms). 0 = in sync on our screen; ~80 = on other players' screens.</summary>
+    public int EmoteFollowOffsetMs { get; set; }
     public string LastSeenChangelogVersion { get; set; } = "";
 }
