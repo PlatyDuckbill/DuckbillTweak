@@ -177,7 +177,7 @@ internal sealed unsafe class NativePositionalColorAddon(Configuration config, Ac
     private void OpenPicker(Slot slot)
     {
         if (picker.IsOpen) picker.Close();
-        picker.Title = slot switch { Slot.Hit => "측후 성공 색", Slot.Miss => "측후 실패 색", _ => "콤보 실패 색" };
+        picker.Heading = slot switch { Slot.Hit => "측후 성공 색", Slot.Miss => "측후 실패 색", _ => "콤보 실패 색" };
         picker.InitialColor = ToVector(Get(slot).Color);
         picker.DefaultColor = ToVector(DefaultColor(slot));
         picker.Previewed = color => ShowColor(slot, FromVector(color));

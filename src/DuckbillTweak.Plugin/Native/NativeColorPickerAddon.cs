@@ -17,6 +17,11 @@ internal sealed unsafe class NativeColorPickerAddon : NativeAddon
     private ColorPickerNode? picker;
     private bool confirmed;
 
+    /// <summary>
+    /// Window title applied during setup. Setting NativeAddon.Title on a closed window throws (its WindowNode component
+    /// is already released), which made every "변경" after the first close fail in 0.2.1.0.
+    /// </summary>
+    public string Heading { get; set; } = "색 선택";
     public Vector4 InitialColor { get; set; } = Vector4.One;
     public Vector4 DefaultColor { get; set; } = Vector4.One;
     /// <summary>Every change while the window is open (not saved).</summary>
@@ -29,6 +34,7 @@ internal sealed unsafe class NativeColorPickerAddon : NativeAddon
     protected override void OnSetup(AtkUnitBase* addon, Span<AtkValue> values)
     {
         confirmed = false;
+        Title = Heading;
         picker = new ColorPickerNode { Position = ContentStartPosition, Size = ContentSize };
         picker.AttachNode(this);
         picker.RgbaColorPreviewed += color => Previewed?.Invoke(color);
