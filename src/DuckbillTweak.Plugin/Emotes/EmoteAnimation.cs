@@ -41,13 +41,4 @@ internal static unsafe class EmoteAnimation
         }
         return best;
     }
-
-    /// <summary>Signed phase difference a - b in seconds, wrapped to (-period/2, period/2].</summary>
-    public static float PhaseDifference(float a, float b, float period)
-    {
-        var diff = (a - b) % period;
-        if (diff > period / 2) diff -= period;
-        if (diff <= -period / 2) diff += period;
-        return diff;
-    }
 }

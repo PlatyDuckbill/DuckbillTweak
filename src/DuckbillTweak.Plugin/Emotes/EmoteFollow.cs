@@ -52,6 +52,7 @@ internal sealed unsafe class EmoteFollow : IDisposable
     private readonly List<double> samples = [];
     private Vector3 firedPosition;
     private bool toggleRetried;
+    private bool ownEmoteSeen;
 
     /// <summary>User setting: run ahead of our own screen by this much so other players see us on the beat.</summary>
     private double Offset => Math.Clamp(config.EmoteFollowOffsetMs, 0, 500) / 1000.0;
@@ -67,6 +68,7 @@ internal sealed unsafe class EmoteFollow : IDisposable
     private void OnMenuOpened(IMenuOpenedArgs args)
     {
         if (!config.EmoteFollow || args.MenuType != ContextMenuType.Default) return;
+        if (conditions[ConditionFlag.InCombat]) return; // it would stop right away
         if (args.Target is not MenuTargetDefault target || target.TargetObject is not ICharacter character) return;
         if (objects.LocalPlayer is not { } self || character.Address == self.Address) return;
         var native = (Character*)character.Address;
@@ -128,12 +130,20 @@ internal sealed unsafe class EmoteFollow : IDisposable
         {
             case Stage.Priming:
             case Stage.Verifying:
-                if (selfNative->EmoteController.EmoteId != emoteId)
+                var ownId = selfNative->EmoteController.EmoteId;
+                if (ownId != emoteId)
                 {
-                    var moved = Vector3.Distance(self.Position, firedPosition) > 0.05f;
-                    // Some emotes end instead of restarting when executed again while playing. If we did not move,
-                    // we are idle now: execute again (priming) or wait for the next beat from idle (verifying), once.
-                    if (!moved && !toggleRetried && now - firedAt < 1500)
+                    if (Vector3.Distance(self.Position, firedPosition) > 0.05f) { Stop("직접 움직이거나 다른 동작을 해서 따라하기를 멈췄습니다."); return; }
+                    // The execution can show up a frame or more later; until our emote has been seen, keep waiting.
+                    if (!ownEmoteSeen)
+                    {
+                        if (now - firedAt > 1000) Stop("감정표현이 시작되지 않아 따라하기를 멈췄습니다.");
+                        return;
+                    }
+                    // Some emotes end instead of restarting when executed again while playing. If it ended without us
+                    // moving or doing another emote, we are idle now: execute again (priming) or wait for the next beat
+                    // from idle (verifying), once.
+                    if (ownId == 0 && !toggleRetried && now - firedAt < 1500)
                     {
                         toggleRetried = true;
                         log.Information("Emote follow: emote {Emote} ended on re-execution; retrying from idle", emoteId);
@@ -141,18 +151,21 @@ internal sealed unsafe class EmoteFollow : IDisposable
                         else { stage = Stage.Scheduled; armed = false; previousDelay = double.NaN; }
                         return;
                     }
-                    if (moved || now - firedAt > 500) { Stop("직접 움직이거나 다른 동작을 해서 따라하기를 멈췄습니다."); return; }
+                    Stop("직접 움직이거나 다른 동작을 해서 따라하기를 멈췄습니다.");
                     return;
                 }
+                ownEmoteSeen = true;
                 if (EmoteAnimation.Dominant(selfNative) is not { } selfLoop) return;
                 // Our new loop: a different control than before the execution, fully weighted, normal speed.
-                var isNewLoop = selfLoop.Control != previousControl && selfLoop.Weight > 0.99f && Math.Abs(selfLoop.Speed - 1) < 0.01f;
-                if (!isNewLoop) return;
-                // Race-specific animations can differ in length; then only the start can be aligned.
+                if (selfLoop.Control == previousControl || selfLoop.Weight < 0.99f || Math.Abs(selfLoop.Speed - 1) > 0.01f) return;
+                // Race-specific animations can differ in length; then only the start can be aligned. A start segment is
+                // also a new fully weighted control of another length, so a different length only counts as our loop
+                // once that control has wrapped and kept playing (a start segment hands over to the loop instead).
                 var sameLength = Math.Abs(selfLoop.Duration - targetLoop.Duration) < 0.05f;
+                if (!sameLength && (selfLoop.Overflow == 0 || selfLoop.LocalTime < 0.1f)) return;
                 if (stage == Stage.Priming)
                 {
-                    var loopStart = now - selfLoop.LocalTime * 1000;
+                    var loopStart = now - (selfLoop.Overflow * (double)selfLoop.Duration + selfLoop.LocalTime) * 1000;
                     lead = Math.Max(0, (loopStart - firedAt) / 1000.0);
                     leadMeasured = true;
                     Remember();
@@ -189,7 +202,9 @@ internal sealed unsafe class EmoteFollow : IDisposable
                 var passed = !double.IsNaN(previousDelay) && delay > previousDelay + targetLoop.Duration / 2;
                 previousDelay = delay;
                 if (delay > 0.05 && !passed) { armed = true; return; }
-                if (armed && (delay <= 0.008 || passed)) Fire();
+                // Fire on the frame closest to the fire point: at most half a frame early or late.
+                var halfFrame = Math.Clamp(framework.UpdateDelta.TotalSeconds / 2, 0.004, 0.025);
+                if (armed && (delay <= halfFrame || passed)) Fire();
                 return;
             }
         }
@@ -198,13 +213,18 @@ internal sealed unsafe class EmoteFollow : IDisposable
     private bool Fire()
     {
         var manager = EmoteManager.Instance();
-        previousControl = objects.LocalPlayer is { } self && EmoteAnimation.Dominant((Character*)self.Address) is { } current ? current.Control : 0;
+        var self = objects.LocalPlayer is { } player ? (Character*)player.Address : null;
+        previousControl = EmoteAnimation.Dominant(self) is { } current ? current.Control : 0;
+        // Already in this emote: a re-execution that ends it is then seen as "ended", not "not started yet".
+        ownEmoteSeen = self is not null && self->EmoteController.EmoteId == emoteId;
         if (manager is null || !manager->CanExecuteEmote(emoteId) || !manager->ExecuteEmote(emoteId, null))
         {
             Stop("지금은 그 감정표현을 실행할 수 없습니다.");
             return false;
         }
         firedAt = Environment.TickCount64;
+        // The time limit covers one wait-and-check; long loops would otherwise run out over several attempts.
+        started = firedAt;
         firedPosition = objects.LocalPlayer?.Position ?? Vector3.Zero;
         attempts++;
         verifyFrom = 0;

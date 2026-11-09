@@ -117,7 +117,7 @@ internal sealed unsafe class EmoteSyncExperiment(IFramework framework, IObjectTa
                 if (selfCharacter->EmoteController.EmoteId != emoteId) { Stop("내 감정표현이 끝나 중단했습니다."); return; }
                 if (now - lastSample < 500 || EmoteAnimation.Dominant(selfCharacter) is not { } selfLoop) return;
                 lastSample = now;
-                var diff = EmoteAnimation.PhaseDifference(selfLoop.LocalTime, targetLoop.LocalTime, targetLoop.Duration);
+                var diff = (float)DuckbillTweak.Core.Emotes.EmoteSyncTiming.PhaseDifference(selfLoop.LocalTime, targetLoop.LocalTime, targetLoop.Duration);
                 differences.Add(diff);
                 log.Information("[EmoteSync] sample self={Self:F3} target={Target:F3} diffMs={Diff:F0} t={Tick}",
                     selfLoop.LocalTime, targetLoop.LocalTime, diff * 1000, now);

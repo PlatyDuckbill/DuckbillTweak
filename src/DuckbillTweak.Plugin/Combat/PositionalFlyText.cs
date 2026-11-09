@@ -14,7 +14,7 @@ using LuminaAction = Lumina.Excel.Sheets.Action;
 
 namespace DuckbillTweak.Plugin.Combat;
 
-    /// <summary>
+/// <summary>
 /// Colors the native damage FlyText of the player's own combo/positional weaponskills by the server's result:
 /// a missed combo first, otherwise positional hit/miss. The server sends no positional/combo flag (raw packet compared,
 /// docs/PLANS.md); its damage bonus byte is floor((applied - unbonused) * 100 / applied) and is decoded against every
