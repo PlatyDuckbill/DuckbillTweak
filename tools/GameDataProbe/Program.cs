@@ -427,6 +427,19 @@ else if (args[1] == "gfd-icons" && args.Length >= 4)
     File.WriteAllBytes(args[2], EncodePng(sheet, sheetWidth, sheetHeight));
     Console.WriteLine($"Sheet={args[2]}; Size={sheetWidth}x{sheetHeight}; Texture={texture.Header.Width}x{texture.Header.Height}");
 }
+else if (args[1] == "emotes")
+{
+    // Offline research for emote sync: each emote's ActionTimeline slots (key, slot, loop flag) and emote mode.
+    var filter = args.Length > 2 ? args[2] : null;
+    foreach (var emote in game.GetExcelSheet<Emote>()!.Where(e => !e.Name.IsEmpty))
+    {
+        var name = emote.Name.ExtractText();
+        if (filter is not null && !name.Contains(filter, StringComparison.Ordinal) && emote.RowId.ToString() != filter) continue;
+        var timelines = emote.ActionTimeline.Select((timeline, index) => (timeline, index)).Where(t => t.timeline.RowId != 0)
+            .Select(t => $"{t.index}:{t.timeline.RowId}/{t.timeline.ValueNullable?.Key.ExtractText()}/slot{t.timeline.ValueNullable?.Slot}/loop{(t.timeline.ValueNullable?.IsLoop == true ? 1 : 0)}");
+        Console.WriteLine($"Emote={emote.RowId}; Name={name}; Category={emote.EmoteCategory.RowId}; Mode={emote.EmoteMode.RowId}; Command={emote.TextCommand.ValueNullable?.Command.ExtractText()}; Timelines=[{string.Join(" ", timelines)}]");
+    }
+}
 else if (args[1] == "combo-actions")
 {
     // Offline candidate list: non-PvP job actions whose KR tooltip macro has a combo potency line.

@@ -558,6 +558,25 @@ GameDataProbe에 툴팁 매크로 평가기(`<if([gnum68 직업], [gnum72 레벨
 2. `ExecuteEmote`의 `PlayEmoteOption` 인자를 확인한다(null 허용 여부, 대상 지정, 모션만 실행 옵션).
 3. Emote 시트의 ActionTimeline 배열(반복/시작 구간)과 실제 타임라인의 대응을 오프라인으로 대조한다.
 
+### 조사 진행 기록
+
+#### 2026-11-10 오프라인 Emote 시트 (`GameDataProbe emotes [이름|ID]`)
+- 대부분의 춤은 Emote.ActionTimeline[0]=반복(`…_loop`), [1]=시작(`…_start`)이고, EmoteMode가 있다(지속형).
+  - 예: 풍요의 춤 102 = `dance_female_loop`(572) / `dance_female_start`(571), Mode 5.
+  - 예: 축제의 춤 109 = `dance01_loop`(3188, slot3) / `dance01_start`(3187, slot1).
+- `/dance`(11)·공주님 춤(250)처럼 시작 구간 없이 반복 하나만 있는 것도 있다(Mode 0).
+- ActionTimeline.Slot이 춤마다 0~3으로 다르고, 같은 춤에서도 시작/반복의 Slot이 다를 수 있다. 그래서 슬롯 번호를 고정할 수 없고, 시트 값과 실제 시퀀서 슬롯의 대응을 인게임에서 확인해야 한다.
+
+#### 2026-11-10 조사 로그 (`/dbtw emoteprobe`, Debug 빌드 전용)
+`Emotes/EmoteProbe.cs`가 Framework에서 내 캐릭터와 현재 대상의 상태를 읽는다. 읽기만 하며 실행하지 않는다.
+- `EmoteController.EmoteId`와 `IsInEmoteLoop()`.
+- `TimelineSequencer`의 14개 슬롯마다 타임라인 ID, `SchedulerTimeline.CurrentTimestamp`, `ActionTimelineKey`, 속도.
+
+기록 내용:
+- 감정표현 변경과 슬롯 타임라인 변경.
+- 재생 위치가 뒤로 돌아간 순간(반복 재시작)과 직전 재시작 이후 경과 시간(주기).
+- 감정표현 중 1초마다 슬롯 요약.
+
 ### 완료 기준
 
 - 대표 춤 감정표현 2~3개에서 따라하기 후 내 화면의 동작이 상대와 맞는 것을 인게임에서 확인한다.

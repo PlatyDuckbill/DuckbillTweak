@@ -4,6 +4,9 @@ using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using DuckbillTweak.Plugin.Chat;
 using DuckbillTweak.Plugin.Combat;
+#if DEBUG
+using DuckbillTweak.Plugin.Emotes;
+#endif
 using DuckbillTweak.Plugin.Loot;
 using DuckbillTweak.Plugin.Native;
 using DuckbillTweak.Plugin.Shops;
@@ -26,6 +29,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
     private readonly IChatGui chat;
 #if DEBUG
     private readonly PositionalProbe probe;
+    private readonly EmoteProbe emoteProbe;
 #endif
     private readonly IGameInteropProvider interop;
     private readonly IFlyTextGui flyText;
@@ -64,6 +68,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
         this.chat = chat; this.interop = interop; this.flyText = flyText; this.objects = objects; this.data = data;
 #if DEBUG
         probe = new(interop, flyText, objects, data, log, framework);
+        emoteProbe = new(framework, objects, target, log);
 #endif
         config = pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         if (config.Version is < 1 or > 3) throw new InvalidOperationException("Unsupported configuration version.");
@@ -168,6 +173,13 @@ public sealed class Plugin : IAsyncDalamudPlugin
                 var enabled = probe.Toggle();
                 chat.Print(enabled ? "측후 조사 로그 켜짐: dalamud.log에 [PositionalProbe]로 기록합니다." : "측후 조사 로그 꺼짐.", "DuckbillTweak");
             });
+        else if (argument.Equals("emoteprobe", StringComparison.OrdinalIgnoreCase))
+            _ = framework.Run(() =>
+            {
+                // Research-only toggle (Debug builds only): logs own/target emote timelines to dalamud.log.
+                var enabled = emoteProbe.Toggle();
+                chat.Print(enabled ? "감정표현 조사 로그 켜짐: dalamud.log에 [EmoteProbe]로 기록합니다." : "감정표현 조사 로그 꺼짐.", "DuckbillTweak");
+            });
 #endif
         else OpenSettings();
     }
@@ -182,7 +194,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
         await framework.Run(() =>
         {
 #if DEBUG
-            probe.Dispose();
+            probe.Dispose(); emoteProbe.Dispose();
 #endif
             positional?.Dispose(); bubbleOrder?.Dispose(); bubbles?.Dispose(); lootInteraction?.Dispose(); shop?.Dispose();
             foreach (var exchange in exchanges) exchange.Dispose();
