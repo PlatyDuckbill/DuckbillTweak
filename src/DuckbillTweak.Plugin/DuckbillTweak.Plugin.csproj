@@ -2,15 +2,15 @@
   <PropertyGroup>
     <AssemblyName>DuckbillTweak</AssemblyName>
     <RootNamespace>DuckbillTweak.Plugin</RootNamespace>
-    <Version>0.2.0.5</Version>
+    <Version>0.2.1.0</Version>
     <Author>PlatyDuckbill</Author>
     <Name>DuckbillTweak</Name>
     <Punchline>Shop collection filters, currency planning and loot results for FFXIV Korea.</Punchline>
-    <Description>Small conveniences in the game's own UI, for FFXIV Korea.&#xA;&#xA;• Filter owned equipment and collectibles, or focus shop lists on collection items.&#xA;• Calculate the current shop's currency requirements and shortages, with linked storage records.&#xA;• Right-click loot items to view participant choices and publicly received roll results.&#xA;• Enable PvP chat bubbles using your game's chat bubble settings.&#xA;&#xA;Open settings: /dbtw or /duckbilltweak. Each feature starts disabled.&#xA;Release history: Settings → 업데이트 내역, or /dbtw changelog.&#xA;&#xA;Korean client and Dalamud API 15 only. Loot numbers appear when the game publishes results. Stored inventory records may be incomplete or out of date.</Description>
-    <Changelog>• Settings and features keep working when the Korean Dalamud distribution is rebuilt.&#xA;• After a game update, only PvP chat bubbles and currency exchange shop tools pause until checked, with a note in settings.</Changelog>
+    <Description>Small conveniences in the game's own UI, for FFXIV Korea.&#xA;&#xA;• Filter owned equipment and collectibles, or focus shop lists on collection items.&#xA;• Calculate the current shop's currency requirements and shortages, with linked storage records.&#xA;• Right-click loot items to view participant choices and publicly received roll results.&#xA;• Enable PvP chat bubbles using your game's chat bubble settings.&#xA;• Mark positional hits/misses and broken combos on your own damage numbers with game icons and colors.&#xA;&#xA;Open settings: /dbtw or /duckbilltweak. Each feature starts disabled.&#xA;Release history: Settings → 업데이트 내역, or /dbtw changelog.&#xA;&#xA;Korean client and Dalamud API 15 only. Loot numbers appear when the game publishes results. Stored inventory records may be incomplete or out of date.</Description>
+    <Changelog>• Show positional hits and misses on your damage numbers with an icon and color.&#xA;• Optionally mark weaponskills used after a broken combo.&#xA;• Settings and features keep working when the Korean Dalamud distribution is rebuilt.&#xA;• After a game update, PvP chat bubbles, currency exchange shop tools and the positional/combo display pause until checked, with a note in settings.</Changelog>
     <IconUrl Condition="Exists('../../assets/duckbilltweak-icon.png')">https://raw.githubusercontent.com/PlatyDuckbill/DuckbillTweak/v$(Version)/assets/duckbilltweak-icon.png</IconUrl>
     <RepoUrl>https://github.com/PlatyDuckbill/DuckbillTweak</RepoUrl>
-    <Tags>tweaks;shop;collection;loot;pvp;한국어</Tags>
+    <Tags>tweaks;shop;collection;loot;pvp;positional;combo;한국어</Tags>
     <DalamudApiLevel>15</DalamudApiLevel>
     <ApplicableVersion>any</ApplicableVersion>
     <IsPackable>false</IsPackable>

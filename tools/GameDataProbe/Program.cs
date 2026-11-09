@@ -129,7 +129,7 @@ if (args.Length >= 2 && args[0] == "resources")
 
 if (args.Length < 2)
 {
-    Console.Error.WriteLine("GameDataProbe <sqpack path> logs|shops|audit|kornago-audit\nGameDataProbe <sqpack path> items|npc <name>\nGameDataProbe resources <plugin DLL path> [currency json path]");
+    Console.Error.WriteLine("GameDataProbe <sqpack path> logs|shops|audit|kornago-audit|positional-actions [loose|dump <job|from-to>]\nGameDataProbe <sqpack path> items|npc <name>\nGameDataProbe resources <plugin DLL path> [currency json path]");
     return 1;
 }
 using var game = new GameData(args[0], new LuminaOptions { DefaultExcelLanguage = Language.Korean });
@@ -352,6 +352,201 @@ else if (args[1] == "ownership-audit")
     foreach (var set in game.GetExcelSheet<MirageStoreSetItem>()!.Where(s => s.Head.RowId == 24337))
         Console.WriteLine($"HornOutfit={set.RowId}; Name={game.GetExcelSheet<Item>()!.GetRow(set.RowId).Name.ExtractText()}");
 }
+else if (args[1] == "positional-actions")
+{
+    // Offline candidate list for docs/PLANS.md: player actions whose KR tooltip mentions a flank/rear condition.
+    var transients = game.GetExcelSheet<ActionTransient>()!;
+    var count = 0;
+    foreach (var action in game.GetExcelSheet<Lumina.Excel.Sheets.Action>()!.Where(a => !a.IsPvP && (a.ClassJobLevel > 0 || args is [_, _, "dump", _])))
+    {
+        if (!transients.TryGetRow(action.RowId, out var transient)) continue;
+        if (args.Length > 3 && args[2] == "dump" && !(action.ClassJob.ValueNullable?.Abbreviation.ExtractText() == args[3]
+            || args[3].Split('-') is [var from, var to] && uint.TryParse(from, out var low) && uint.TryParse(to, out var high) && action.RowId >= low && action.RowId <= high)) continue;
+        // Conditional tooltip lines live inside macros that ExtractText drops, so match the macro form as well.
+        var raw = transient.Description.ToString();
+        if (args.Length > 3 && args[2] == "dump")
+        {
+            Console.WriteLine($"Dump={action.RowId}; Name={action.Name.ExtractText()}; Level={action.ClassJobLevel}; Raw={raw.Replace('\n', ' ')}; Macro={transient.Description.ToMacroString().Replace('\n', ' ')}");
+            continue;
+        }
+        var flank = raw.Contains("측면공격") || raw.Contains("측면 공격");
+        var rear = raw.Contains("후방공격") || raw.Contains("후방 공격");
+        if (args.Length > 2 && args[2] == "loose" && !flank && !rear && (raw.Contains("측면") || raw.Contains("후방")))
+        {
+            var marker = raw.IndexOf(raw.Contains("측면") ? "측면" : "후방", StringComparison.Ordinal);
+            Console.WriteLine($"Loose={action.RowId}; Name={action.Name.ExtractText()}; Job={action.ClassJob.ValueNullable?.Abbreviation.ExtractText()}; Raw={raw.Substring(Math.Max(0, marker - 40), Math.Min(100, raw.Length - Math.Max(0, marker - 40))).Replace('\n', ' ')}");
+            continue;
+        }
+        if (!flank && !rear) continue;
+        Console.WriteLine($"Action={action.RowId}; Name={action.Name.ExtractText()}; Job={action.ClassJobCategory.ValueNullable?.Name.ExtractText()}; Level={action.ClassJobLevel}; Flank={flank}; Rear={rear}");
+        count++;
+    }
+    Console.WriteLine($"PositionalCandidates={count}");
+}
+else if (args[1] == "gfd-icons" && args.Length >= 4)
+{
+    // Renders inline game icons (BitmapFontIcon ids) from common/font/gfdata.gfd + fonticon texture into one PNG sheet,
+    // one 4x-scaled cell per id in the given order, so icon choices can be reviewed by eye. Offline, read-only.
+    var gfd = game.GetFile("common/font/gfdata.gfd") ?? throw new InvalidDataException("gfdata.gfd not found.");
+    var data = gfd.Data;
+    var count = BitConverter.ToInt32(data, 8);
+    var entries = new Dictionary<int, (int Left, int Top, int Width, int Height)>();
+    for (var i = 0; i < count; i++)
+    {
+        var offset = 0x10 + i * 0x10;
+        if (offset + 0x10 > data.Length) break;
+        entries[BitConverter.ToUInt16(data, offset)] = (BitConverter.ToUInt16(data, offset + 2), BitConverter.ToUInt16(data, offset + 4),
+            BitConverter.ToUInt16(data, offset + 6), BitConverter.ToUInt16(data, offset + 8));
+    }
+    var texture = game.GetFile<TexFile>("common/font/fonticon_xinput.tex") ?? throw new InvalidDataException("fonticon texture not found.");
+    var pixels = texture.ImageData; // BGRA8
+    var ids = args[3].Split(',').Select(int.Parse).ToArray();
+    const int scale = 4, cell = 30 * scale;
+    var sheetWidth = cell * Math.Min(ids.Length, 6);
+    var sheetHeight = cell * ((ids.Length + 5) / 6);
+    var sheet = new byte[sheetWidth * sheetHeight * 4];
+    for (var p = 0; p < sheet.Length; p += 4) { sheet[p] = 60; sheet[p + 1] = 60; sheet[p + 2] = 60; sheet[p + 3] = 255; } // grey background
+    for (var n = 0; n < ids.Length; n++)
+    {
+        if (!entries.TryGetValue(ids[n], out var e)) { Console.WriteLine($"Icon={ids[n]}; Missing"); continue; }
+        Console.WriteLine($"Cell={n}; Icon={ids[n]}; Rect={e.Left},{e.Top},{e.Width}x{e.Height}");
+        var originX = (n % 6) * cell + 4; var originY = (n / 6) * cell + 4;
+        for (var y = 0; y < e.Height * scale; y++)
+        for (var x = 0; x < e.Width * scale; x++)
+        {
+            var sx = e.Left + x / scale; var sy = e.Top + y / scale;
+            if (sx >= texture.Header.Width || sy >= texture.Header.Height) continue;
+            var src = (sy * texture.Header.Width + sx) * 4;
+            var dx = originX + x; var dy = originY + y;
+            if (dx >= sheetWidth || dy >= sheetHeight) continue;
+            var dst = (dy * sheetWidth + dx) * 4;
+            var alpha = pixels[src + 3] / 255.0;
+            for (var c = 0; c < 3; c++) sheet[dst + c] = (byte)(pixels[src + 2 - c] * alpha + sheet[dst + c] * (1 - alpha)); // BGRA -> RGB blend
+        }
+    }
+    File.WriteAllBytes(args[2], EncodePng(sheet, sheetWidth, sheetHeight));
+    Console.WriteLine($"Sheet={args[2]}; Size={sheetWidth}x{sheetHeight}; Texture={texture.Header.Width}x{texture.Header.Height}");
+}
+else if (args[1] == "combo-actions")
+{
+    // Offline candidate list: non-PvP job actions whose KR tooltip macro has a combo potency line.
+    var transients = game.GetExcelSheet<ActionTransient>()!;
+    var ids = new List<uint>();
+    foreach (var action in game.GetExcelSheet<Lumina.Excel.Sheets.Action>()!.Where(a => !a.IsPvP && a.ClassJobLevel > 0))
+    {
+        if (!transients.TryGetRow(action.RowId, out var transient)) continue;
+        if (!transient.Description.ToMacroString().Contains("콤보 시 위력")) continue;
+        ids.Add(action.RowId);
+        Console.WriteLine($"Combo={action.RowId}; Name={action.Name.ExtractText()}; Category={action.ClassJobCategory.ValueNullable?.Name.ExtractText()}; Level={action.ClassJobLevel}");
+    }
+    Console.WriteLine($"ComboCandidates={ids.Count}; Ids={string.Join(", ", ids)}");
+}
+else if (args[1] == "bonus-coverage")
+{
+    // Runs the shipped Core tooltip builder for every candidate, job and level, i.e. exactly what the plugin evaluates
+    // in game. Prints contiguous level ranges with the derived potencies and state bytes, or the rejection reason.
+    var actions = game.GetExcelSheet<Lumina.Excel.Sheets.Action>()!;
+    var transients = game.GetExcelSheet<ActionTransient>()!;
+    var classJobs = game.GetExcelSheet<ClassJob>()!.Where(job => job.RowId != 0 && !job.Name.IsEmpty)
+        .Select(job => (Id: (int)job.RowId, Name: job.Name.ExtractText())).ToList();
+    int supported = 0, rejected = 0;
+    var rejectedActions = new SortedSet<uint>();
+    foreach (var id in DuckbillTweak.Core.Combat.BonusTooltip.Candidates)
+    {
+        var action = actions.GetRow(id);
+        var macro = transients.GetRow(id).Description.ToMacroString();
+        var category = action.ClassJobCategory.ValueNullable?.Name.ExtractText() ?? "";
+        var words = category.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var jobs = classJobs.Where(job => words.Contains(job.Name)).Select(job => job.Id).ToList();
+        Console.WriteLine($"Action={id}; Name={action.Name.ExtractText()}; Category={category}; Learned={action.ClassJobLevel}; Jobs={string.Join(',', jobs)}");
+        if (jobs.Count == 0) { Console.WriteLine("  NO JOB RESOLVED"); rejectedActions.Add(id); }
+        foreach (var job in jobs)
+        {
+            string? previous = null; var from = 0;
+            for (var level = Math.Max(1, (int)action.ClassJobLevel); level <= 101; level++)
+            {
+                var summary = "";
+                if (level <= 100)
+                {
+                    var built = DuckbillTweak.Core.Combat.BonusTooltip.Build(id, macro, job, level, out var reason);
+                    if (built is null) { rejected++; rejectedActions.Add(id); summary = $"REJECT {reason}"; }
+                    else
+                    {
+                        supported++;
+                        var context = new DuckbillTweak.Core.Combat.BonusContext(new HashSet<uint>(), 0, 0);
+                        var raised = new DuckbillTweak.Core.Combat.BonusContext(new HashSet<uint> { built.ModifierStatus }, 1, 1);
+                        summary = $"{built.Side} Base={built.Base} Combo={built.Combo} Pos=+{built.Positional} From={built.ComboFrom ?? "-"}" +
+                            $"{(built.ComboOnly ? " ComboOnly" : "")}" +
+                            $"{(built.Modifier == DuckbillTweak.Core.Combat.PositionalModifier.None ? "" : $" Mod={built.Modifier}:{built.ModifierStatus}+{built.ModifierPotency} Raised[{DuckbillTweak.Core.Combat.BonusJudge.Describe(built, raised)}]")}" +
+                            $" Bytes[{DuckbillTweak.Core.Combat.BonusJudge.Describe(built, context)}]";
+                    }
+                }
+                if (summary != previous)
+                {
+                    if (previous is not null) Console.WriteLine($"  Job={job}; Levels={from}-{level - 1}; {previous}");
+                    previous = summary; from = level;
+                }
+            }
+        }
+    }
+    Console.WriteLine($"BonusCoverage: SupportedJobLevels={supported}; RejectedJobLevels={rejected}; ActionsWithRejections={string.Join(',', rejectedActions)}");
+}
+else if (args[1] == "bonus-replay" && args.Length >= 3)
+{
+    // Replays "/dbtw probe" effect lines through the same Core builder + decoder the plugin uses, at the logged job/level.
+    // Positional truth = client zone label (or True North). Combo truth = previous action name matches the tooltip's combo
+    // condition at that level (or Meikyo Shisui for Samurai), so only clean test hits are meaningful.
+    var actions = game.GetExcelSheet<Lumina.Excel.Sheets.Action>()!;
+    var transients = game.GetExcelSheet<ActionTransient>()!;
+    int ok = 0, wrong = 0, notJudged = 0, rejectedRows = 0;
+    var pattern = new System.Text.RegularExpressions.Regex(@"effect t=\d+ action=(\d+)/.*? job=(\d+) level=(\d+) comboAtReceive=(\d+)/([\d.]+) trueNorth=(\w+) statuses=\[(.*?)\](?: monkFury=\S*coeurl(\d+))?(?: kazematoi=(\d+))? target=.*? relative=(-?\d+)deg zone=(\w+).*type=3 p=\[.. .. (..)");
+    foreach (var line in File.ReadLines(args[2]))
+    {
+        var m = pattern.Match(line);
+        if (!m.Success) continue;
+        var id = uint.Parse(m.Groups[1].Value);
+        if (!DuckbillTweak.Core.Combat.BonusTooltip.Candidates.Contains(id)) continue;
+        var job = int.Parse(m.Groups[2].Value); var level = int.Parse(m.Groups[3].Value);
+        var action = DuckbillTweak.Core.Combat.BonusTooltip.Build(id, transients.GetRow(id).Description.ToMacroString(), job, level, out var reason);
+        if (action is null) { rejectedRows++; Console.WriteLine($"Rejected: {line[11..23]} Action={id} Job={job} Level={level} {reason}"); continue; }
+        var statuses = m.Groups[7].Value.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => uint.Parse(s.Split('x')[0])).ToHashSet();
+        var context = new DuckbillTweak.Core.Combat.BonusContext(statuses,
+            m.Groups[8].Success ? int.Parse(m.Groups[8].Value) : 0, m.Groups[9].Success ? int.Parse(m.Groups[9].Value) : 0);
+        var bonus = Convert.ToInt32(m.Groups[12].Value, 16);
+        var zone = m.Groups[11].Value;
+        var comboId = uint.Parse(m.Groups[4].Value);
+        var comboName = comboId == 0 ? null : actions.GetRow(comboId).Name.ExtractText();
+        bool? comboTruth = action.CanMissCombo
+            // Tooltips may list alternatives: "A 또는 B".
+            ? (double.Parse(m.Groups[5].Value) > 0 && comboName is not null && action.ComboFrom is not null
+                && action.ComboFrom.Split(" 또는 ").Contains(comboName)) || (job == 34 && statuses.Contains(1233))
+            : null;
+        bool? positionalTruth = action.HasPositional
+            ? m.Groups[6].Value == "True" || (action.Side == DuckbillTweak.Core.Combat.PositionalSide.Flank ? zone == "Flank" : zone == "Rear")
+            : null;
+        var result = DuckbillTweak.Core.Combat.BonusJudge.Decode(action, context, bonus);
+        if (result is null)
+        {
+            notJudged++;
+            Console.WriteLine($"NotJudged: {line[11..23]} Action={id} Zone={zone} Bonus={bonus} States=[{DuckbillTweak.Core.Combat.BonusJudge.Describe(action, context)}] Kazematoi={(m.Groups[9].Success ? m.Groups[9].Value : "not-logged")}");
+        }
+        else if (result.Value.ComboApplied == comboTruth && result.Value.PositionalHit == positionalTruth) ok++;
+        else
+        {
+            wrong++;
+            Console.WriteLine($"WRONG: {line[11..23]} Action={id} Zone={zone}({m.Groups[10].Value}) Combo={comboName ?? "-"} Bonus={bonus} Decoded={result} Truth=({comboTruth},{positionalTruth})");
+        }
+    }
+    Console.WriteLine($"BonusReplay: Correct={ok}; Wrong={wrong}; NotJudged={notJudged}; RejectedRows={rejectedRows}");
+    return wrong == 0 ? 0 : 2;
+}
+else if (args[1] == "territory-uses")
+{
+    // Offline map of TerritoryIntendedUse ids to sample place names, used to exclude special fields from positional judging.
+    foreach (var group in game.GetExcelSheet<TerritoryType>()!.Where(t => t.PlaceName.RowId != 0)
+        .GroupBy(t => t.TerritoryIntendedUse.RowId).OrderBy(g => g.Key))
+        Console.WriteLine($"Use={group.Key}; Count={group.Count()}; Samples={string.Join(", ", group.Select(t => t.PlaceName.Value.Name.ExtractText()).Where(n => n.Length > 0).Distinct().Take(4))}");
+}
 else if (args[1] == "logs")
 {
     foreach (var row in game.GetExcelSheet<LogMessage>()!)
@@ -427,3 +622,42 @@ else if (args[1] == "uld" && args.Length >= 3)
 }
 else return 1;
 return 0;
+
+// Minimal RGBA PNG encoder (no external packages) for offline review images.
+static byte[] EncodePng(byte[] rgba, int width, int height)
+{
+    var raw = new MemoryStream();
+    for (var y = 0; y < height; y++)
+    {
+        raw.WriteByte(0);
+        raw.Write(rgba, y * width * 4, width * 4);
+    }
+    var compressed = new MemoryStream();
+    using (var zlib = new System.IO.Compression.ZLibStream(compressed, System.IO.Compression.CompressionLevel.Optimal, leaveOpen: true))
+        raw.WriteTo(zlib);
+    var output = new MemoryStream();
+    output.Write([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+    void Chunk(string type, byte[] body)
+    {
+        var length = new byte[4]; System.Buffers.Binary.BinaryPrimitives.WriteInt32BigEndian(length, body.Length);
+        output.Write(length);
+        var typed = System.Text.Encoding.ASCII.GetBytes(type).Concat(body).ToArray();
+        output.Write(typed);
+        uint crc = 0xFFFFFFFF;
+        foreach (var b in typed)
+        {
+            crc ^= b;
+            for (var k = 0; k < 8; k++) crc = (crc & 1) != 0 ? 0xEDB88320 ^ (crc >> 1) : crc >> 1;
+        }
+        var crcBytes = new byte[4]; System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(crcBytes, crc ^ 0xFFFFFFFF);
+        output.Write(crcBytes);
+    }
+    var header = new byte[13];
+    System.Buffers.Binary.BinaryPrimitives.WriteInt32BigEndian(header.AsSpan(0), width);
+    System.Buffers.Binary.BinaryPrimitives.WriteInt32BigEndian(header.AsSpan(4), height);
+    header[8] = 8; header[9] = 6; // 8-bit RGBA
+    Chunk("IHDR", header);
+    Chunk("IDAT", compressed.ToArray());
+    Chunk("IEND", []);
+    return output.ToArray();
+}

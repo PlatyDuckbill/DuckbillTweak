@@ -16,6 +16,7 @@
 | 보관 기록 연동 | Allagan Tools가 있으면 현재 캐릭터의 집사·초코보 가방 등의 보관 기록도 참고합니다. |
 | 아이템별 입찰 현황 | 원래 우클릭 메뉴에서 참여자의 선택과 공개된 주사위 결과를 봅니다. 일반 파티는 한 열, 연합은 세 열로 표시합니다. |
 | PvP 전장 말풍선 | 게임의 기본 대화 말풍선 설정을 따르는 PvP 말풍선을 켤 수 있습니다. |
+| 측후·콤보 표시 | 내 측면·후방 스킬의 데미지 숫자에 측후 성공·실패를 게임 아이콘과 색으로 표시하고, 콤보가 끊긴 채 쓴 스킬도 표시할 수 있습니다. 서버가 보낸 스킬 결과로 판정하며, PvP·특수필드에서는 동작하지 않습니다. |
 
 설정·필터·결과 화면은 게임의 UI 컴포넌트와 글꼴을 사용합니다.
 
@@ -68,6 +69,6 @@ git submodule update --init --recursive
 기본 참조는 `build/dalamud-reference.json`에 고정한 컴파일용 KR15.0.3.7 전체 묶음이며, 처음 빌드할 때 다운로드·SHA256 확인 후 `.cache`에만 풉니다. 설치된 게임/Dalamud는 변경하지 않습니다. 현재0.2.0.2는 검증된 wasdcxz15.0.3.9/dal4kr15.0.3.7 런타임 조합을 지원하며 실제 친구 PC 확인은 별도입니다. `DALAMUD_HOME` 또는 `-DalamudPath`를 지정할 때도 고정 컴파일 버전을 사용해야 합니다. 런타임 지원 범위와 비교 근거는 [네이티브 UI 계약](docs/NATIVE-UI.md)을 따릅니다.
 개발 DLL은 `src/DuckbillTweak.Plugin/bin/Debug/DuckbillTweak.dll`이며, 같은 폴더의 DLL·Assets·라이선스도 함께 필요합니다.
 
-[배포 절차](docs/DISTRIBUTION.md) · [현재 상태](docs/STATUS.md) · [확인 절차](docs/VERIFICATION.md) · [네이티브 UI 계약](docs/NATIVE-UI.md) · [구조·참고 자료](docs/DEVELOPMENT.md)
+[배포 절차](docs/DISTRIBUTION.md) · [현재 상태](docs/STATUS.md) · [기능 계획](docs/PLANS.md) · [확인 절차](docs/VERIFICATION.md) · [네이티브 UI 계약](docs/NATIVE-UI.md) · [구조·참고 자료](docs/DEVELOPMENT.md)
 
 네이티브 UI에는 MIT 라이선스 [KamiToolKit](https://github.com/MidoriKami/KamiToolKit)을 고정 revision으로 사용합니다. [서드파티 고지](THIRD-PARTY-NOTICES.txt)를 참고하십시오.

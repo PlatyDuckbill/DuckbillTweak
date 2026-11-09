@@ -3,6 +3,7 @@ using Dalamud.Game.Command;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using DuckbillTweak.Plugin.Chat;
+using DuckbillTweak.Plugin.Combat;
 using DuckbillTweak.Plugin.Loot;
 using DuckbillTweak.Plugin.Native;
 using DuckbillTweak.Plugin.Shops;
@@ -22,6 +23,14 @@ public sealed class Plugin : IAsyncDalamudPlugin
     private readonly IAddonEventManager events;
     private readonly IAddonLifecycle addonLifecycle;
     private readonly IContextMenu contextMenu;
+    private readonly IChatGui chat;
+#if DEBUG
+    private readonly PositionalProbe probe;
+#endif
+    private readonly IGameInteropProvider interop;
+    private readonly IFlyTextGui flyText;
+    private readonly IObjectTable objects;
+    private readonly IDataManager data;
     private readonly Configuration config;
     private readonly MerchantService merchants;
     private readonly LootService loot;
@@ -29,6 +38,8 @@ public sealed class Plugin : IAsyncDalamudPlugin
     private NativeExecutable executable = new(false, 0, "not inspected");
     private NativeSettingsAddon? settings;
     private NativeChangelogAddon? changelog;
+    private NativePositionalColorAddon? colors;
+    private KamiToolKit.Addons.ColorPickerAddon? colorPicker;
     private NativeCurrencyAddon? currency;
     private NativeLootAddon? lootPopup;
     private NativeShopController? shop;
@@ -36,22 +47,29 @@ public sealed class Plugin : IAsyncDalamudPlugin
     private NativeLootInteraction? lootInteraction;
     private NativePvpBubbles? bubbles;
     private NativeBubbleOrder? bubbleOrder;
+    private PositionalFlyText? positional;
     private bool toolkitInitialized;
     private bool disposed;
 
     public Plugin(IDalamudPluginInterface pluginInterface, ICommandManager commands, IDataManager data,
         IUnlockState unlocks, IGameInventory inventory, IClientState client, IPlayerState player,
         ICondition conditions, ITargetManager target, IGameGui gameGui, IFramework framework,
-        IPluginLog log, IChatGui chat, IPartyList party, IAddonEventManager events, IAddonLifecycle addonLifecycle, IContextMenu contextMenu)
+        IPluginLog log, IChatGui chat, IPartyList party, IAddonEventManager events, IAddonLifecycle addonLifecycle, IContextMenu contextMenu,
+        IGameInteropProvider interop, IFlyTextGui flyText, IObjectTable objects)
     {
         this.pluginInterface = pluginInterface; this.commands = commands; this.framework = framework;
         this.client = client; this.log = log; this.gui = gameGui; this.party = party; this.events = events;
         this.addonLifecycle = addonLifecycle;
         this.contextMenu = contextMenu;
+        this.chat = chat; this.interop = interop; this.flyText = flyText; this.objects = objects; this.data = data;
+#if DEBUG
+        probe = new(interop, flyText, objects, data, log, framework);
+#endif
         config = pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         if (config.Version is < 1 or > 3) throw new InvalidOperationException("Unsupported configuration version.");
         config.Version = 3;
         config.LastSeenChangelogVersion ??= "";
+        if (MigratePositionalDisplay(config)) pluginInterface.SavePluginConfig(config);
         merchants = new(data, unlocks, inventory, client, player, conditions, target, gameGui, framework, log, config, pluginInterface);
         try { loot = new(chat, data, client, player, party, framework, config, log); }
         catch { merchants.Dispose(); throw; }
@@ -66,7 +84,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
             var environment = await Task.Run(NativeEnvironment.Inspect, cancellationToken);
             log.Information("{Environment}", environment.Diagnostic);
             executable = await Task.Run(NativeExecutable.Inspect, cancellationToken);
-            log.Information("Native executable contract: Matches={Matches}; {Reason}; Features=PvpBubbles,ShopExchangeCurrency",
+            log.Information("Native executable contract: Matches={Matches}; {Reason}; Features=PvpBubbles,ShopExchangeCurrency,PositionalFlyText",
                 executable.Matches, executable.Reason);
             toolkitInitialized = true;
             await KamiToolKitLibrary.InitializeAsync(pluginInterface);
@@ -75,7 +93,9 @@ public sealed class Plugin : IAsyncDalamudPlugin
                 merchants.NativeOwnershipEnabled = true;
                 loot.NativeObservationEnabled = true;
                 changelog = new NativeChangelogAddon(config, Save) { InternalName = "DuckbillTweakChangelog", Title = "업데이트 내역", Size = new Vector2(650, 420) };
-                settings = new NativeSettingsAddon(config, Save, () => changelog.Open(), executable.Matches) { InternalName = "DuckbillTweakSettings", Title = "DuckbillTweak", Size = new Vector2(580, 348) };
+                colorPicker = new KamiToolKit.Addons.ColorPickerAddon { InternalName = "DuckbillTweakColorPicker", Title = "측후 색 선택" };
+                colors = new NativePositionalColorAddon(config, Save, colorPicker) { InternalName = "DuckbillTweakPositionalColors", Title = "측후·콤보 표시 세부 설정", Size = new Vector2(640, 390) };
+                settings = new NativeSettingsAddon(config, Save, () => changelog.Open(), () => colors.Open(), executable.Matches) { InternalName = "DuckbillTweakSettings", Title = "DuckbillTweak", Size = new Vector2(580, 430) };
                 currency = new NativeCurrencyAddon(merchants) { InternalName = "DuckbillTweakCurrency", Title = "필요 재화", Size = new Vector2(760, 586) };
                 lootPopup = new NativeLootAddon(loot, config) { InternalName = "DuckbillTweakRolls", Title = "입찰 현황", Size = new Vector2(420, 420) };
                 shop = new(merchants, currency, log, addonLifecycle);
@@ -87,6 +107,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
                 lootInteraction = new(events, addonLifecycle, contextMenu, gui, config, lootPopup, log);
                 bubbles = new(framework, client, log, config, executable);
                 bubbleOrder = new(framework, client, log);
+                positional = new(interop, framework, flyText, objects, client, data, log, config, executable);
             });
             foreach (var command in new[] { "/duckbilltweak", "/dbtw" })
             {
@@ -101,11 +122,53 @@ public sealed class Plugin : IAsyncDalamudPlugin
     }
 
     private void Save() => pluginInterface.SavePluginConfig(config);
+
+    /// <summary>
+    /// Moves positional/combo display values that still equal an earlier default or preset to the current ones.
+    /// Values the user picked by hand are left alone. Returns true when anything changed.
+    /// </summary>
+    private static bool MigratePositionalDisplay(Configuration config)
+    {
+        var changed = false;
+        if (NativePositionalColorAddon.PreviousDefaults.Contains((config.PositionalHitColor, config.PositionalMissColor)))
+        {
+            (config.PositionalHitColor, config.PositionalMissColor) = (NativePositionalColorAddon.DefaultHit, NativePositionalColorAddon.DefaultMiss);
+            changed = true;
+        }
+        if (config.ComboFailColor == NativePositionalColorAddon.PreviousDefaultCombo)
+        {
+            config.ComboFailColor = NativePositionalColorAddon.DefaultCombo;
+            changed = true;
+        }
+        var colors = (config.PositionalHitColor, config.PositionalMissColor, config.ComboFailColor);
+        foreach (var (old, current) in NativePositionalColorAddon.PreviousPresets)
+            if (colors == old)
+            {
+                (config.PositionalHitColor, config.PositionalMissColor, config.ComboFailColor) = current;
+                changed = true;
+                break;
+            }
+        foreach (var (old, current) in NativePositionalColorAddon.PreviousHitIcons)
+            if (config.PositionalHitIcon == old) { config.PositionalHitIcon = current; changed = true; }
+        foreach (var (old, current) in NativePositionalColorAddon.PreviousMissIcons)
+            if (config.PositionalMissIcon == old) { config.PositionalMissIcon = current; changed = true; }
+        return changed;
+    }
     private void OpenSettings() => _ = framework.Run(() => settings?.Open());
     private void OnCommand(string command, string arguments)
     {
-        if (arguments.Trim().Equals("changelog", StringComparison.OrdinalIgnoreCase))
+        var argument = arguments.Trim();
+        if (argument.Equals("changelog", StringComparison.OrdinalIgnoreCase))
             _ = framework.Run(() => changelog?.Open());
+#if DEBUG
+        else if (argument.Equals("probe", StringComparison.OrdinalIgnoreCase))
+            _ = framework.Run(() =>
+            {
+                // Research-only toggle (Debug builds only): logs own statuses, target names and positions to dalamud.log.
+                var enabled = probe.Toggle();
+                chat.Print(enabled ? "측후 조사 로그 켜짐: dalamud.log에 [PositionalProbe]로 기록합니다." : "측후 조사 로그 꺼짐.", "DuckbillTweak");
+            });
+#endif
         else OpenSettings();
     }
 
@@ -118,12 +181,17 @@ public sealed class Plugin : IAsyncDalamudPlugin
         foreach (var command in registeredCommands) commands.RemoveHandler(command);
         await framework.Run(() =>
         {
-            bubbleOrder?.Dispose(); bubbles?.Dispose(); lootInteraction?.Dispose(); shop?.Dispose();
+#if DEBUG
+            probe.Dispose();
+#endif
+            positional?.Dispose(); bubbleOrder?.Dispose(); bubbles?.Dispose(); lootInteraction?.Dispose(); shop?.Dispose();
             foreach (var exchange in exchanges) exchange.Dispose();
             merchants.Dispose(); loot.Dispose();
         });
         if (settings is not null) await settings.DisposeAsync();
         if (changelog is not null) await changelog.DisposeAsync();
+        if (colors is not null) await colors.DisposeAsync();
+        if (colorPicker is not null) await colorPicker.DisposeAsync();
         if (currency is not null) await currency.DisposeAsync();
         if (lootPopup is not null) await lootPopup.DisposeAsync();
         if (toolkitInitialized) await KamiToolKitLibrary.DisposeAsync();
