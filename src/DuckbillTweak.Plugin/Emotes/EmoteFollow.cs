@@ -52,6 +52,8 @@ internal sealed unsafe class EmoteFollow : IDisposable
     private uint territory;
     private readonly List<double> samples = [];
     private Vector3 firedPosition;
+    private float firedRotation;
+    private bool facingLogPending;
     private bool toggleRetried;
     private bool ownEmoteSeen;
     private bool faceTarget;
@@ -122,6 +124,7 @@ internal sealed unsafe class EmoteFollow : IDisposable
 
     private void OnUpdate(IFramework _)
     {
+        LogFacing(false);
         try { Step(); }
         catch (Exception exception) { log.Error(exception, "Emote follow failed"); Stop("따라하기 중 오류가 나서 멈췄습니다."); }
     }
@@ -243,6 +246,8 @@ internal sealed unsafe class EmoteFollow : IDisposable
         previousControl = EmoteAnimation.Dominant(self) is { } current ? current.Control : 0;
         // Already in this emote: a re-execution that ends it is then seen as "ended", not "not started yet".
         ownEmoteSeen = self is not null && self->EmoteController.EmoteId == emoteId;
+        // Before the call: the execution itself may already turn us.
+        firedRotation = self is not null ? self->GameObject.Rotation : 0;
         if (manager is null || !manager->CanExecuteEmote(emoteId) || !Execute(manager))
         {
             Stop("지금은 그 감정표현을 실행할 수 없습니다.");
@@ -252,6 +257,7 @@ internal sealed unsafe class EmoteFollow : IDisposable
         // The time limit covers one wait-and-check; long loops would otherwise run out over several attempts.
         started = firedAt;
         firedPosition = objects.LocalPlayer?.Position ?? Vector3.Zero;
+        facingLogPending = true;
         attempts++;
         verifyFrom = 0;
         samples.Clear();
@@ -278,6 +284,23 @@ internal sealed unsafe class EmoteFollow : IDisposable
         finally { targets.Target = target; targets.SoftTarget = soft; }
     }
 
+    /// <summary>
+    /// Logs our facing before the execution and about a second later, once per execution, so "keep facing" can be
+    /// checked from dalamud.log. One comparison per frame while following; nothing else.
+    /// </summary>
+    private void LogFacing(bool stopping)
+    {
+        if (!facingLogPending) return;
+        var elapsed = Environment.TickCount64 - firedAt;
+        if (!stopping && elapsed < 1000) return;
+        facingLogPending = false;
+        if (objects.LocalPlayer is not { } self) return;
+        var turned = (self.Rotation - firedRotation) * 180 / MathF.PI;
+        turned = (turned % 360 + 540) % 360 - 180; // wrap to [-180, 180)
+        log.Information("Emote follow facing: FaceTarget={Face}; BeforeDeg={Before:F1}; AfterDeg={After:F1}; TurnedDeg={Turned:F1}; AfterMs={Elapsed}",
+            faceTarget, firedRotation * 180 / MathF.PI, self.Rotation * 180 / MathF.PI, turned, elapsed);
+    }
+
     private void Remember()
     {
         config.EmoteLeadMs[emoteId] = (int)Math.Round(lead * 1000);
@@ -287,6 +310,7 @@ internal sealed unsafe class EmoteFollow : IDisposable
     private void Stop(string? message)
     {
         if (stage == Stage.Idle) return;
+        LogFacing(true);
         framework.Update -= OnUpdate;
         stage = Stage.Idle;
         if (message is not null)
