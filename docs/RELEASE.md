@@ -1,5 +1,21 @@
 # 배포 확인
 
+## 0.2.1.0 · 측후·콤보 표시
+
+사용자가 배포를 명시 요청했다. 업데이트 내역의 게임 업데이트 문구를 사용자 요청으로 명확히 고친 뒤 후보2를 만들어 재빌드 없이 게시했다. 고정 Release ZIP 자체의 인게임 확인은 하지 않았으므로 InGameVerified=false를 유지한다. 같은 소스의 개발판 인게임 확인 범위는 [검증 기록](VERIFICATION.md#2026-11-09-측후콤보-표시-0210-후보-전)을 따른다.
+
+| 항목 | 값 |
+|---|---|
+| 소스 | `6d35943656784274aa9b7228987b85f7f21fa6c0` |
+| 고정 후보 | `artifacts/release/0.2.1.0/candidate2` · SourceDirty=false (candidate1은 문구 수정 전 후보로 게시하지 않음) |
+| ZIP | `DuckbillTweak-0.2.1.0.zip` · 445,762바이트/15파일 |
+| SHA256 | `a1f1db4f94836fc9dfe285b80e836e723b4e7cb35c2e07d8dff8b4152c75243b` |
+| 공개 Release | ID439263342 · `v0.2.1.0` · draft=false/prerelease=false |
+| 공개 시각 | 2026-11-09T14:54:19Z / 23:54:19 KST |
+| 설치 원본 | `repo/release.json` · 0.2.1.0/API15 · LastUpdate1794203659 |
+| 실기 | 고정 ZIP 미확인 · InGameVerified=false |
+
+[공개 릴리스](https://github.com/PlatyDuckbill/DuckbillTweak/releases/tag/v0.2.1.0). Release 빌드 경고·오류0, 내장 한영 4항목·manifest 일치, Release DLL에 조사 도구 없음. 업로드 자산 digest/크기와 태그 대상 커밋을 대조한 뒤 공개했다. 인증 없는 ZIP/체크섬/태그 아이콘 HTTP200·원본 해시 일치를 확인한 후 설치 원본을 작성했고 LastUpdate는 실제 공개 시각이다. 게시 근거는 `.cache/publication-0.2.1.0/`에 보관한다.
 ## 0.2.0.4 · dal4kr15.0.3.9 UI 참조 차단 대응
 
 사용자가 문제 대응 후 버전 상승·공개 배포를 명시 요청했다. 고정 후보를 재빌드 없이 게시했으며 실제 새 런타임 로드·화면 확인은 대기이므로 InGameVerified=false를 유지한다.
