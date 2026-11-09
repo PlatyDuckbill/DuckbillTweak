@@ -23,6 +23,7 @@ internal sealed unsafe class EmoteSyncExperiment(IFramework framework, IObjectTa
     private bool armed;
     private long started, firedAt, selfEmoteAt, selfLoopAt, lastSample;
     private float targetPeriod;
+    private float previousTargetTime = -1;
     private readonly List<float> differences = [];
 
     public void Start(int lead)
@@ -43,6 +44,7 @@ internal sealed unsafe class EmoteSyncExperiment(IFramework framework, IObjectTa
         leadMs = Math.Max(0, lead);
         targetPeriod = playback.Duration;
         armed = false;
+        previousTargetTime = -1;
         differences.Clear();
         started = Environment.TickCount64;
         firedAt = selfEmoteAt = selfLoopAt = lastSample = 0;
@@ -73,9 +75,13 @@ internal sealed unsafe class EmoteSyncExperiment(IFramework framework, IObjectTa
             case Phase.Waiting:
             {
                 var lead = (leadMs % (int)(targetLoop.Duration * 1000)) / 1000f;
+                // LocalTime wraps before Remaining reaches 0, so a wrap seen this frame also counts as reaching the point
+                // (needed for lead 0, at most one frame late).
+                var wrapped = previousTargetTime >= 0 && targetLoop.LocalTime + 0.05f < previousTargetTime;
+                previousTargetTime = targetLoop.LocalTime;
                 // Arm only after seeing the target farther than the lead from its wrap, so we fire on the approach.
-                if (targetLoop.Remaining > lead + 0.05f) armed = true;
-                if (armed && targetLoop.Remaining <= lead)
+                if (targetLoop.Remaining > lead + 0.05f && !wrapped) { armed = true; break; }
+                if (armed && (targetLoop.Remaining <= lead || wrapped))
                 {
                     var ok = EmoteManager.Instance()->ExecuteEmote(emoteId, null);
                     firedAt = now;
