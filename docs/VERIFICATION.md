@@ -1,6 +1,14 @@
 # 확인 절차
 
-현재 공개판은0.2.0.4이며 사용자 명시 요청으로 dal4kr15.0.3.9 호환성 수정을 게시했다. 고정 Release 전체의 InGameVerified=false를 유지한다. 앞선0.2.0.3의 말풍선 원인과 수정 후 실제 가림 해소도 미확정이며 기존 상점 정상 관측을 새 Release 실기로 확대하지 않는다. 게시 근거는[RELEASE](RELEASE.md)를 따른다.
+현재 공개판은0.2.0.4이며(2026-11-09 전역 모듈 가드 제거는 미배포 소스 변경) 사용자 명시 요청으로 dal4kr15.0.3.9 호환성 수정을 게시했다. 고정 Release 전체의 InGameVerified=false를 유지한다. 앞선0.2.0.3의 말풍선 원인과 수정 후 실제 가림 해소도 미확정이며 기존 상점 정상 관측을 새 Release 실기로 확대하지 않는다. 게시 근거는[RELEASE](RELEASE.md)를 따른다.
+
+## 2026-11-09 전역 모듈 가드 제거
+
+- 변경: `NativeCompatibility`/`NativeRuntimeProfiles`를 제거하고 보고 전용 `NativeEnvironment`와 실행 파일 전용 `NativeExecutable`로 나눴다. 설정·업데이트 내역·상점 필터·입찰·말풍선 순서는 DLL 조합과 무관하게 초기화한다. PvP 말풍선 패치와 ShopExchangeCurrency 도구만 게임 SHA 일치 시 켠다. 말풍선 순서에 레이어 이동 사후 검사를 추가했다. 근거·위험은 [네이티브 계약](NATIVE-UI.md#2026-11-09-전역-모듈-가드-제거와-기능별-계약).
+- 정규 `scripts/build.ps1`: 잠금 복원/Debug 빌드 경고0·오류0. 실제 DLL 재화자료708바이트/28매핑·업데이트 내역 원본 일치, Plugin/KamiToolKit 참조 Dalamud15.0.3.7/FFCS7.57.0.9386/Interop1.0.0.0 유지.
+- `native-contract`(Debug probe): 로컬 KR 실행 파일에 대해 게임SHA/원본10명령 일치. 모듈은 보고만 하며 세 폴더 모두 통과했다. 로컬 XIVLauncher `Hooks/15.0.3.9`(Dalamud MVID dc000449…, 이전 허용 목록에 없음), `.cache/native-dal4kr/changed`(Dalamud/Interop은 기존 dal4kr15.0.3.7과 같고 FFCS SHA만 다름), 고정 dal4kr15.0.3.9. 이전 구조에서는 앞의 두 폴더가 거부됐을 조합이다.
+- 새 ClientStructs 멤버 사용은 없다(기존 `DepthLayers`/`Entries`/`SetAddonDepthLayer`만 사용). 이후 소스 버전을0.2.0.5로 올려 재빌드했고 내장 업데이트 내역0.2.0.5/2항목 원본 일치를 확인했다. 자동 테스트 추가·실행, Release 후보/설치 JSON 변경은 없다.
+- 실기 대기: 로그 `NativeEnvironment: …; ModuleGate=None`과 `Native executable contract: Matches=True; KR 2026.10.06`, `/dbtw` 설정 열기, 상점 필터/재화/재화 교환 상점/입찰 우클릭/말풍선 순서·PvP 말풍선. 이전 허용 목록에 없던 런타임(예: 로컬 Hooks)에서의 로드·화면 확인도 대기다.
 
 ## 2026-10-30 dal4kr15.0.3.9 UI 참조 차단
 

@@ -22,12 +22,11 @@ public sealed class Plugin : IAsyncDalamudPlugin
     private readonly IAddonEventManager events;
     private readonly IAddonLifecycle addonLifecycle;
     private readonly IContextMenu contextMenu;
-    private readonly IChatGui chat;
     private readonly Configuration config;
     private readonly MerchantService merchants;
     private readonly LootService loot;
     private readonly List<string> registeredCommands = [];
-    private NativeCompatibility compatibility = new(false, 0, "UI 초기화 중");
+    private NativeExecutable executable = new(false, 0, "not inspected");
     private NativeSettingsAddon? settings;
     private NativeChangelogAddon? changelog;
     private NativeCurrencyAddon? currency;
@@ -46,7 +45,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
         IPluginLog log, IChatGui chat, IPartyList party, IAddonEventManager events, IAddonLifecycle addonLifecycle, IContextMenu contextMenu)
     {
         this.pluginInterface = pluginInterface; this.commands = commands; this.framework = framework;
-        this.client = client; this.log = log; this.gui = gameGui; this.party = party; this.events = events; this.chat = chat;
+        this.client = client; this.log = log; this.gui = gameGui; this.party = party; this.events = events;
         this.addonLifecycle = addonLifecycle;
         this.contextMenu = contextMenu;
         config = pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
@@ -62,30 +61,33 @@ public sealed class Plugin : IAsyncDalamudPlugin
     {
         try
         {
-            compatibility = await Task.Run(NativeCompatibility.Inspect, cancellationToken);
-            log.Information("Native UI compatibility: Supported={Supported}; {Reason}", compatibility.Supported, compatibility.Reason);
-            if (compatibility.Supported)
+            // No global DLL/game gate: Dalamud decides loadability, and each feature checks its own contract.
+            // Only executable-bound code (PvP patch, currency exchange row map) requires the exact KR executable.
+            var environment = await Task.Run(NativeEnvironment.Inspect, cancellationToken);
+            log.Information("{Environment}", environment.Diagnostic);
+            executable = await Task.Run(NativeExecutable.Inspect, cancellationToken);
+            log.Information("Native executable contract: Matches={Matches}; {Reason}; Features=PvpBubbles,ShopExchangeCurrency",
+                executable.Matches, executable.Reason);
+            toolkitInitialized = true;
+            await KamiToolKitLibrary.InitializeAsync(pluginInterface);
+            await framework.Run(() =>
             {
-                toolkitInitialized = true;
-                await KamiToolKitLibrary.InitializeAsync(pluginInterface);
-                await framework.Run(() =>
-                {
-                    merchants.NativeOwnershipEnabled = true;
-                    loot.NativeObservationEnabled = true;
-                    changelog = new NativeChangelogAddon(config, Save) { InternalName = "DuckbillTweakChangelog", Title = "업데이트 내역", Size = new Vector2(650, 420) };
-                    settings = new NativeSettingsAddon(config, Save, () => changelog.Open()) { InternalName = "DuckbillTweakSettings", Title = "DuckbillTweak", Size = new Vector2(580, 348) };
-                    currency = new NativeCurrencyAddon(merchants) { InternalName = "DuckbillTweakCurrency", Title = "필요 재화", Size = new Vector2(760, 586) };
-                    lootPopup = new NativeLootAddon(loot, config) { InternalName = "DuckbillTweakRolls", Title = "입찰 현황", Size = new Vector2(420, 420) };
-                    shop = new(merchants, currency, log, addonLifecycle);
-                    exchanges.Add(new("InclusionShop", merchants, currency, log, addonLifecycle));
-                    exchanges.Add(new("ShopExchangeItem", merchants, currency, log, addonLifecycle));
-                    exchanges.Add(new("ShopExchangeCurrency", merchants, currency, log, addonLifecycle));
-                    lootInteraction = new(events, addonLifecycle, contextMenu, gui, config, lootPopup, log);
-                    bubbles = new(framework, client, log, config, compatibility);
-                    bubbleOrder = new(framework, client, compatibility);
-                });
-            }
-            else log.Warning("Native UI disabled: {Reason}", compatibility.Reason);
+                merchants.NativeOwnershipEnabled = true;
+                loot.NativeObservationEnabled = true;
+                changelog = new NativeChangelogAddon(config, Save) { InternalName = "DuckbillTweakChangelog", Title = "업데이트 내역", Size = new Vector2(650, 420) };
+                settings = new NativeSettingsAddon(config, Save, () => changelog.Open(), executable.Matches) { InternalName = "DuckbillTweakSettings", Title = "DuckbillTweak", Size = new Vector2(580, 348) };
+                currency = new NativeCurrencyAddon(merchants) { InternalName = "DuckbillTweakCurrency", Title = "필요 재화", Size = new Vector2(760, 586) };
+                lootPopup = new NativeLootAddon(loot, config) { InternalName = "DuckbillTweakRolls", Title = "입찰 현황", Size = new Vector2(420, 420) };
+                shop = new(merchants, currency, log, addonLifecycle);
+                exchanges.Add(new("InclusionShop", merchants, currency, log, addonLifecycle));
+                exchanges.Add(new("ShopExchangeItem", merchants, currency, log, addonLifecycle));
+                // The compact row map and selected-tab byte are raw offsets inspected on the exact KR executable.
+                if (executable.Matches) exchanges.Add(new("ShopExchangeCurrency", merchants, currency, log, addonLifecycle));
+                else log.Warning("ShopExchangeCurrency tools disabled: {Reason}", executable.Reason);
+                lootInteraction = new(events, addonLifecycle, contextMenu, gui, config, lootPopup, log);
+                bubbles = new(framework, client, log, config, executable);
+                bubbleOrder = new(framework, client, log);
+            });
             foreach (var command in new[] { "/duckbilltweak", "/dbtw" })
             {
                 if (!commands.AddHandler(command, new CommandInfo(OnCommand) { HelpMessage = "DuckbillTweak 기능 설정" }))
@@ -99,18 +101,11 @@ public sealed class Plugin : IAsyncDalamudPlugin
     }
 
     private void Save() => pluginInterface.SavePluginConfig(config);
-    private void OpenSettings()
-    {
-        if (!compatibility.Supported) { chat.PrintError(compatibility.Reason); return; }
-        _ = framework.Run(() => settings?.Open());
-    }
+    private void OpenSettings() => _ = framework.Run(() => settings?.Open());
     private void OnCommand(string command, string arguments)
     {
         if (arguments.Trim().Equals("changelog", StringComparison.OrdinalIgnoreCase))
-        {
-            if (!compatibility.Supported) { chat.PrintError(compatibility.Reason); return; }
             _ = framework.Run(() => changelog?.Open());
-        }
         else OpenSettings();
     }
 

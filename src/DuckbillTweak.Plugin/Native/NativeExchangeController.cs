@@ -278,7 +278,7 @@ internal sealed unsafe class NativeExchangeController : IDisposable
     private static bool TryMapCurrencyRows(AtkUnitBase* addon, AtkComponentList* list, AgentShop* shop, int[] sources, out string failure)
     {
         // Inspected KR 2026.10.06: refresh RVA12C17A0, row render RVA12C2D10,
-        // tooltip RVA12C2B74. Compatibility's exact executable hash/MVID still applies.
+        // tooltip RVA12C2B74. Plugin attaches this shop only when NativeExecutable matches that executable.
         // The 60-entry compact map is native addon state, not a filtered purchase index.
         const int capacity = 60;
         const int itemIdValue = 0x42A;
@@ -348,7 +348,7 @@ internal sealed unsafe class NativeExchangeController : IDisposable
         }
         var shop = AgentShop.Instance();
         if (shop is null || shop->AddonId != addon->Id) return null;
-        // KR setup RVA12C1416 and tab selection RVA12C26CB use this selected tab byte.
+        // KR setup RVA12C1416 and tab selection RVA12C26CB use this selected tab byte (NativeExecutable-gated).
         var tab = CurrencyShop ? *((byte*)addon + 0x318) : 0;
         return tab is < 0 or > 3 ? null : $"{ReadShopName(shop)}:{tab}";
     }

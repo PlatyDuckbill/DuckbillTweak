@@ -2,12 +2,12 @@
   <PropertyGroup>
     <AssemblyName>DuckbillTweak</AssemblyName>
     <RootNamespace>DuckbillTweak.Plugin</RootNamespace>
-    <Version>0.2.0.4</Version>
+    <Version>0.2.0.5</Version>
     <Author>PlatyDuckbill</Author>
     <Name>DuckbillTweak</Name>
     <Punchline>Shop collection filters, currency planning and loot results for FFXIV Korea.</Punchline>
-    <Description>Small conveniences in the game's own UI, for FFXIV Korea.&#xA;&#xA;• Filter owned equipment and collectibles, or focus shop lists on collection items.&#xA;• Calculate the current shop's currency requirements and shortages, with linked storage records.&#xA;• Right-click loot items to view participant choices and publicly received roll results.&#xA;• Enable PvP chat bubbles using your game's chat bubble settings.&#xA;&#xA;Open settings: /dbtw or /duckbilltweak. Each feature starts disabled.&#xA;Release history: Settings → 업데이트 내역, or /dbtw changelog.&#xA;&#xA;Korean client and inspected Dalamud API 15 bindings only. Loot numbers appear when the game publishes results. Stored inventory records may be incomplete or out of date.</Description>
-    <Changelog>• Restore settings and features on the updated dal4kr 15.0.3.9 Korean Dalamud distribution.</Changelog>
+    <Description>Small conveniences in the game's own UI, for FFXIV Korea.&#xA;&#xA;• Filter owned equipment and collectibles, or focus shop lists on collection items.&#xA;• Calculate the current shop's currency requirements and shortages, with linked storage records.&#xA;• Right-click loot items to view participant choices and publicly received roll results.&#xA;• Enable PvP chat bubbles using your game's chat bubble settings.&#xA;&#xA;Open settings: /dbtw or /duckbilltweak. Each feature starts disabled.&#xA;Release history: Settings → 업데이트 내역, or /dbtw changelog.&#xA;&#xA;Korean client and Dalamud API 15 only. Loot numbers appear when the game publishes results. Stored inventory records may be incomplete or out of date.</Description>
+    <Changelog>• Settings and features keep working when the Korean Dalamud distribution is rebuilt.&#xA;• After a game update, only PvP chat bubbles and currency exchange shop tools pause until checked, with a note in settings.</Changelog>
     <IconUrl Condition="Exists('../../assets/duckbilltweak-icon.png')">https://raw.githubusercontent.com/PlatyDuckbill/DuckbillTweak/v$(Version)/assets/duckbilltweak-icon.png</IconUrl>
     <RepoUrl>https://github.com/PlatyDuckbill/DuckbillTweak</RepoUrl>
     <Tags>tweaks;shop;collection;loot;pvp;한국어</Tags>

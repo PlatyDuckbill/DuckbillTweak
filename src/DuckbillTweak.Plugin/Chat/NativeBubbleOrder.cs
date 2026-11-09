@@ -1,12 +1,12 @@
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Dalamud.Plugin.Services;
-using DuckbillTweak.Plugin.Native;
 
 namespace DuckbillTweak.Plugin.Chat;
 
-// Uses the installed bindings, behind NativeCompatibility's exact KR profile.
-// KR ULD: MiniTalk and NamePlate each have root 1 and custom component 2/1001.
+// Uses only the installed ClientStructs functions and lists; no module/executable hash gate.
+// Runtime contract: KR ULD shape (MiniTalk and NamePlate each have root 1 and custom component 2/1001),
+// unique non-null layer membership, and after a cross-layer move the old layer no longer lists the addon.
 internal sealed unsafe class NativeBubbleOrder : IDisposable
 {
     private sealed record Saved(nint Addon, ushort Id, uint Layer, ushort Previous, nint BeforeAddress,
@@ -14,19 +14,20 @@ internal sealed unsafe class NativeBubbleOrder : IDisposable
     private Saved? saved;
     private readonly IFramework framework;
     private readonly IClientState client;
-    private readonly NativeCompatibility compatibility;
+    private readonly IPluginLog log;
     private uint territory;
+    private bool contractFailed;
 
-    public NativeBubbleOrder(IFramework framework, IClientState client, NativeCompatibility compatibility)
+    public NativeBubbleOrder(IFramework framework, IClientState client, IPluginLog log)
     {
-        this.framework = framework; this.client = client; this.compatibility = compatibility;
+        this.framework = framework; this.client = client; this.log = log;
         framework.Update += OnUpdate;
     }
 
     private void OnUpdate(IFramework _)
     {
         if (territory != client.TerritoryType) { Restore(); territory = client.TerritoryType; }
-        if (!compatibility.Supported || !client.IsLoggedIn) { Restore(); return; }
+        if (contractFailed || !client.IsLoggedIn) { Restore(); return; }
         Update();
     }
 
@@ -90,14 +91,28 @@ internal sealed unsafe class NativeBubbleOrder : IDisposable
         // can be restored. Never use a stale neighbor or invent an exact slot.
     }
 
-    private static bool MoveLayer(RaptureAtkUnitManager* manager, AtkUnitBase* addon, uint layer)
+    private bool MoveLayer(RaptureAtkUnitManager* manager, AtkUnitBase* addon, uint layer)
     {
-        if (layer >= manager->DepthLayers.Length || Index(manager, addon) < 0) return false;
+        if (contractFailed || layer >= manager->DepthLayers.Length || Index(manager, addon) < 0) return false;
         if (addon->DepthLayer == layer) return true;
         ref var destination = ref manager->DepthLayers[(int)layer];
         if (destination.Count >= 256) return false;
         for (var i = 0; i < destination.Count; i++) if (destination.Entries[i].Value is null) return false;
-        return manager->SetAddonDepthLayer(addon->Id, layer) && addon->DepthLayer == layer && Index(manager, addon) >= 0;
+        var source = addon->DepthLayer;
+        if (!manager->SetAddonDepthLayer(addon->Id, layer)) return false;
+        // The inspected KR build removes the old membership first; verify that at runtime instead of a build hash.
+        if (addon->DepthLayer == layer && Index(manager, addon) >= 0 && !Lists(manager, source, addon)) return true;
+        contractFailed = true;
+        log.Error("Chat bubble order: depth layer move contract failed (layer {From} -> {To}); disabled until reload.", source, layer);
+        return false;
+    }
+
+    private static bool Lists(RaptureAtkUnitManager* manager, uint layerIndex, AtkUnitBase* addon)
+    {
+        if (layerIndex >= manager->DepthLayers.Length) return false;
+        ref var layer = ref manager->DepthLayers[(int)layerIndex];
+        for (var i = 0; i < layer.Count && i < 256; i++) if (layer.Entries[i].Value == addon) return true;
+        return false;
     }
 
     private static bool Shape(AtkUnitBase* addon)

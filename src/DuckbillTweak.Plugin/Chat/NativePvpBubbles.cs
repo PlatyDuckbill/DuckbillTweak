@@ -8,7 +8,7 @@ namespace DuckbillTweak.Plugin.Chat;
 internal sealed class NativePvpBubbles : IDisposable
 {
     private sealed record Patch(int Rva, byte[] Original, byte[] Replacement);
-    // Verified against the exact KR executable above; not upstream signatures or global-client offsets.
+    // Verified against the exact KR executable (NativeExecutable SHA-256); not upstream signatures or global-client offsets.
     private static readonly Patch[] Patches =
     [
         new(0xCD5682, [0x40, 0xB6, 0x01], [0x40, 0x30, 0xF6]),
@@ -19,21 +19,21 @@ internal sealed class NativePvpBubbles : IDisposable
     private readonly IClientState client;
     private readonly IPluginLog log;
     private readonly Configuration config;
-    private readonly NativeCompatibility compatibility;
+    private readonly NativeExecutable executable;
     private readonly List<Patch> applied = [];
     private bool failed;
 
     public NativePvpBubbles(IFramework framework, IClientState client, IPluginLog log,
-        Configuration config, NativeCompatibility compatibility)
+        Configuration config, NativeExecutable executable)
     {
         this.framework = framework; this.client = client; this.log = log;
-        this.config = config; this.compatibility = compatibility;
+        this.config = config; this.executable = executable;
         framework.Update += Update;
     }
 
     private void Update(IFramework _)
     {
-        var enabled = compatibility.Supported && config.PvpBubbles && client.IsLoggedIn && client.IsPvPExcludingDen;
+        var enabled = executable.Matches && config.PvpBubbles && client.IsLoggedIn && client.IsPvPExcludingDen;
         if (!enabled) { Restore(); failed = false; return; }
         if (applied.Count != 0 || failed) return;
         if (Patches.Any(p => !Matches(p, p.Original)))
@@ -44,7 +44,7 @@ internal sealed class NativePvpBubbles : IDisposable
         }
         foreach (var patch in Patches)
         {
-            if (!SafeMemory.WriteBytes(compatibility.ImageBase + patch.Rva, patch.Replacement))
+            if (!SafeMemory.WriteBytes(executable.ImageBase + patch.Rva, patch.Replacement))
             {
                 failed = true; Restore();
                 log.Error("PvP chat bubbles: native patch write failed.");
@@ -55,7 +55,7 @@ internal sealed class NativePvpBubbles : IDisposable
     }
 
     private bool Matches(Patch patch, byte[] expected) =>
-        SafeMemory.ReadBytes(compatibility.ImageBase + patch.Rva, expected.Length, out var bytes) && bytes.AsSpan().SequenceEqual(expected);
+        SafeMemory.ReadBytes(executable.ImageBase + patch.Rva, expected.Length, out var bytes) && bytes.AsSpan().SequenceEqual(expected);
 
     private void Restore()
     {
@@ -64,7 +64,7 @@ internal sealed class NativePvpBubbles : IDisposable
             var patch = applied[i];
             if (Matches(patch, patch.Replacement))
             {
-                if (!SafeMemory.WriteBytes(compatibility.ImageBase + patch.Rva, patch.Original))
+                if (!SafeMemory.WriteBytes(executable.ImageBase + patch.Rva, patch.Original))
                     log.Error("PvP chat bubbles: restoring instruction at {Rva:X} failed.", patch.Rva);
             }
             else log.Warning("PvP chat bubbles: instruction at {Rva:X} changed externally; not overwriting.", patch.Rva);

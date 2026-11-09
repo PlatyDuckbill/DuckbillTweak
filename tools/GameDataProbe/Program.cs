@@ -11,7 +11,7 @@ using DuckbillTweak.Plugin.Native;
 
 if (args.Length >= 3 && args[0] == "native-contract")
 {
-    const string expectedGame = NativeRuntimeProfiles.GameSha256;
+    const string expectedGame = NativeExecutable.GameSha256;
     var exe = File.ReadAllBytes(args[1]);
     if (Convert.ToHexString(SHA256.HashData(exe)) != expectedGame) throw new InvalidDataException("Game hash mismatch.");
     using var gamePe = new PEReader(new MemoryStream(exe));
@@ -38,9 +38,10 @@ if (args.Length >= 3 && args[0] == "native-contract")
         if (!exe.AsSpan(offset, bytes.Length).SequenceEqual(bytes)) throw new InvalidDataException($"Instruction mismatch at {rva:X}.");
         Console.WriteLine($"RVA={rva:X}; Original={Convert.ToHexString(bytes)}; Match=True");
     }
-    // Preserve the old DLL-path invocation while inspecting the complete distribution.
+    // Report-only: module identities are no longer a runtime gate (see NativeEnvironment / docs/NATIVE-UI.md).
+    // Member/signature differences between distributions are reviewed with scripts/compare-native-runtime.ps1.
     var referenceDirectory = Directory.Exists(args[2]) ? args[2] : Path.GetDirectoryName(Path.GetFullPath(args[2]))!;
-    NativeModuleIdentity ReadModule(string name)
+    foreach (var name in new[] { "Dalamud.dll", "FFXIVClientStructs.dll", "InteropGenerator.Runtime.dll" })
     {
         using var stream = File.OpenRead(Path.Combine(referenceDirectory, name));
         var sha256 = Convert.ToHexString(SHA256.HashData(stream));
@@ -48,12 +49,9 @@ if (args.Length >= 3 && args[0] == "native-contract")
         using var pe = new PEReader(stream);
         var metadata = pe.GetMetadataReader();
         var mvid = metadata.GetGuid(metadata.GetModuleDefinition().Mvid);
-        Console.WriteLine($"Module={name}; MVID={mvid}; SHA256={sha256}");
-        return new(mvid, sha256);
+        Console.WriteLine($"Module={name}; MVID={mvid}; SHA256={sha256}; Gate=None");
     }
-    var profile = NativeRuntimeProfiles.Match(ReadModule("Dalamud.dll"), ReadModule("FFXIVClientStructs.dll"), ReadModule("InteropGenerator.Runtime.dll"));
-    if (profile is null) throw new InvalidDataException("Uninspected or mixed native runtime distribution.");
-    Console.WriteLine($"GameSHA256={expectedGame}; NativeProfile={profile.Id}; Match=True");
+    Console.WriteLine($"GameSHA256={expectedGame}; ExecutableContract=Match; ModuleGate=None");
     return 0;
 }
 

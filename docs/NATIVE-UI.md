@@ -4,10 +4,30 @@
 
 ## 고정 환경
 
-- 게임: KR2026.10.06.0000.0000. 실행 파일 SHA-256: DB9824EFAC6D5370AB64B02353E882931DDA447E160EE1A5D9E5DCBA43695728.
-- 런타임: 검토한 wasdcxz15.0.3.9/dal4kr15.0.3.7/dal4kr15.0.3.9의 세 모듈 조합. 버전 번호만으로 허용하지 않는다. 새 dal4kr15.0.3.9 지원은0.2.0.4부터 제공한다.
+- 게임: KR2026.10.06.0000.0000. 실행 파일 SHA-256: DB9824EFAC6D5370AB64B02353E882931DDA447E160EE1A5D9E5DCBA43695728. 이 해시는 실행 파일 고유 코드에 묶인 기능에만 적용한다(아래 2026-11-09 절).
+- 런타임: 모듈 MVID/SHA256 허용 목록은 2026-11-09에 제거했다. 로드는 Dalamud API 레벨 판정에 맡기고 설치된 ClientStructs를 신뢰한다. 이전에 검토한 wasdcxz15.0.3.9/dal4kr15.0.3.7/dal4kr15.0.3.9 기록은 근거로 보존한다.
 - KamiToolKit: MIT, revision1eaccb5c6d6fcc697f7e1b98b5528580f5edd201. 소스 수정 없이 submodule로 빌드하며 라이선스를 출력에 포함한다.
-- SDK/API 버전은 변경하지 않았다. NativeCompatibility가 게임 해시와 로드된 세 모듈의 MVID/디스크 SHA256 조합을 확인한다. 틀리면 사용자 명령에 미지원 사유만 출력한다.
+- SDK/API 버전은 변경하지 않았다. 아래 절 이전 기록의 "NativeCompatibility/세 모듈 조합 가드"는 당시 구조이며 현재 정책은 2026-11-09 절을 따른다.
+
+### 2026-11-09 전역 모듈 가드 제거와 기능별 계약
+
+배경: 0.2.0.1과 0.2.0.4는 게임 변경 없이 dal4kr가 DLL만 재배포해 생긴 전체 차단을 풀기 위한 릴리스였다. 기존 `NativeCompatibility`는 세 모듈 조합 하나가 다르면 KamiToolKit 초기화부터 설정·업데이트 내역·상점·입찰·말풍선까지 모두 끄고 있었다. 같은 작성자의 [DuckbillFisher 590e506](https://github.com/PlatyDuckbill/DuckbillFisher/commit/590e5062d4897bdb75b981c87c6914f22d9949c4)(2026-11-04, 전역 가드 제거·기능별 실행 계약)의 방식을 읽기 전용으로 참고했다. 코드 복사는 `NativeEnvironment`의 보고 형식(게임 버전 파일·모듈 버전/MVID)뿐이며, Fisher의 글로벌 지원·로그 결합 계약은 도입하지 않았다. Tweak은 KR 전용 정책을 유지한다.
+
+| 구분 | 기능 | 판정 |
+|---|---|---|
+| 보고 전용 | `NativeEnvironment` | 게임 버전 파일, Dalamud·FFCS·Interop 버전/MVID를 로그에 기록. 기능을 막지 않고 해시도 계산하지 않음 |
+| 실행 파일 계약 | PvP 말풍선 패치(RVA CD5682/CD568A/CD571E) | `NativeExecutable` 게임 SHA-256·모듈 크기 일치 + 기존 원본 바이트 대조 |
+| 실행 파일 계약 | ShopExchangeCurrency 행 연결/선택 탭(addon 오프셋 3B38/21A0/320/318) | 게임 SHA 불일치 시 해당 컨트롤러를 붙이지 않아 원래 화면 그대로 사용 |
+| ClientStructs 계약 | 설정·업데이트 내역·필요 재화 화면 | KamiToolKit/설치 바인딩. 항상 열림 |
+| ClientStructs 계약 | Shop·InclusionShop·ShopExchangeItem 필터 | 기존 ULD 크기/노드 형태, AgentShop 수량, 원본 인덱스·품목·컨텍스트 재검증 유지 |
+| ClientStructs 계약 | 입찰 관측/우클릭 메뉴 | 기존 NeedGreed 형태·로그 형식·행/아이템 재검증 유지 |
+| ClientStructs 계약 | 말풍선 표시 순서 | 기존 ULD 형태·레이어 고유 소속 검사 + **신규** 레이어 이동 뒤 이전 레이어에 남지 않았는지 실행 중 확인. 위반 시 재로드 전까지 이 기능만 정지 |
+
+- 정적 근거였던 SetAddonDepthLayer의 이전 소속 제거(RVA67C885)는 실행 중 사후 검사로 대체했다. 설치 FFCS 함수만 호출하며 주소를 직접 호출하지 않는 점은 그대로다.
+- 충돌 목록의 DrawFlags bit21(RVA677ABB) 해석은 숨긴 원본 행의 마우스 판정 근거다. 게임 패치로 의미가 바뀌면 숨긴 행이 반응할 수 있으나, 그 행은 자기 원본 인덱스의 기본 동작이며 구매 인덱스를 바꾸지 않는다. 이 위험은 수용하고 실행 파일 계약으로 묶지 않았다.
+- 남는 위험: 배포판이 게임과 맞지 않는 ClientStructs를 공급하면 잘못된 값을 읽을 수 있다. 같은 배포판의 모든 플러그인이 같은 위험을 지며, UI 형태·원본 행 검사로 대부분 비활성/Unknown이 된다. 0으로 만들 수는 없다.
+- 게임 업데이트 시: PvP 말풍선과 재화 교환 상점 도구만 꺼지고 설정 화면에 안내한다. 새 실행 파일의 바이트/오프셋을 재조사한 뒤 `NativeExecutable`의 해시와 `native-contract` 대조 목록을 함께 갱신한다.
+- `GameDataProbe native-contract`는 게임 SHA와 원본 10명령을 계속 강제하고, 모듈 MVID/SHA256은 `Gate=None`으로 보고만 한다. 배포판 간 멤버 차이는 `compare-native-runtime.ps1`로 개발 중 검토한다.
 
 ### 2026-10-30 dal4kr15.0.3.9 추가
 

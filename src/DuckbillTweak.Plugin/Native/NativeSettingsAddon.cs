@@ -5,15 +5,18 @@ using KamiToolKit.Nodes;
 
 namespace DuckbillTweak.Plugin.Native;
 
-internal sealed unsafe class NativeSettingsAddon(Configuration config, Action save, Action openChangelog) : NativeAddon
+// executableMatches: NativeExecutable result. Only the PvP patch and the currency exchange shop depend on it.
+internal sealed unsafe class NativeSettingsAddon(Configuration config, Action save, Action openChangelog, bool executableMatches) : NativeAddon
 {
     private TextButtonNode? changelogButton;
     protected override void OnSetup(AtkUnitBase* addon, Span<AtkValue> values)
     {
         AddToggle("PvP 전장 말풍선", 60, config.PvpBubbles, value => config.PvpBubbles = value);
-        AddText("채널·색상·표시 방식은 캐릭터 설정의 대화 말풍선 설정을 따릅니다.", 88);
+        AddText(executableMatches ? "채널·색상·표시 방식은 캐릭터 설정의 대화 말풍선 설정을 따릅니다." :
+            "현재 게임 버전에서는 확인 전이라 동작하지 않습니다. 플러그인 업데이트를 기다려 주세요.", 88);
         AddToggle("상점 품목 필터와 필요 재화", 138, config.MerchantTools, value => config.MerchantTools = value);
-        AddText("상점 안의 '보유 수집품 제외'와 '필요 재화'를 사용합니다.", 166);
+        AddText(executableMatches ? "상점 안의 '보유 수집품 제외'와 '필요 재화'를 사용합니다." :
+            "상점 안의 '보유 수집품 제외'와 '필요 재화'를 사용합니다. 재화 교환 상점은 현재 게임 버전 확인 전까지 제외됩니다.", 166);
         AddToggle("아이템별 입찰 숫자", 216, config.LootRolls, value => config.LootRolls = value);
         AddText("입찰 목록에서 우클릭 → '입찰 숫자 보기'를 선택합니다.", 244);
         var unread = config.LastSeenChangelogVersion != ReleaseHistory.CurrentVersion;

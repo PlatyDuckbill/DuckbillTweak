@@ -1,5 +1,17 @@
 [
   {
+    "Version": "0.2.0.5",
+    "Date": "2026-11-09",
+    "Korean": [
+      "한국 Dalamud 배포판이 다시 빌드되어도 설정과 기능이 차단되지 않습니다.",
+      "게임 업데이트 후 확인 전까지는 PvP 말풍선과 재화 교환 상점 도구만 잠시 꺼지며, 설정 화면에서 안내합니다."
+    ],
+    "English": [
+      "Settings and features keep working when the Korean Dalamud distribution is rebuilt.",
+      "After a game update, only PvP chat bubbles and currency exchange shop tools pause until checked, with a note in settings."
+    ]
+  },
+  {
     "Version": "0.2.0.4",
     "Date": "2026-10-30",
     "Korean": [
