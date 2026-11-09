@@ -22,6 +22,8 @@ internal sealed unsafe class EmoteProbe(IFramework framework, IObjectTable objec
         public readonly float[] Time = new float[Slots];
         public readonly long[] LastRestart = new long[Slots];
         public long LastSnapshot;
+        public List<HavokControl> Havok = [];
+        public readonly Dictionary<nint, long> HavokRestart = [];
     }
 
     private readonly Dictionary<ulong, Track> tracks = [];
@@ -82,13 +84,64 @@ internal sealed unsafe class EmoteProbe(IFramework framework, IObjectTable objec
             }
             track.Time[slot] = time;
         }
+        ObserveHavok(role, character, track, now);
         if (track.Emote != 0 && now - track.LastSnapshot >= 1000)
         {
             track.LastSnapshot = now;
             var active = Enumerable.Range(0, Slots).Where(slot => track.Timeline[slot] != 0)
                 .Select(slot => $"{slot}:{track.Timeline[slot]}@{track.Time[slot]:F2}");
-            log.Information("[EmoteProbe] {Role} snapshot emote={Emote} loop={Loop} slots=[{Slots}] t={Tick}", role, track.Emote, track.Loop, string.Join(' ', active), now);
+            log.Information("[EmoteProbe] {Role} snapshot emote={Emote} loop={Loop} slots=[{Slots}] havok=[{Havok}] t={Tick}",
+                role, track.Emote, track.Loop, string.Join(' ', active), string.Join(' ', track.Havok.Select(h => h.Describe())), now);
         }
+    }
+
+    private sealed record HavokControl(nint Address, float Duration, float LocalTime, float Speed, uint Overflow, float Weight)
+    {
+        public string Describe() => $"{Address:X}:{LocalTime:F3}/{Duration:F3}x{Speed:F2} ov{Overflow} w{Weight:F2}";
+    }
+
+    /// <summary>
+    /// Body skeleton (partial 0, animated skeleton 0) Havok animation controls: the real looping playback state.
+    /// Logs a control's loop overflow (LocalTime wrapped past Duration) with the measured period.
+    /// </summary>
+    private void ObserveHavok(string role, Character* character, Track track, long now)
+    {
+        var current = new List<HavokControl>();
+        var draw = character->GameObject.DrawObject;
+        if (draw is not null && draw->Object.GetObjectType() == FFXIVClientStructs.FFXIV.Client.Graphics.Scene.ObjectType.CharacterBase)
+        {
+            var skeleton = ((FFXIVClientStructs.FFXIV.Client.Graphics.Scene.CharacterBase*)draw)->Skeleton;
+            if (skeleton is not null && skeleton->PartialSkeletonCount > 0)
+            {
+                var animated = skeleton->PartialSkeletons[0].GetHavokAnimatedSkeleton(0);
+                if (animated is not null)
+                    for (var i = 0; i < animated->AnimationControls.Length; i++)
+                    {
+                        var control = animated->AnimationControls.Data[i].Value;
+                        if (control is null) continue;
+                        var binding = control->hkaAnimationControl.Binding.ptr;
+                        var animation = binding is null ? null : binding->Animation.ptr;
+                        current.Add(new((nint)control, animation is null ? -1 : animation->Duration, control->hkaAnimationControl.LocalTime,
+                            control->PlaybackSpeed, control->OverflowCount, control->hkaAnimationControl.Weight));
+                    }
+            }
+        }
+        foreach (var control in current)
+        {
+            var previous = track.Havok.FirstOrDefault(old => old.Address == control.Address);
+            if (previous is null)
+                log.Information("[EmoteProbe] {Role} havok add {Control} emote={Emote} t={Tick}", role, control.Describe(), track.Emote, now);
+            else if (control.Overflow != previous.Overflow || control.LocalTime + 0.05f < previous.LocalTime)
+            {
+                track.HavokRestart.TryGetValue(control.Address, out var last);
+                log.Information("[EmoteProbe] {Role} havok loop {Control} prev={Prev:F3} periodMs={Period} emote={Emote} t={Tick}",
+                    role, control.Describe(), previous.LocalTime, last == 0 ? -1 : now - last, track.Emote, now);
+                track.HavokRestart[control.Address] = now;
+            }
+        }
+        foreach (var gone in track.Havok.Where(old => current.All(c => c.Address != old.Address)))
+            log.Information("[EmoteProbe] {Role} havok remove {Control} t={Tick}", role, gone.Describe(), now);
+        track.Havok = current;
     }
 
     public void Dispose()
