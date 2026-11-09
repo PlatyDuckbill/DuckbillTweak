@@ -13,9 +13,10 @@
 | 공개 Release | ID439649656 · `v0.2.2.1` · draft=false/prerelease=false |
 | 공개 시각 | 2026-11-09T21:11:03Z / 2026-11-10 06:11:03 KST |
 | 설치 원본 | `repo/release.json` · 0.2.2.1/API15 · LastUpdate1794226263 |
+| 공용 동기화 | [workflow42700139605](https://github.com/PlatyDuckbill/DuckbillRepo/actions/runs/42700139605) 성공 · 공용원본`53c01a62eee5e4f8011af451903228a925739991` |
 | 실기 | 고정 ZIP·방향 유지·재실행 대기 미확인 · InGameVerified=false |
 
-[공개 릴리스](https://github.com/PlatyDuckbill/DuckbillTweak/releases/tag/v0.2.2.1). Release 빌드 경고·오류0, 내장 한영 안내·manifest 일치, Release DLL에 조사 도구 문자열 없음. 업로드 자산 digest/크기와 태그 대상 커밋을 대조한 뒤 공개했다. 인증 없는 ZIP/체크섬/태그 아이콘 HTTP200·원본 해시 일치를 확인한 후 설치 원본을 작성했다. 게시 근거는 `.cache/publication-0.2.2.1/`에 보관한다.
+[공개 릴리스](https://github.com/PlatyDuckbill/DuckbillTweak/releases/tag/v0.2.2.1). Release 빌드 경고·오류0, 내장 한영 안내·manifest 일치, Release DLL에 조사 도구 문자열 없음. 업로드 자산 digest/크기와 태그 대상 커밋을 대조한 뒤 공개했다. 인증 없는 ZIP/체크섬/태그 아이콘 HTTP200·원본 해시 일치를 확인한 후 설치 원본을 작성했다. 게시 근거는 `.cache/publication-0.2.2.1/`에 보관한다. 설치 원본`8c32192` push 후 공용 동기화를 수동 실행했다. 2026-11-09T21:12:04Z에 고정 공용 커밋과 기존 [공용 설치 URL](https://raw.githubusercontent.com/PlatyDuckbill/DuckbillRepo/main/pluginmaster.json) 모두 익명HTTP200/0.2.2.1/API15/22필드 원본 일치를 확인했다. 다른 Fisher 항목은0.9.0.0을 유지한다. 공개 배포·공용 목록 반영은 완료이며 실제 Dalamud 업데이트·인게임 성공과 구분한다.
 ## 0.2.2.0 · 감정표현 따라하기와 색 선택 창 수정
 
 사용자가 최신 따라하기 보완(박자 기준·종족별 길이·꺼지는 감정표현 재시도)의 인게임 확인 전에 배포를 명시 요청했다("나머진 해보면서 할게"). 고정 후보를 재빌드 없이 게시했으며 InGameVerified=false를 유지한다. 따라하기 1차 구현과 색 선택 창 수정의 개발판 확인 범위는 [계획 기록](PLANS.md)을 따른다.
