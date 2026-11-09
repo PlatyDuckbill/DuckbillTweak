@@ -2,12 +2,12 @@
   <PropertyGroup>
     <AssemblyName>DuckbillTweak</AssemblyName>
     <RootNamespace>DuckbillTweak.Plugin</RootNamespace>
-    <Version>0.2.2.0</Version>
+    <Version>0.2.2.1</Version>
     <Author>PlatyDuckbill</Author>
     <Name>DuckbillTweak</Name>
     <Punchline>Shop collection filters, currency planning and loot results for FFXIV Korea.</Punchline>
     <Description>Small conveniences in the game's own UI, for FFXIV Korea.&#xA;&#xA;• Filter owned equipment and collectibles, or focus shop lists on collection items.&#xA;• Calculate the current shop's currency requirements and shortages, with linked storage records.&#xA;• Right-click loot items to view participant choices and publicly received roll results.&#xA;• Enable PvP chat bubbles using your game's chat bubble settings.&#xA;• Mark positional hits/misses and broken combos on your own damage numbers with game icons and colors.&#xA;• Right-click a character in a looping emote to perform the same emote in time with them.&#xA;&#xA;Open settings: /dbtw or /duckbilltweak. Each feature starts disabled.&#xA;Release history: Settings → 업데이트 내역, or /dbtw changelog.&#xA;&#xA;Korean client and Dalamud API 15 only. Loot numbers appear when the game publishes results. Stored inventory records may be incomplete or out of date.</Description>
-    <Changelog>• Right-click a character in a looping emote to perform the same emote in time with them. A timing option can start slightly earlier so other players see you on the beat.&#xA;• Emotes whose animation length differs by race are aligned at the start only.&#xA;• Fix the color picker in the positional/combo detail settings showing an unrelated confirm label and not changing colors after reopening.</Changelog>
+    <Changelog>• Emote follow now asks whether to keep your current facing or face the character.&#xA;• Fix emote follow stopping early on emotes with an opening motion.&#xA;• Fix emote follow stopping when an emote that ends on re-execution could not restart right away, or when a long loop needed several attempts.</Changelog>
     <IconUrl Condition="Exists('../../assets/duckbilltweak-icon.png')">https://raw.githubusercontent.com/PlatyDuckbill/DuckbillTweak/v$(Version)/assets/duckbilltweak-icon.png</IconUrl>
     <RepoUrl>https://github.com/PlatyDuckbill/DuckbillTweak</RepoUrl>
     <Tags>tweaks;shop;collection;loot;pvp;positional;combo;한국어</Tags>

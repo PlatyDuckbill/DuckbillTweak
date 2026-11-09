@@ -1,5 +1,19 @@
 [
   {
+    "Version": "0.2.2.1",
+    "Date": "2026-11-10",
+    "Korean": [
+      "감정표현 따라하기에서 '지금 방향 그대로'와 '상대를 바라보며' 중 하나를 고를 수 있습니다.",
+      "시작 동작이 있는 감정표현에서 따라하기가 잘못 멈추던 문제를 수정했습니다.",
+      "다시 실행하면 꺼지는 감정표현이나 반복이 긴 감정표현에서 따라하기가 중간에 멈추던 문제를 수정했습니다."
+    ],
+    "English": [
+      "Emote follow now asks whether to keep your current facing or face the character.",
+      "Fix emote follow stopping early on emotes with an opening motion.",
+      "Fix emote follow stopping when an emote that ends on re-execution could not restart right away, or when a long loop needed several attempts."
+    ]
+  },
+  {
     "Version": "0.2.2.0",
     "Date": "2026-11-10",
     "Korean": [
