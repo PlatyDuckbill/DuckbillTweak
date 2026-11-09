@@ -30,6 +30,7 @@ internal sealed unsafe class EmoteFollow : IDisposable
     private readonly IFramework framework;
     private readonly IObjectTable objects;
     private readonly IClientState client;
+    private readonly ITargetManager targets;
     private readonly ICondition conditions;
     private readonly IDataManager data;
     private readonly IChatGui chat;
@@ -54,13 +55,15 @@ internal sealed unsafe class EmoteFollow : IDisposable
     private bool toggleRetried;
     private bool ownEmoteSeen;
     private bool faceTarget;
+    private bool refirePending;
 
     /// <summary>User setting: run ahead of our own screen by this much so other players see us on the beat.</summary>
     private double Offset => Math.Clamp(config.EmoteFollowOffsetMs, 0, 500) / 1000.0;
 
-    public EmoteFollow(IContextMenu contextMenu, IFramework framework, IObjectTable objects, IClientState client,
+    public EmoteFollow(IContextMenu contextMenu, IFramework framework, IObjectTable objects, IClientState client, ITargetManager targets,
         ICondition conditions, IDataManager data, IChatGui chat, IPluginLog log, Configuration config, Action save)
     {
+        this.targets = targets;
         this.contextMenu = contextMenu; this.framework = framework; this.objects = objects; this.client = client;
         this.conditions = conditions; this.data = data; this.chat = chat; this.log = log; this.config = config; this.save = save;
         contextMenu.OnMenuOpened += OnMenuOpened;
@@ -85,11 +88,17 @@ internal sealed unsafe class EmoteFollow : IDisposable
             args.AddMenuItem(new MenuItem { Name = $"따라하기 · {name} (사용 불가)", IsEnabled = false });
             return;
         }
-        // Right-clicking targets the character, and an emote with a target turns us toward it. The first item passes
-        // "no target" so we keep facing where we are; the second faces the character like a normal targeted emote.
-        if (EmoteController.PlayEmoteOption.StaticVirtualTablePointer is not null)
-            args.AddMenuItem(new MenuItem { Name = $"따라하기 · {name}", OnClicked = _ => Start(objectId, id, name, false) });
-        args.AddMenuItem(new MenuItem { Name = $"따라하기 · {name} (바라보며)", OnClicked = _ => Start(objectId, id, name, true) });
+        // Right-clicking targets the character, and an emote with a target turns us toward it, so the choice is a submenu:
+        // keep our facing (executed with the target cleared for that moment) or face the character.
+        args.AddMenuItem(new MenuItem
+        {
+            Name = $"따라하기 · {name}", IsSubmenu = true,
+            OnClicked = clicked => clicked.OpenSubmenu($"따라하기 · {name}",
+            [
+                new MenuItem { Name = "지금 방향 그대로", OnClicked = _ => Start(objectId, id, name, false) },
+                new MenuItem { Name = "상대를 바라보며", OnClicked = _ => Start(objectId, id, name, true) },
+            ]),
+        });
     }
 
     private void Start(ulong objectId, ushort id, string name, bool face)
@@ -98,7 +107,7 @@ internal sealed unsafe class EmoteFollow : IDisposable
         targetId = objectId; emoteId = id; emoteName = name; faceTarget = face;
         leadMeasured = config.EmoteLeadMs.TryGetValue(id, out var ms);
         lead = leadMeasured ? ms / 1000.0 : DefaultLead;
-        attempts = 0; samples.Clear(); armed = false; previousDelay = double.NaN; toggleRetried = false;
+        attempts = 0; samples.Clear(); armed = false; previousDelay = double.NaN; toggleRetried = false; refirePending = false;
         started = Environment.TickCount64; territory = client.TerritoryType;
         framework.Update += OnUpdate;
         if (leadMeasured) stage = Stage.Scheduled;
@@ -135,6 +144,14 @@ internal sealed unsafe class EmoteFollow : IDisposable
         {
             case Stage.Priming:
             case Stage.Verifying:
+                if (refirePending)
+                {
+                    // The emote just ended; the game refuses a new one until its ending motion is over.
+                    var emotes = EmoteManager.Instance();
+                    if (emotes is not null && emotes->CanExecuteEmote(emoteId)) { refirePending = false; Fire(); }
+                    else if (now - firedAt > 5000) Stop("지금은 그 감정표현을 실행할 수 없습니다.");
+                    return;
+                }
                 var ownId = selfNative->EmoteController.EmoteId;
                 if (ownId != emoteId)
                 {
@@ -152,7 +169,7 @@ internal sealed unsafe class EmoteFollow : IDisposable
                     {
                         toggleRetried = true;
                         log.Information("Emote follow: emote {Emote} ended on re-execution; retrying from idle", emoteId);
-                        if (stage == Stage.Priming) Fire();
+                        if (stage == Stage.Priming) refirePending = true;
                         else { stage = Stage.Scheduled; armed = false; previousDelay = double.NaN; }
                         return;
                     }
@@ -209,7 +226,11 @@ internal sealed unsafe class EmoteFollow : IDisposable
                 if (delay > 0.05 && !passed) { armed = true; return; }
                 // Fire on the frame closest to the fire point: at most half a frame early or late.
                 var halfFrame = Math.Clamp(framework.UpdateDelta.TotalSeconds / 2, 0.004, 0.025);
-                if (armed && (delay <= halfFrame || passed)) Fire();
+                if (!armed || (delay > halfFrame && !passed)) return;
+                // Right after an emote ends the game can refuse a new one for a moment; then wait for the next beat.
+                var manager = EmoteManager.Instance();
+                if (manager is not null && !manager->CanExecuteEmote(emoteId)) { armed = false; return; }
+                Fire();
                 return;
             }
         }
@@ -245,9 +266,16 @@ internal sealed unsafe class EmoteFollow : IDisposable
     private bool Execute(EmoteManager* manager)
     {
         var vtable = EmoteController.PlayEmoteOption.StaticVirtualTablePointer;
-        if (vtable is null) return faceTarget && manager->ExecuteEmote(emoteId, null);
         var option = new EmoteController.PlayEmoteOption { VirtualTable = vtable, TargetId = faceTarget ? targetId : 0xE0000000 };
-        return manager->ExecuteEmote(emoteId, &option);
+        var optionPointer = vtable is null ? null : &option;
+        if (faceTarget) return manager->ExecuteEmote(emoteId, optionPointer);
+        // The option alone did not keep our facing in game (the emote still turned toward the selected target), so the
+        // target is cleared only for the execution call and put back right after, within the same frame.
+        var (target, soft) = (targets.Target, targets.SoftTarget);
+        targets.Target = null;
+        targets.SoftTarget = null;
+        try { return manager->ExecuteEmote(emoteId, optionPointer); }
+        finally { targets.Target = target; targets.SoftTarget = soft; }
     }
 
     private void Remember()

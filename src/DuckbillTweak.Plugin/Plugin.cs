@@ -35,6 +35,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
     private readonly IObjectTable objects;
     private readonly IDataManager data;
     private readonly ICondition conditions;
+    private readonly ITargetManager targets;
     private readonly Configuration config;
     private readonly MerchantService merchants;
     private readonly LootService loot;
@@ -66,7 +67,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
         this.client = client; this.log = log; this.gui = gameGui; this.party = party; this.events = events;
         this.addonLifecycle = addonLifecycle;
         this.contextMenu = contextMenu;
-        this.chat = chat; this.interop = interop; this.flyText = flyText; this.objects = objects; this.data = data; this.conditions = conditions;
+        this.chat = chat; this.interop = interop; this.flyText = flyText; this.objects = objects; this.data = data; this.conditions = conditions; this.targets = target;
 #if DEBUG
         probe = new(interop, flyText, objects, data, log, framework);
         emoteProbe = new(framework, objects, target, log);
@@ -115,7 +116,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
                 bubbles = new(framework, client, log, config, executable);
                 bubbleOrder = new(framework, client, log);
                 positional = new(interop, framework, flyText, objects, client, data, log, config, executable);
-                emoteFollow = new(contextMenu, framework, objects, client, conditions, data, chat, log, config, Save);
+                emoteFollow = new(contextMenu, framework, objects, client, targets, conditions, data, chat, log, config, Save);
             });
             foreach (var command in new[] { "/duckbilltweak", "/dbtw" })
             {
