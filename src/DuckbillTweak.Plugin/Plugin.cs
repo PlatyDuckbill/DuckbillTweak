@@ -4,9 +4,7 @@ using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using DuckbillTweak.Plugin.Chat;
 using DuckbillTweak.Plugin.Combat;
-#if DEBUG
 using DuckbillTweak.Plugin.Emotes;
-#endif
 using DuckbillTweak.Plugin.Loot;
 using DuckbillTweak.Plugin.Native;
 using DuckbillTweak.Plugin.Shops;
@@ -36,6 +34,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
     private readonly IFlyTextGui flyText;
     private readonly IObjectTable objects;
     private readonly IDataManager data;
+    private readonly ICondition conditions;
     private readonly Configuration config;
     private readonly MerchantService merchants;
     private readonly LootService loot;
@@ -53,6 +52,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
     private NativePvpBubbles? bubbles;
     private NativeBubbleOrder? bubbleOrder;
     private PositionalFlyText? positional;
+    private EmoteFollow? emoteFollow;
     private bool toolkitInitialized;
     private bool disposed;
 
@@ -66,7 +66,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
         this.client = client; this.log = log; this.gui = gameGui; this.party = party; this.events = events;
         this.addonLifecycle = addonLifecycle;
         this.contextMenu = contextMenu;
-        this.chat = chat; this.interop = interop; this.flyText = flyText; this.objects = objects; this.data = data;
+        this.chat = chat; this.interop = interop; this.flyText = flyText; this.objects = objects; this.data = data; this.conditions = conditions;
 #if DEBUG
         probe = new(interop, flyText, objects, data, log, framework);
         emoteProbe = new(framework, objects, target, log);
@@ -102,7 +102,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
                 changelog = new NativeChangelogAddon(config, Save) { InternalName = "DuckbillTweakChangelog", Title = "업데이트 내역", Size = new Vector2(650, 420) };
                 colorPicker = new NativeColorPickerAddon { InternalName = "DuckbillTweakColorPicker", Title = "색 선택", Size = new Vector2(400, 425) };
                 colors = new NativePositionalColorAddon(config, Save, colorPicker) { InternalName = "DuckbillTweakPositionalColors", Title = "측후·콤보 표시 세부 설정", Size = new Vector2(640, 390) };
-                settings = new NativeSettingsAddon(config, Save, () => changelog.Open(), () => colors.Open(), executable.Matches) { InternalName = "DuckbillTweakSettings", Title = "DuckbillTweak", Size = new Vector2(580, 430) };
+                settings = new NativeSettingsAddon(config, Save, () => changelog.Open(), () => colors.Open(), executable.Matches) { InternalName = "DuckbillTweakSettings", Title = "DuckbillTweak", Size = new Vector2(580, 510) };
                 currency = new NativeCurrencyAddon(merchants) { InternalName = "DuckbillTweakCurrency", Title = "필요 재화", Size = new Vector2(760, 586) };
                 lootPopup = new NativeLootAddon(loot, config) { InternalName = "DuckbillTweakRolls", Title = "입찰 현황", Size = new Vector2(420, 420) };
                 shop = new(merchants, currency, log, addonLifecycle);
@@ -115,6 +115,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
                 bubbles = new(framework, client, log, config, executable);
                 bubbleOrder = new(framework, client, log);
                 positional = new(interop, framework, flyText, objects, client, data, log, config, executable);
+                emoteFollow = new(contextMenu, framework, objects, client, conditions, data, chat, log, config, Save);
             });
             foreach (var command in new[] { "/duckbilltweak", "/dbtw" })
             {
@@ -205,7 +206,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
 #if DEBUG
             probe.Dispose(); emoteProbe.Dispose(); emoteSync.Dispose();
 #endif
-            positional?.Dispose(); bubbleOrder?.Dispose(); bubbles?.Dispose(); lootInteraction?.Dispose(); shop?.Dispose();
+            positional?.Dispose(); emoteFollow?.Dispose(); bubbleOrder?.Dispose(); bubbles?.Dispose(); lootInteraction?.Dispose(); shop?.Dispose();
             foreach (var exchange in exchanges) exchange.Dispose();
             merchants.Dispose(); loot.Dispose();
         });

@@ -32,5 +32,9 @@ public sealed class Configuration : IPluginConfiguration
     public uint ComboFailIcon { get; set; } = 63;
     public bool ComboFailColorEnabled { get; set; } = true;
     public uint ComboFailColor { get; set; } = 0x8C8C8C;
+    /// <summary>Right-click "따라하기" for looping emotes (off by default).</summary>
+    public bool EmoteFollow { get; set; }
+    /// <summary>Measured per-emote lead (ms) from executing to our loop restarting; refined after each sync.</summary>
+    public Dictionary<uint, int> EmoteLeadMs { get; set; } = [];
     public string LastSeenChangelogVersion { get; set; } = "";
 }

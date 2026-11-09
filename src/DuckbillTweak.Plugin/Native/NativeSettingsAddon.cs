@@ -23,11 +23,13 @@ internal sealed unsafe class NativeSettingsAddon(Configuration config, Action sa
         new TextButtonNode { Position = new(400, 292), Size = new(140, 28), String = "세부 설정", OnClick = openColors }.AttachNode(this);
         AddText(executableMatches ? "일반 콘텐츠에서 데미지 텍스트에 측면·후방 성공/실패와 콤보 실패를 아이콘과 색으로 표시합니다. 항목별 켜기와 아이콘·색은 '세부 설정'에서 정합니다." :
             "현재 게임 버전에서는 확인 전이라 동작하지 않습니다. 플러그인 업데이트를 기다려 주세요.", 322);
+        AddToggle("감정표현 따라하기", 372, config.EmoteFollow, value => config.EmoteFollow = value);
+        AddText("춤처럼 반복하는 감정표현 중인 캐릭터를 우클릭해 '따라하기'를 고르면 상대의 동작 주기에 맞춰 같은 감정표현을 실행합니다.", 400);
         var unread = config.LastSeenChangelogVersion != ReleaseHistory.CurrentVersion;
-        changelogButton = new TextButtonNode { Position = new(28, 378), Size = new(190, 28),
+        changelogButton = new TextButtonNode { Position = new(28, 456), Size = new(190, 28),
             String = unread ? "업데이트 내역 · NEW" : "업데이트 내역", OnClick = openChangelog };
         changelogButton.AttachNode(this);
-        new TextNode { Position = new(360, 380), Size = new(190, 24), FontSize = 13,
+        new TextNode { Position = new(360, 458), Size = new(190, 24), FontSize = 13,
             AlignmentType = AlignmentType.Right, String = $"v{ReleaseHistory.CurrentVersion}" }.AttachNode(this);
     }
 
