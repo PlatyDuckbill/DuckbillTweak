@@ -6,13 +6,13 @@
       "측면·후방 스킬의 데미지 숫자에 측후 성공과 실패를 아이콘과 색으로 표시할 수 있습니다.",
       "콤보가 끊긴 채 사용한 스킬도 따로 표시할 수 있습니다.",
       "한국 Dalamud 배포판이 다시 빌드되어도 설정과 기능이 차단되지 않습니다.",
-      "게임 업데이트 후 확인 전까지는 PvP 말풍선, 재화 교환 상점 도구, 측후·콤보 표시가 잠시 꺼지며 설정 화면에서 안내합니다."
+      "게임이 업데이트되면, 플러그인이 새 버전에 맞춰 업데이트될 때까지 PvP 말풍선·재화 교환 상점 도구·측후·콤보 표시는 동작하지 않습니다. 설정 화면에서 안내합니다."
     ],
     "English": [
       "Show positional hits and misses on your damage numbers with an icon and color.",
       "Optionally mark weaponskills used after a broken combo.",
       "Settings and features keep working when the Korean Dalamud distribution is rebuilt.",
-      "After a game update, PvP chat bubbles, currency exchange shop tools and the positional/combo display pause until checked, with a note in settings."
+      "After a game update, PvP chat bubbles, currency exchange shop tools and the positional/combo display do not work until the plugin is updated for the new game version, with a note in settings."
     ]
   },
   {
