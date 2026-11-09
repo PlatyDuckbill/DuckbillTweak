@@ -1,5 +1,21 @@
 # 배포 확인
 
+## 0.2.2.0 · 감정표현 따라하기와 색 선택 창 수정
+
+사용자가 최신 따라하기 보완(박자 기준·종족별 길이·꺼지는 감정표현 재시도)의 인게임 확인 전에 배포를 명시 요청했다("나머진 해보면서 할게"). 고정 후보를 재빌드 없이 게시했으며 InGameVerified=false를 유지한다. 따라하기 1차 구현과 색 선택 창 수정의 개발판 확인 범위는 [계획 기록](PLANS.md)을 따른다.
+
+| 항목 | 값 |
+|---|---|
+| 소스 | `eedac750b19ef0e763acc86f1b03ead0d73556fa` |
+| 고정 후보 | `artifacts/release/0.2.2.0/candidate1` · SourceDirty=false |
+| ZIP | `DuckbillTweak-0.2.2.0.zip` · 455,580바이트/15파일 |
+| SHA256 | `c58bfc233957849ad69d62c186b1272c0037905d146cd7f694d3c2f7a5c13ec0` |
+| 공개 Release | ID439584091 · `v0.2.2.0` · draft=false/prerelease=false |
+| 공개 시각 | 2026-11-09T20:06:32Z / 2026-11-10 05:06:32 KST |
+| 설치 원본 | `repo/release.json` · 0.2.2.0/API15 · LastUpdate1794222392 |
+| 실기 | 고정 ZIP 미확인 · 최신 따라하기 보완 미확인 · InGameVerified=false |
+
+[공개 릴리스](https://github.com/PlatyDuckbill/DuckbillTweak/releases/tag/v0.2.2.0). Release 빌드 경고·오류0, 내장 한영 안내·manifest 일치, Release DLL에 조사 도구(PositionalProbe/EmoteProbe/EmoteSyncExperiment) 문자열 없음. 업로드 자산 digest/크기와 태그 대상 커밋을 대조한 뒤 공개했다. 인증 없는 ZIP/체크섬/태그 아이콘 HTTP200·원본 해시 일치를 확인한 후 설치 원본을 작성했다. 게시 근거는 `.cache/publication-0.2.2.0/`에 보관한다.
 ## 0.2.1.0 · 측후·콤보 표시
 
 사용자가 배포를 명시 요청했다. 업데이트 내역의 게임 업데이트 문구를 사용자 요청으로 명확히 고친 뒤 후보2를 만들어 재빌드 없이 게시했다. 고정 Release ZIP 자체의 인게임 확인은 하지 않았으므로 InGameVerified=false를 유지한다. 같은 소스의 개발판 인게임 확인 범위는 [검증 기록](VERIFICATION.md#2026-11-09-측후콤보-표시-0210-후보-전)을 따른다.

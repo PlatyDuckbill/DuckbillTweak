@@ -2,8 +2,8 @@
   "Author": "PlatyDuckbill",
   "Name": "DuckbillTweak",
   "InternalName": "DuckbillTweak",
-  "AssemblyVersion": "0.2.1.0",
-  "Description": "Small conveniences in the game's own UI, for FFXIV Korea.\n\n• Filter owned equipment and collectibles, or focus shop lists on collection items.\n• Calculate the current shop's currency requirements and shortages, with linked storage records.\n• Right-click loot items to view participant choices and publicly received roll results.\n• Enable PvP chat bubbles using your game's chat bubble settings.\n• Mark positional hits/misses and broken combos on your own damage numbers with game icons and colors.\n\nOpen settings: /dbtw or /duckbilltweak. Each feature starts disabled.\nRelease history: Settings → 업데이트 내역, or /dbtw changelog.\n\nKorean client and Dalamud API 15 only. Loot numbers appear when the game publishes results. Stored inventory records may be incomplete or out of date.",
+  "AssemblyVersion": "0.2.2.0",
+  "Description": "Small conveniences in the game's own UI, for FFXIV Korea.\n\n• Filter owned equipment and collectibles, or focus shop lists on collection items.\n• Calculate the current shop's currency requirements and shortages, with linked storage records.\n• Right-click loot items to view participant choices and publicly received roll results.\n• Enable PvP chat bubbles using your game's chat bubble settings.\n• Mark positional hits/misses and broken combos on your own damage numbers with game icons and colors.\n• Right-click a character in a looping emote to perform the same emote in time with them.\n\nOpen settings: /dbtw or /duckbilltweak. Each feature starts disabled.\nRelease history: Settings → 업데이트 내역, or /dbtw changelog.\n\nKorean client and Dalamud API 15 only. Loot numbers appear when the game publishes results. Stored inventory records may be incomplete or out of date.",
   "ApplicableVersion": "any",
   "RepoUrl": "https://github.com/PlatyDuckbill/DuckbillTweak",
   "Tags": [
@@ -21,13 +21,13 @@
   "LoadSync": false,
   "CanUnloadAsync": true,
   "LoadPriority": 0,
-  "IconUrl": "https://raw.githubusercontent.com/PlatyDuckbill/DuckbillTweak/v0.2.1.0/assets/duckbilltweak-icon.png",
+  "IconUrl": "https://raw.githubusercontent.com/PlatyDuckbill/DuckbillTweak/v0.2.2.0/assets/duckbilltweak-icon.png",
   "Punchline": "Shop collection filters, currency planning and loot results for FFXIV Korea.",
-  "Changelog": "• Show positional hits and misses on your damage numbers with an icon and color.\n• Optionally mark weaponskills used after a broken combo.\n• Settings and features keep working when the Korean Dalamud distribution is rebuilt.\n• After a game update, PvP chat bubbles, currency exchange shop tools and the positional/combo display do not work until the plugin is updated for the new game version, with a note in settings.",
+  "Changelog": "• Right-click a character in a looping emote to perform the same emote in time with them. A timing option can start slightly earlier so other players see you on the beat.\n• Emotes whose animation length differs by race are aligned at the start only.\n• Fix the color picker in the positional/combo detail settings showing an unrelated confirm label and not changing colors after reopening.",
   "AcceptsFeedback": true,
-  "IsHide": false,
-  "LastUpdate": 1794203659,
-  "DownloadLinkUpdate": "https://github.com/PlatyDuckbill/DuckbillTweak/releases/download/v0.2.1.0/DuckbillTweak-0.2.1.0.zip",
-  "DownloadLinkInstall": "https://github.com/PlatyDuckbill/DuckbillTweak/releases/download/v0.2.1.0/DuckbillTweak-0.2.1.0.zip",
-  "IsTestingExclusive": false
+  "IsTestingExclusive": false,
+  "LastUpdate": 1794222392,
+  "DownloadLinkUpdate": "https://github.com/PlatyDuckbill/DuckbillTweak/releases/download/v0.2.2.0/DuckbillTweak-0.2.2.0.zip",
+  "DownloadLinkInstall": "https://github.com/PlatyDuckbill/DuckbillTweak/releases/download/v0.2.2.0/DuckbillTweak-0.2.2.0.zip",
+  "IsHide": false
 }
