@@ -13,9 +13,10 @@
 | 공개 Release | ID439584091 · `v0.2.2.0` · draft=false/prerelease=false |
 | 공개 시각 | 2026-11-09T20:06:32Z / 2026-11-10 05:06:32 KST |
 | 설치 원본 | `repo/release.json` · 0.2.2.0/API15 · LastUpdate1794222392 |
+| 공용 동기화 | [workflow42689868878](https://github.com/PlatyDuckbill/DuckbillRepo/actions/runs/42689868878) 성공 · 공용원본`a750f1eef74c78d55e9dce629a91d4891eceb73a` |
 | 실기 | 고정 ZIP 미확인 · 최신 따라하기 보완 미확인 · InGameVerified=false |
 
-[공개 릴리스](https://github.com/PlatyDuckbill/DuckbillTweak/releases/tag/v0.2.2.0). Release 빌드 경고·오류0, 내장 한영 안내·manifest 일치, Release DLL에 조사 도구(PositionalProbe/EmoteProbe/EmoteSyncExperiment) 문자열 없음. 업로드 자산 digest/크기와 태그 대상 커밋을 대조한 뒤 공개했다. 인증 없는 ZIP/체크섬/태그 아이콘 HTTP200·원본 해시 일치를 확인한 후 설치 원본을 작성했다. 게시 근거는 `.cache/publication-0.2.2.0/`에 보관한다.
+[공개 릴리스](https://github.com/PlatyDuckbill/DuckbillTweak/releases/tag/v0.2.2.0). Release 빌드 경고·오류0, 내장 한영 안내·manifest 일치, Release DLL에 조사 도구(PositionalProbe/EmoteProbe/EmoteSyncExperiment) 문자열 없음. 업로드 자산 digest/크기와 태그 대상 커밋을 대조한 뒤 공개했다. 인증 없는 ZIP/체크섬/태그 아이콘 HTTP200·원본 해시 일치를 확인한 후 설치 원본을 작성했다. 게시 근거는 `.cache/publication-0.2.2.0/`에 보관한다. 설치 원본`bada284` push 후 공용 동기화를 수동 실행했다. 2026-11-09T20:11:13Z에 고정 공용 커밋과 기존 [공용 설치 URL](https://raw.githubusercontent.com/PlatyDuckbill/DuckbillRepo/main/pluginmaster.json) 모두 익명HTTP200/0.2.2.0/API15/22필드 원본 일치를 확인했다. 다른 Fisher 항목은0.9.0.0을 유지한다. 공개 배포·공용 목록 반영은 완료이며 실제 Dalamud 업데이트·인게임 성공과 구분한다.
 ## 0.2.1.0 · 측후·콤보 표시
 
 사용자가 배포를 명시 요청했다. 업데이트 내역의 게임 업데이트 문구를 사용자 요청으로 명확히 고친 뒤 후보2를 만들어 재빌드 없이 게시했다. 고정 Release ZIP 자체의 인게임 확인은 하지 않았으므로 InGameVerified=false를 유지한다. 같은 소스의 개발판 인게임 확인 범위는 [검증 기록](VERIFICATION.md#2026-11-09-측후콤보-표시-0210-후보-전)을 따른다.
