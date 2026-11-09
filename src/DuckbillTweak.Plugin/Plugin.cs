@@ -39,7 +39,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
     private NativeSettingsAddon? settings;
     private NativeChangelogAddon? changelog;
     private NativePositionalColorAddon? colors;
-    private KamiToolKit.Addons.ColorPickerAddon? colorPicker;
+    private NativeColorPickerAddon? colorPicker;
     private NativeCurrencyAddon? currency;
     private NativeLootAddon? lootPopup;
     private NativeShopController? shop;
@@ -93,7 +93,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
                 merchants.NativeOwnershipEnabled = true;
                 loot.NativeObservationEnabled = true;
                 changelog = new NativeChangelogAddon(config, Save) { InternalName = "DuckbillTweakChangelog", Title = "업데이트 내역", Size = new Vector2(650, 420) };
-                colorPicker = new KamiToolKit.Addons.ColorPickerAddon { InternalName = "DuckbillTweakColorPicker", Title = "측후 색 선택" };
+                colorPicker = new NativeColorPickerAddon { InternalName = "DuckbillTweakColorPicker", Title = "색 선택", Size = new Vector2(400, 425) };
                 colors = new NativePositionalColorAddon(config, Save, colorPicker) { InternalName = "DuckbillTweakPositionalColors", Title = "측후·콤보 표시 세부 설정", Size = new Vector2(640, 390) };
                 settings = new NativeSettingsAddon(config, Save, () => changelog.Open(), () => colors.Open(), executable.Matches) { InternalName = "DuckbillTweakSettings", Title = "DuckbillTweak", Size = new Vector2(580, 430) };
                 currency = new NativeCurrencyAddon(merchants) { InternalName = "DuckbillTweakCurrency", Title = "필요 재화", Size = new Vector2(760, 586) };

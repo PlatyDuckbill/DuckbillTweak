@@ -1,6 +1,5 @@
 using System.Numerics;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using KamiToolKit.Addons;
 using KamiToolKit.BaseTypes;
 using KamiToolKit.Nodes;
 using Lumina.Text.ReadOnly;
@@ -15,9 +14,9 @@ internal sealed record IconChoice(uint Id, string Name);
 /// <summary>
 /// Detail settings for the combo/positional FlyText. One row per outcome (positional hit, positional miss, missed
 /// combo) with its own enable, icon and color switches, plus color presets. Icons are game BitmapFontIcon ids
-/// rendered in the lists; colors use the KamiToolKit ColorPickerAddon (ring, square, hex) and are saved as RGB.
+/// rendered in the lists; colors use NativeColorPickerAddon (ring, square, hex, Korean buttons) and are saved as RGB.
 /// </summary>
-internal sealed unsafe class NativePositionalColorAddon(Configuration config, Action save, ColorPickerAddon picker) : NativeAddon
+internal sealed unsafe class NativePositionalColorAddon(Configuration config, Action save, NativeColorPickerAddon picker) : NativeAddon
 {
     private enum Slot { Hit, Miss, Combo }
 
@@ -181,9 +180,9 @@ internal sealed unsafe class NativePositionalColorAddon(Configuration config, Ac
         picker.Title = slot switch { Slot.Hit => "측후 성공 색", Slot.Miss => "측후 실패 색", _ => "콤보 실패 색" };
         picker.InitialColor = ToVector(Get(slot).Color);
         picker.DefaultColor = ToVector(DefaultColor(slot));
-        picker.OnColorPreviewed = color => ShowColor(slot, FromVector(color));
-        picker.OnColorCancelled = Refresh;
-        picker.OnColorConfirmed = color => { SetColor(slot, FromVector(color)); save(); Refresh(); };
+        picker.Previewed = color => ShowColor(slot, FromVector(color));
+        picker.Cancelled = Refresh;
+        picker.Confirmed = color => { SetColor(slot, FromVector(color)); save(); Refresh(); };
         previewing = true;
         picker.Open();
     }
