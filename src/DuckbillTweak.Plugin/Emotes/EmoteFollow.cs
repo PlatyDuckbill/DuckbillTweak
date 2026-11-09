@@ -53,6 +53,7 @@ internal sealed unsafe class EmoteFollow : IDisposable
     private Vector3 firedPosition;
     private bool toggleRetried;
     private bool ownEmoteSeen;
+    private bool faceTarget;
 
     /// <summary>User setting: run ahead of our own screen by this much so other players see us on the beat.</summary>
     private double Offset => Math.Clamp(config.EmoteFollowOffsetMs, 0, 500) / 1000.0;
@@ -79,18 +80,22 @@ internal sealed unsafe class EmoteFollow : IDisposable
         var manager = EmoteManager.Instance();
         var usable = manager is not null && manager->CanExecuteEmote(id);
         var objectId = character.GameObjectId;
-        args.AddMenuItem(new MenuItem
+        if (!usable)
         {
-            Name = usable ? $"따라하기 · {name}" : $"따라하기 · {name} (사용 불가)",
-            IsEnabled = usable,
-            OnClicked = _ => Start(objectId, id, name),
-        });
+            args.AddMenuItem(new MenuItem { Name = $"따라하기 · {name} (사용 불가)", IsEnabled = false });
+            return;
+        }
+        // Right-clicking targets the character, and an emote with a target turns us toward it. The first item passes
+        // "no target" so we keep facing where we are; the second faces the character like a normal targeted emote.
+        if (EmoteController.PlayEmoteOption.StaticVirtualTablePointer is not null)
+            args.AddMenuItem(new MenuItem { Name = $"따라하기 · {name}", OnClicked = _ => Start(objectId, id, name, false) });
+        args.AddMenuItem(new MenuItem { Name = $"따라하기 · {name} (바라보며)", OnClicked = _ => Start(objectId, id, name, true) });
     }
 
-    private void Start(ulong objectId, ushort id, string name)
+    private void Start(ulong objectId, ushort id, string name, bool face)
     {
         Stop(null);
-        targetId = objectId; emoteId = id; emoteName = name;
+        targetId = objectId; emoteId = id; emoteName = name; faceTarget = face;
         leadMeasured = config.EmoteLeadMs.TryGetValue(id, out var ms);
         lead = leadMeasured ? ms / 1000.0 : DefaultLead;
         attempts = 0; samples.Clear(); armed = false; previousDelay = double.NaN; toggleRetried = false;
@@ -103,7 +108,7 @@ internal sealed unsafe class EmoteFollow : IDisposable
             stage = Stage.Priming;
             if (!Fire()) return;
         }
-        log.Information("Emote follow start: Emote={Emote}/{Name}; Lead={Lead:F3}; Measured={Measured}", emoteId, emoteName, lead, leadMeasured);
+        log.Information("Emote follow start: Emote={Emote}/{Name}; Lead={Lead:F3}; Measured={Measured}; FaceTarget={Face}", emoteId, emoteName, lead, leadMeasured, faceTarget);
     }
 
     private void OnUpdate(IFramework _)
@@ -217,7 +222,7 @@ internal sealed unsafe class EmoteFollow : IDisposable
         previousControl = EmoteAnimation.Dominant(self) is { } current ? current.Control : 0;
         // Already in this emote: a re-execution that ends it is then seen as "ended", not "not started yet".
         ownEmoteSeen = self is not null && self->EmoteController.EmoteId == emoteId;
-        if (manager is null || !manager->CanExecuteEmote(emoteId) || !manager->ExecuteEmote(emoteId, null))
+        if (manager is null || !manager->CanExecuteEmote(emoteId) || !Execute(manager))
         {
             Stop("지금은 그 감정표현을 실행할 수 없습니다.");
             return false;
@@ -231,6 +236,18 @@ internal sealed unsafe class EmoteFollow : IDisposable
         samples.Clear();
         if (stage == Stage.Scheduled) stage = Stage.Verifying;
         return true;
+    }
+
+    /// <summary>
+    /// Executes with an explicit target: the followed character, or none (0xE0000000, the game's "no object" id) so
+    /// that our facing is kept. Without the option the game would use whatever is targeted at that moment.
+    /// </summary>
+    private bool Execute(EmoteManager* manager)
+    {
+        var vtable = EmoteController.PlayEmoteOption.StaticVirtualTablePointer;
+        if (vtable is null) return faceTarget && manager->ExecuteEmote(emoteId, null);
+        var option = new EmoteController.PlayEmoteOption { VirtualTable = vtable, TargetId = faceTarget ? targetId : 0xE0000000 };
+        return manager->ExecuteEmote(emoteId, &option);
     }
 
     private void Remember()
