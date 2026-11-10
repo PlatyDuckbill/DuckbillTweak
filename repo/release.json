@@ -2,7 +2,7 @@
   "Author": "PlatyDuckbill",
   "Name": "DuckbillTweak",
   "InternalName": "DuckbillTweak",
-  "AssemblyVersion": "0.2.2.1",
+  "AssemblyVersion": "0.2.2.2",
   "Description": "Small conveniences in the game's own UI, for FFXIV Korea.\n\n• Filter owned equipment and collectibles, or focus shop lists on collection items.\n• Calculate the current shop's currency requirements and shortages, with linked storage records.\n• Right-click loot items to view participant choices and publicly received roll results.\n• Enable PvP chat bubbles using your game's chat bubble settings.\n• Mark positional hits/misses and broken combos on your own damage numbers with game icons and colors.\n• Right-click a character in a looping emote to perform the same emote in time with them.\n\nOpen settings: /dbtw or /duckbilltweak. Each feature starts disabled.\nRelease history: Settings → 업데이트 내역, or /dbtw changelog.\n\nKorean client and Dalamud API 15 only. Loot numbers appear when the game publishes results. Stored inventory records may be incomplete or out of date.",
   "ApplicableVersion": "any",
   "RepoUrl": "https://github.com/PlatyDuckbill/DuckbillTweak",
@@ -21,13 +21,13 @@
   "LoadSync": false,
   "CanUnloadAsync": true,
   "LoadPriority": 0,
-  "IconUrl": "https://raw.githubusercontent.com/PlatyDuckbill/DuckbillTweak/v0.2.2.1/assets/duckbilltweak-icon.png",
+  "IconUrl": "https://raw.githubusercontent.com/PlatyDuckbill/DuckbillTweak/v0.2.2.2/assets/duckbilltweak-icon.png",
   "Punchline": "Shop collection filters, currency planning and loot results for FFXIV Korea.",
-  "Changelog": "• Emote follow now asks whether to keep your current facing or face the character.\n• Fix emote follow stopping early on emotes with an opening motion.\n• Fix emote follow stopping when an emote that ends on re-execution could not restart right away, or when a long loop needed several attempts.",
+  "Changelog": "• PvP chat bubbles, currency exchange shop tools and positional/combo markers work again after the 2026.11.03 game update.\n• These features no longer stop on every game update. Only a feature whose game code cannot be found turns off, with a notice in settings.\n• Release history now shows every version on one scrolling page.",
   "AcceptsFeedback": true,
-  "LastUpdate": 1794226263,
-  "DownloadLinkInstall": "https://github.com/PlatyDuckbill/DuckbillTweak/releases/download/v0.2.2.1/DuckbillTweak-0.2.2.1.zip",
-  "DownloadLinkUpdate": "https://github.com/PlatyDuckbill/DuckbillTweak/releases/download/v0.2.2.1/DuckbillTweak-0.2.2.1.zip",
+  "DownloadLinkUpdate": "https://github.com/PlatyDuckbill/DuckbillTweak/releases/download/v0.2.2.2/DuckbillTweak-0.2.2.2.zip",
+  "IsHide": false,
   "IsTestingExclusive": false,
-  "IsHide": false
+  "DownloadLinkInstall": "https://github.com/PlatyDuckbill/DuckbillTweak/releases/download/v0.2.2.2/DuckbillTweak-0.2.2.2.zip",
+  "LastUpdate": 1794271955
 }

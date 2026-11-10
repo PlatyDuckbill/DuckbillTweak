@@ -1,5 +1,22 @@
 # 배포 확인
 
+## 0.2.2.2 · 게임 SHA 가드 제거(KR 2026.11.03 대응)와 업데이트 내역 한 화면 표시
+
+사용자가 개발판에서 측후 표시가 정상 동작하는 것을 확인한 뒤 배포를 명시 요청했다("일단 측후 잘되니까 배포 진행하고"). 고정 후보를 재빌드 없이 게시했으며 InGameVerified=false를 유지한다. 새 빌드의 PvP 말풍선·재화 교환 상점과 업데이트 내역 한 화면 표시는 실기 대기다. 근거는 [확인 기록](VERIFICATION.md#2026-11-10-게임-sha-가드-제거-kr-20261103-대응)을 따른다.
+
+| 항목 | 값 |
+|---|---|
+| 소스 | `5465dd2f33f93eaed1fc60bf21eeb7d8320fffaa` |
+| 고정 후보 | `artifacts/release/0.2.2.2/candidate1` · SourceDirty=false |
+| ZIP | `DuckbillTweak-0.2.2.2.zip` · 462,842바이트/15파일 |
+| SHA256 | `1a74157d96b3591faa4e04871d66b8437f4c28b786dee17ce5d80ed7677ed2cc` |
+| 공개 Release | ID440183401 · `v0.2.2.2` · draft=false/prerelease=false |
+| 공개 시각 | 2026-11-10T09:52:35Z / 2026-11-10 18:52:35 KST |
+| 설치 원본 | `repo/release.json` · 0.2.2.2/API15 · LastUpdate1794271955 |
+| 실기 | 측후 표시(개발판) 사용자 확인 · 고정 ZIP·PvP 말풍선·재화 교환·업데이트 내역 화면 미확인 · InGameVerified=false |
+
+[공개 릴리스](https://github.com/PlatyDuckbill/DuckbillTweak/releases/tag/v0.2.2.2). Release 빌드 경고·오류0, 내장 한영 안내(3항목)·manifest 일치, Release DLL에 조사 도구 문자열 없음. 업로드 자산 digest/크기와 태그 대상 커밋을 대조한 뒤 공개했다. 인증 없는 ZIP/체크섬/태그 아이콘 HTTP200·원본 해시 일치를 확인한 후 설치 원본을 작성했다. 게시 근거는 `.cache/publication-0.2.2.2/`에 보관한다.
+
 ## 0.2.2.1 · 감정표현 따라하기 방향 선택과 판정 수정
 
 테스트 대상이 없어 사용자가 코드 점검 후 배포를 명시 요청했다("너가 코드로 한 번만 점검해주고 배포하자"). 고정 후보를 재빌드 없이 게시했으며 InGameVerified=false를 유지한다. "지금 방향 그대로"(실행 순간 타겟 비우기)가 실제로 방향을 유지하는지는 방향 로그(`Emote follow facing`)로 확인 대기다. 변경 근거는 [계획 기록](PLANS.md)의 0.2.2.0 배포 후 코드 점검 수정을 따른다.
