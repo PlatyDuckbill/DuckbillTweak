@@ -2,6 +2,14 @@
 
 현재 공개판은0.2.1.0이다(측후·콤보 표시와2026-11-09 전역 모듈 가드 제거 포함). 사용자 명시 요청으로 dal4kr15.0.3.9 호환성 수정을 게시했다. 고정 Release 전체의 InGameVerified=false를 유지한다. 앞선0.2.0.3의 말풍선 원인과 수정 후 실제 가림 해소도 미확정이며 기존 상점 정상 관측을 새 Release 실기로 확대하지 않는다. 게시 근거는[RELEASE](RELEASE.md)를 따른다.
 
+## 2026-11-10 게임 SHA 가드 제거 (KR 2026.11.03 대응)
+
+- 변경: `NativeExecutable`(게임 SHA-256 가드)을 삭제했다. PvP 말풍선과 재화 교환 상점은 `NativeCode`의 KR 명령 시그니처로 실행 중에 지점/필드를 찾는다. 측후·콤보는 Receive 해석과 툴팁 모델 검사만 남겼다. 설정 화면 안내는 기능별 계약 결과를 따른다. 근거·위험은 [네이티브 계약](NATIVE-UI.md#2026-11-10-게임-sha-가드-제거와-코드-시그니처-계약).
+- `scripts/build.ps1` Debug: 잠금 복원·빌드 경고0·오류0, 재화 자료708바이트/28매핑·업데이트 내역 원본 일치, 참조 Dalamud15.0.3.7/FFCS7.57.0.9386/Interop1.0.0.0 유지.
+- `native-contract`(KR 2026.11.03, SHA A416573B…385ED6): PvpBubbles Available(RVA CD53C2/CD53CA/CD545E, 원본 40B601/E891C9B6FF/40B601), ShopExchangeCurrency Available(map 21A0, count 3B38, record 320, tab 318 — 이전 하드코딩 값과 같음).
+- `bonus-coverage`(새 sqpack): 지원 4,998 / 거부 280(바이퍼 34610~34613), 이전과 같음. `bonus-replay`(보관 조사 로그): 정답 156 / 틀림 0 / 미판정 4, 이전과 같음.
+- 인게임: 2026-11-10 18:16 실제 로그에서 이전 빌드가 Dalamud15.0.3.9/FFCS7.57.0.9415로 로드되고 SHA 불일치로 재화 교환만 꺼진 것을 확인했다. 새 빌드의 로드 로그(`Native code contract: PvpBubbles=True …`), PvP 말풍선·재화 교환 상점·측후 표시 실기는 대기다. 자동 테스트 추가·실행 없음.
+
 ## 2026-11-09 측후·콤보 표시 (0.2.1.0 후보 전)
 
 | 구분 | 결과 |

@@ -11,33 +11,25 @@ using DuckbillTweak.Plugin.Native;
 
 if (args.Length >= 3 && args[0] == "native-contract")
 {
-    const string expectedGame = NativeExecutable.GameSha256;
+    // Runs the plugin's own per-feature code contracts (NativeCode) against an executable file. No game hash gate.
     var exe = File.ReadAllBytes(args[1]);
-    if (Convert.ToHexString(SHA256.HashData(exe)) != expectedGame) throw new InvalidDataException("Game hash mismatch.");
-    using var gamePe = new PEReader(new MemoryStream(exe));
-    foreach (var (rva, bytes) in new (int, byte[])[]
+    var reader = new FileCodeReader(exe);
+    Console.WriteLine($"Game={args[1]}; SHA256={Convert.ToHexString(SHA256.HashData(exe))}; Gate=None");
+    var pvp = NativeCode.ResolvePvpBubbles(reader);
+    var exchange = NativeCode.ResolveExchangeCurrency(reader);
+    foreach (var patch in pvp.Value ?? [])
+        Console.WriteLine($"PvpBubbles: RVA={reader.Rva(patch.Address):X}; Original={Convert.ToHexString(patch.Original)}; Replacement={Convert.ToHexString(patch.Replacement)}");
+    Console.WriteLine($"Contract=PvpBubbles; Available={pvp.Available}; {pvp.Reason}");
+    Console.WriteLine($"Contract=ShopExchangeCurrency; Available={exchange.Available}; {exchange.Reason}");
+    // Report-only analysis basis for features that use installed ClientStructs functions (not a runtime contract).
+    foreach (var (name, pattern) in new[]
     {
-        (0xCD5682, [0x40, 0xB6, 0x01]),
-        (0xCD568A, [0xE8, 0xE1, 0xC6, 0xB6, 0xFF]),
-        (0xCD571E, [0x40, 0xB6, 0x01]),
-        // KR ShopExchangeCurrency: compact map producer/consumer and item identity.
-        (0x12C1B59, [0x89, 0x84, 0xBE, 0xA0, 0x21, 0x00, 0x00]),
-        (0x12C2D5F, [0x8B, 0xAC, 0x9E, 0xA0, 0x21, 0x00, 0x00]),
-        (0x12C2BAB, [0x8B, 0x84, 0x19, 0x20, 0x03, 0x00, 0x00]),
-        (0x12C26CB, [0x88, 0x93, 0x18, 0x03, 0x00, 0x00]), // Selected currency tab.
-        // KR collision collection reads applied visibility (DrawFlags bit 21).
-        (0x677ABB, [0x8B, 0x8B, 0xB0, 0x00, 0x00, 0x00, 0xC1, 0xE9, 0x15]),
-        // SetAddonOrderAfter: reference and moving addon arguments.
-        (0x6816B4, [0x41, 0x0F, 0xB6, 0xF1, 0x49, 0x8B, 0xD8, 0x48, 0x8B, 0xEA]),
-        // SetAddonDepthLayer removes the old list membership before changing layers.
-        (0x67C885, [0x41, 0x80, 0xE2, 0xEF, 0x49, 0x8D, 0x49, 0x30, 0x48, 0x8B, 0xD3]),
+        ("CollisionDrawFlagsBit21", "8B 8B B0 00 00 00 C1 E9 15"),
+        ("SetAddonOrderAfterArguments", "41 0F B6 F1 49 8B D8 48 8B EA"),
+        ("SetAddonDepthLayerUnlink", "41 80 E2 EF 49 8D 49 30 48 8B D3"),
     })
-    {
-        var section = gamePe.PEHeaders.SectionHeaders.Single(s => rva >= s.VirtualAddress && rva + bytes.Length <= s.VirtualAddress + s.SizeOfRawData);
-        var offset = section.PointerToRawData + rva - section.VirtualAddress;
-        if (!exe.AsSpan(offset, bytes.Length).SequenceEqual(bytes)) throw new InvalidDataException($"Instruction mismatch at {rva:X}.");
-        Console.WriteLine($"RVA={rva:X}; Original={Convert.ToHexString(bytes)}; Match=True");
-    }
+        Console.WriteLine($"Basis={name}; Matches={string.Join(",", reader.ScanAll(pattern).Select(a => reader.Rva(a).ToString("X")))}; Gate=None");
+    if (!pvp.Available || !exchange.Available) throw new InvalidDataException("A native code contract failed.");
     // Report-only: module identities are no longer a runtime gate (see NativeEnvironment / docs/NATIVE-UI.md).
     // Member/signature differences between distributions are reviewed with scripts/compare-native-runtime.ps1.
     var referenceDirectory = Directory.Exists(args[2]) ? args[2] : Path.GetDirectoryName(Path.GetFullPath(args[2]))!;
@@ -51,7 +43,7 @@ if (args.Length >= 3 && args[0] == "native-contract")
         var mvid = metadata.GetGuid(metadata.GetModuleDefinition().Mvid);
         Console.WriteLine($"Module={name}; MVID={mvid}; SHA256={sha256}; Gate=None");
     }
-    Console.WriteLine($"GameSHA256={expectedGame}; ExecutableContract=Match; ModuleGate=None");
+    Console.WriteLine("CodeContracts=Match; ModuleGate=None");
     return 0;
 }
 
@@ -673,4 +665,45 @@ static byte[] EncodePng(byte[] rgba, int width, int height)
     Chunk("IDAT", compressed.ToArray());
     Chunk("IEND", []);
     return output.ToArray();
+}
+
+/// <summary>Offline INativeCodeReader over an executable file: matches .text, addresses are preferred-base VAs.</summary>
+sealed class FileCodeReader : INativeCodeReader
+{
+    private readonly byte[] bytes;
+    private readonly PEReader pe;
+    private readonly ulong imageBase;
+
+    public FileCodeReader(byte[] bytes)
+    {
+        this.bytes = bytes;
+        pe = new PEReader(new MemoryStream(bytes));
+        imageBase = pe.PEHeaders.PEHeader!.ImageBase;
+    }
+
+    public long Rva(nint address) => (long)((ulong)address - imageBase);
+
+    public IReadOnlyList<nint> ScanAll(string pattern)
+    {
+        var parsed = NativeCode.Parse(pattern);
+        var text = pe.PEHeaders.SectionHeaders.Single(s => s.Name == ".text");
+        var span = bytes.AsSpan(text.PointerToRawData, Math.Min(text.SizeOfRawData, text.VirtualSize));
+        var matches = new List<nint>();
+        for (var offset = 0; offset <= span.Length - parsed.Length; offset++)
+            if (NativeCode.Match(span[offset..], parsed)) matches.Add((nint)(imageBase + (ulong)(text.VirtualAddress + offset)));
+        return matches;
+    }
+
+    public bool TryRead(nint address, int length, out byte[] result)
+    {
+        result = [];
+        var rva = Rva(address);
+        foreach (var section in pe.PEHeaders.SectionHeaders)
+        {
+            if (rva < section.VirtualAddress || rva + length > section.VirtualAddress + section.SizeOfRawData) continue;
+            result = bytes.AsSpan((int)(section.PointerToRawData + rva - section.VirtualAddress), length).ToArray();
+            return true;
+        }
+        return false;
+    }
 }

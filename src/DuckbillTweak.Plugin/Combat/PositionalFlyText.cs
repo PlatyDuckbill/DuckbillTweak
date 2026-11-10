@@ -48,13 +48,14 @@ internal sealed unsafe class PositionalFlyText : IDisposable
     private readonly Dictionary<uint, BonusAction> table = [];
     private readonly List<Pending> pending = [];
     private readonly Hook<ReceiveDelegate>? hook;
+    public bool Available => hook is not null;
     private (uint Job, int Level) tableKey;
     private uint territory;
     private bool territoryAllowed;
     private bool active;
 
     public PositionalFlyText(IGameInteropProvider interop, IFramework framework, IFlyTextGui flyText, IObjectTable objects,
-        IClientState client, IDataManager data, IPluginLog log, Configuration config, NativeExecutable executable)
+        IClientState client, IDataManager data, IPluginLog log, Configuration config)
     {
         this.framework = framework; this.flyText = flyText; this.objects = objects; this.client = client;
         this.data = data; this.log = log; this.config = config;
@@ -66,10 +67,10 @@ internal sealed unsafe class PositionalFlyText : IDisposable
             names[id] = row.Name.ExtractText();
             macros[id] = transient.Description.ToMacroString();
         }
-        // Potencies and the verified model are tied to the exact KR build.
+        // No game build gate (2026-11-10): potencies come from the running client's KR tooltips, and BonusTooltip rejects
+        // any tooltip outside the verified model, so only actions that still fit it are judged.
         var address = ActionEffectHandler.Addresses.Receive.Value;
-        if (!executable.Matches) log.Warning("Positional FlyText disabled: {Reason}", executable.Reason);
-        else if (address == 0) log.Warning("Positional FlyText disabled: ActionEffectHandler.Receive was not resolved.");
+        if (address == 0) log.Warning("Positional FlyText disabled: ActionEffectHandler.Receive was not resolved.");
         else if (macros.Count != BonusTooltip.Candidates.Count) log.Warning("Positional FlyText disabled: action rows missing.");
         else hook = interop.HookFromAddress<ReceiveDelegate>(address, Detour);
         framework.Update += Update;

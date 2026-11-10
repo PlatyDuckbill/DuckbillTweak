@@ -24,6 +24,8 @@ internal sealed unsafe class NativeExchangeController : IDisposable
     private readonly NativeCollisionRefresh collisions;
     private readonly AddonController controller;
     private readonly NativeTreeFilter nativeFilter;
+    // ShopExchangeCurrency only: addon fields resolved from KR instructions in the running game (NativeCode).
+    private readonly ExchangeCurrencyLayout? layout;
     private CheckboxNode? missing;
     private CheckboxNode? consumables;
     private TextButtonNode? calculate;
@@ -45,9 +47,11 @@ internal sealed unsafe class NativeExchangeController : IDisposable
     private bool Shape(AtkUnitBase* addon) => addon->RootNode is not null && addon->RootNode->Width == (CurrencyShop ? 680 : 760) &&
         addon->RootNode->Height == (name == "InclusionShop" ? 586 : CurrencyShop ? 528 : 556) && addon->GetNodeById(ListId) is not null;
 
-    public NativeExchangeController(string name, MerchantService merchants, NativeCurrencyAddon currency, IPluginLog log, IAddonLifecycle lifecycle)
+    public NativeExchangeController(string name, MerchantService merchants, NativeCurrencyAddon currency, IPluginLog log, IAddonLifecycle lifecycle,
+        ExchangeCurrencyLayout? layout = null)
     {
-        this.name = name; this.merchants = merchants; this.currency = currency; this.log = log;
+        if (name == "ShopExchangeCurrency" && layout is null) throw new ArgumentNullException(nameof(layout));
+        this.name = name; this.merchants = merchants; this.currency = currency; this.log = log; this.layout = layout;
         collisions = new(lifecycle, name);
         nativeFilter = new(collisions);
         controller = new AddonController { AddonName = name, OnUpdate = Update, OnFinalize = Detach,
@@ -154,7 +158,7 @@ internal sealed unsafe class NativeExchangeController : IDisposable
             // Currency exchange tabs expose a subset of AgentShop. Use the game's own
             // row -> compact page entry -> item identity mapping, never row == agent index.
             var sources = Enumerable.Range(0, sourceCount).ToArray();
-            if (CurrencyShop && !TryMapCurrencyRows(addon, list, shop, sources, out var mappingFailure))
+            if (CurrencyShop && !TryMapCurrencyRows(addon, list, shop, layout!, sources, out var mappingFailure))
             {
                 var reason = "currency tab mapping: " + mappingFailure;
                 if (lastReadFailure != reason) log.Information("{Shop} snapshot waiting: {Reason}", name, reason);
@@ -275,18 +279,19 @@ internal sealed unsafe class NativeExchangeController : IDisposable
         return true;
     }
 
-    private static bool TryMapCurrencyRows(AtkUnitBase* addon, AtkComponentList* list, AgentShop* shop, int[] sources, out string failure)
+    private static bool TryMapCurrencyRows(AtkUnitBase* addon, AtkComponentList* list, AgentShop* shop, ExchangeCurrencyLayout layout,
+        int[] sources, out string failure)
     {
-        // Inspected KR 2026.10.06: refresh RVA12C17A0, row render RVA12C2D10,
-        // tooltip RVA12C2B74. Plugin attaches this shop only when NativeExecutable matches that executable.
+        // Field offsets come from the refresh/row render/tooltip instructions of the running game (NativeCode;
+        // KR 2026.10.06 map 21A0, count 3B38, record 320, stride 40). The values below still cross-check them.
         // The 60-entry compact map is native addon state, not a filtered purchase index.
-        const int capacity = 60;
+        const int capacity = ExchangeCurrencyLayout.Capacity;
         const int itemIdValue = 0x42A;
         const int iconValue = 0xD4;
         failure = "native value layout unavailable";
         if (addon->AtkValues is null || addon->AtkValuesCount <= itemIdValue + capacity - 1 ||
             addon->AtkValues[3].Type is not (AtkValueType.UInt or AtkValueType.Int)) return false;
-        var count = *(uint*)((byte*)addon + 0x3B38);
+        var count = *(uint*)((byte*)addon + layout.CountOffset);
         failure = $"page count mismatch: rows={sources.Length}; page={count}; values={addon->AtkValues[3].UInt}";
         if (count is 0 or > capacity || addon->AtkValues[3].UInt != count || sources.Length > count) return false;
         var tree = (AtkComponentTreeList*)list;
@@ -297,12 +302,12 @@ internal sealed unsafe class NativeExchangeController : IDisposable
             failure = $"row {rowIndex}: unsupported payload";
             if (row is null || row->UIntValues.LongCount != 3 || row->UIntValues.First is null ||
                 row->UIntValues[0] != 0 || row->UIntValues[1] >= count || row->UIntValues[2] != 0) return false;
-            var entry = ((uint*)((byte*)addon + 0x21A0))[row->UIntValues[1]];
+            var entry = ((uint*)((byte*)addon + layout.MapOffset))[row->UIntValues[1]];
             failure = $"row {rowIndex}: compact map outside page";
             if (entry >= count) return false;
             ref var id = ref addon->AtkValues[itemIdValue + entry];
             ref var icon = ref addon->AtkValues[iconValue + entry];
-            var record = (uint*)((byte*)addon + 0x320 + entry * 0x40);
+            var record = (uint*)((byte*)addon + layout.RecordOffset + entry * ExchangeCurrencyLayout.RecordStride);
             failure = $"row {rowIndex}: item identity mismatch";
             if (id.Type is not (AtkValueType.UInt or AtkValueType.Int) ||
                 icon.Type is not (AtkValueType.UInt or AtkValueType.Int) ||
@@ -348,8 +353,8 @@ internal sealed unsafe class NativeExchangeController : IDisposable
         }
         var shop = AgentShop.Instance();
         if (shop is null || shop->AddonId != addon->Id) return null;
-        // KR setup RVA12C1416 and tab selection RVA12C26CB use this selected tab byte (NativeExecutable-gated).
-        var tab = CurrencyShop ? *((byte*)addon + 0x318) : 0;
+        // Selected tab byte resolved from the tab selection read/write pair (NativeCode; KR 2026.10.06 offset 318).
+        var tab = CurrencyShop ? *((byte*)addon + layout!.TabOffset) : 0;
         return tab is < 0 or > 3 ? null : $"{ReadShopName(shop)}:{tab}";
     }
 

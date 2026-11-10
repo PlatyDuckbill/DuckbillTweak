@@ -8,7 +8,7 @@ namespace DuckbillTweak.Plugin.Native;
 /// <summary>
 /// Report-only description of the running game build and the installed Dalamud/ClientStructs distribution.
 /// Nothing here enables or disables a feature: loading is Dalamud's API-level decision, and each native feature checks
-/// its own contract (UI shape, row/item identity, resolved functions; NativeExecutable for executable-bound code).
+/// its own contract (UI shape, row/item identity, resolved functions; NativeCode signatures for executable-bound code).
 /// Approach adapted from DuckbillFisher 590e506 (same author); see docs/NATIVE-UI.md.
 /// </summary>
 internal sealed record NativeEnvironment(string Diagnostic)

@@ -1,5 +1,19 @@
 [
   {
+    "Version": "0.2.2.2",
+    "Date": "2026-11-10",
+    "Korean": [
+      "2026년 11월 3일 게임 업데이트 이후 꺼져 있던 PvP 말풍선·재화 교환 상점 도구·측후·콤보 표시가 다시 동작합니다.",
+      "이제 게임이 업데이트되어도 이 기능들이 매번 멈추지 않습니다. 필요한 게임 코드를 찾지 못한 기능만 꺼지고 설정 화면에서 안내합니다.",
+      "업데이트 내역을 버전마다 고르지 않고 한 화면에서 스크롤해 볼 수 있습니다."
+    ],
+    "English": [
+      "PvP chat bubbles, currency exchange shop tools and positional/combo markers work again after the 2026.11.03 game update.",
+      "These features no longer stop on every game update. Only a feature whose game code cannot be found turns off, with a notice in settings.",
+      "Release history now shows every version on one scrolling page."
+    ]
+  },
+  {
     "Version": "0.2.2.1",
     "Date": "2026-11-10",
     "Korean": [

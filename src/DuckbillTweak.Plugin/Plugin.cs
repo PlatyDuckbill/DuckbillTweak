@@ -40,7 +40,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
     private readonly MerchantService merchants;
     private readonly LootService loot;
     private readonly List<string> registeredCommands = [];
-    private NativeExecutable executable = new(false, 0, "not inspected");
+    private readonly ISigScanner scanner;
     private NativeSettingsAddon? settings;
     private NativeChangelogAddon? changelog;
     private NativePositionalColorAddon? colors;
@@ -61,8 +61,9 @@ public sealed class Plugin : IAsyncDalamudPlugin
         IUnlockState unlocks, IGameInventory inventory, IClientState client, IPlayerState player,
         ICondition conditions, ITargetManager target, IGameGui gameGui, IFramework framework,
         IPluginLog log, IChatGui chat, IPartyList party, IAddonEventManager events, IAddonLifecycle addonLifecycle, IContextMenu contextMenu,
-        IGameInteropProvider interop, IFlyTextGui flyText, IObjectTable objects)
+        IGameInteropProvider interop, IFlyTextGui flyText, IObjectTable objects, ISigScanner scanner)
     {
+        this.scanner = scanner;
         this.pluginInterface = pluginInterface; this.commands = commands; this.framework = framework;
         this.client = client; this.log = log; this.gui = gameGui; this.party = party; this.events = events;
         this.addonLifecycle = addonLifecycle;
@@ -88,12 +89,13 @@ public sealed class Plugin : IAsyncDalamudPlugin
         try
         {
             // No global DLL/game gate: Dalamud decides loadability, and each feature checks its own contract.
-            // Only executable-bound code (PvP patch, currency exchange row map) requires the exact KR executable.
+            // Executable-specific code (PvP patch, currency exchange fields) is resolved from KR signatures in the
+            // running game; a failed contract disables only its own feature.
             var environment = await Task.Run(NativeEnvironment.Inspect, cancellationToken);
             log.Information("{Environment}", environment.Diagnostic);
-            executable = await Task.Run(NativeExecutable.Inspect, cancellationToken);
-            log.Information("Native executable contract: Matches={Matches}; {Reason}; Features=PvpBubbles,ShopExchangeCurrency,PositionalFlyText",
-                executable.Matches, executable.Reason);
+            var code = await Task.Run(() => NativeRuntimeCode.Inspect(scanner), cancellationToken);
+            log.Information("Native code contract: PvpBubbles={Pvp} ({PvpReason}); ShopExchangeCurrency={Exchange} ({ExchangeReason})",
+                code.Pvp.Available, code.Pvp.Reason, code.Exchange.Available, code.Exchange.Reason);
             toolkitInitialized = true;
             await KamiToolKitLibrary.InitializeAsync(pluginInterface);
             await framework.Run(() =>
@@ -103,19 +105,20 @@ public sealed class Plugin : IAsyncDalamudPlugin
                 changelog = new NativeChangelogAddon(config, Save) { InternalName = "DuckbillTweakChangelog", Title = "업데이트 내역", Size = new Vector2(650, 420) };
                 colorPicker = new NativeColorPickerAddon { InternalName = "DuckbillTweakColorPicker", Title = "색 선택", Size = new Vector2(400, 425) };
                 colors = new NativePositionalColorAddon(config, Save, colorPicker) { InternalName = "DuckbillTweakPositionalColors", Title = "측후·콤보 표시 세부 설정", Size = new Vector2(640, 390) };
-                settings = new NativeSettingsAddon(config, Save, () => changelog.Open(), () => colors.Open(), executable.Matches) { InternalName = "DuckbillTweakSettings", Title = "DuckbillTweak", Size = new Vector2(580, 510) };
+                bubbles = new(framework, client, log, config, code.Pvp);
+                positional = new(interop, framework, flyText, objects, client, data, log, config);
+                settings = new NativeSettingsAddon(config, Save, () => changelog.Open(), () => colors.Open(),
+                    bubbles.Available, code.Exchange.Available, positional.Available) { InternalName = "DuckbillTweakSettings", Title = "DuckbillTweak", Size = new Vector2(580, 510) };
                 currency = new NativeCurrencyAddon(merchants) { InternalName = "DuckbillTweakCurrency", Title = "필요 재화", Size = new Vector2(760, 586) };
                 lootPopup = new NativeLootAddon(loot, config) { InternalName = "DuckbillTweakRolls", Title = "입찰 현황", Size = new Vector2(420, 420) };
                 shop = new(merchants, currency, log, addonLifecycle);
                 exchanges.Add(new("InclusionShop", merchants, currency, log, addonLifecycle));
                 exchanges.Add(new("ShopExchangeItem", merchants, currency, log, addonLifecycle));
-                // The compact row map and selected-tab byte are raw offsets inspected on the exact KR executable.
-                if (executable.Matches) exchanges.Add(new("ShopExchangeCurrency", merchants, currency, log, addonLifecycle));
-                else log.Warning("ShopExchangeCurrency tools disabled: {Reason}", executable.Reason);
+                // The compact row map, page count, records and selected tab are addon fields read from KR instructions.
+                if (code.Exchange.Value is { } layout) exchanges.Add(new("ShopExchangeCurrency", merchants, currency, log, addonLifecycle, layout));
+                else log.Warning("ShopExchangeCurrency tools disabled: {Reason}", code.Exchange.Reason);
                 lootInteraction = new(events, addonLifecycle, contextMenu, gui, config, lootPopup, log);
-                bubbles = new(framework, client, log, config, executable);
                 bubbleOrder = new(framework, client, log);
-                positional = new(interop, framework, flyText, objects, client, data, log, config, executable);
                 emoteFollow = new(contextMenu, framework, objects, client, targets, conditions, data, chat, log, config, Save);
             });
             foreach (var command in new[] { "/duckbilltweak", "/dbtw" })
