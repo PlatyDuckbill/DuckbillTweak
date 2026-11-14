@@ -13,10 +13,10 @@
 | 공개 Release | ID445658332 · `v0.2.3.0` · draft=false/prerelease=false |
 | 공개 시각 | 2026-11-14T23:06:49Z / 2026-11-15 08:06:49 KST |
 | 설치 원본 | `repo/release.json` · 0.2.3.0/API15 · LastUpdate1794665209 |
-| 공용 동기화 | 설치 원본 push 후 실행·확인 예정 |
+| 공용 동기화 | [workflow43651748780](https://github.com/PlatyDuckbill/DuckbillRepo/actions/runs/43651748780) 성공 · 공용원본`a526371c6397f3a5c2454dea0a846b71d294ffec` |
 | 실기 | 개발판 준비 확인·극 초읽기 중앙/채팅·춤 싱크 사용자 확인 · 고정 ZIP InGameVerified=false |
 
-[공개 릴리스](https://github.com/PlatyDuckbill/DuckbillTweak/releases/tag/v0.2.3.0). 정규 Release 빌드 경고·오류0, 내장 한영 안내5항목·설치 manifest 일치, 패키지15파일·추출본 해시·리소스 일치. Release DLL의 조사 타입/음식 진단 문자열0개. 업로드 자산 digest/크기·태그 대상 커밋을 대조한 뒤 공개했다. 인증 없는 ZIP·체크섬·태그 아이콘 다운로드가 모두 HTTP200·원본 해시 일치임을 확인한 후 설치 원본을 작성했다. 게시 근거는 `.cache/publication-0.2.3.0/`에 보관한다. 실제 공개 버전 설치·업데이트 성공은 HTTP 검사나 개발판 확인과 구분한다.
+[공개 릴리스](https://github.com/PlatyDuckbill/DuckbillTweak/releases/tag/v0.2.3.0). 정규 Release 빌드 경고·오류0, 내장 한영 안내5항목·설치 manifest 일치, 패키지15파일·추출본 해시·리소스 일치. Release DLL의 조사 타입/음식 진단 문자열0개. 업로드 자산 digest/크기·태그 대상 커밋을 대조한 뒤 공개했다. 인증 없는 ZIP·체크섬·태그 아이콘 다운로드가 모두 HTTP200·원본 해시 일치임을 확인한 후 설치 원본을 작성했다. 설치 원본6413a82 push 후 공용 동기화를 실행했으며, 2026-11-14T23:10:27Z에 고정 공용 커밋과 기존 [공용 설치 URL](https://raw.githubusercontent.com/PlatyDuckbill/DuckbillRepo/main/pluginmaster.json) 모두 인증 없는 HTTP200/0.2.3.0/API15/원본22필드 일치를 확인했다. Fisher0.9.0.0과 Calendar0.4.0.1도 목록에 유지됐다. 최초 기존 URL의 이전 버전 응답은 재조회 후 새 버전으로 확인했다. 게시 근거는 `.cache/publication-0.2.3.0/`에 보관한다. 공개 배포·공용 목록 반영은 완료이며 실제 공개 버전 설치·업데이트 성공은 HTTP 검사나 개발판 확인과 구분한다.
 
 ## 0.2.2.2 · 게임 SHA 가드 제거(KR 2026.11.03 대응)와 업데이트 내역 한 화면 표시
 
