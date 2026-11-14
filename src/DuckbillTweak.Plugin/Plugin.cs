@@ -5,6 +5,7 @@ using Dalamud.Plugin.Services;
 using DuckbillTweak.Plugin.Chat;
 using DuckbillTweak.Plugin.Combat;
 using DuckbillTweak.Plugin.Emotes;
+using DuckbillTweak.Plugin.Food;
 using DuckbillTweak.Plugin.Loot;
 using DuckbillTweak.Plugin.Native;
 using DuckbillTweak.Plugin.Shops;
@@ -54,6 +55,10 @@ public sealed class Plugin : IAsyncDalamudPlugin
     private NativeBubbleOrder? bubbleOrder;
     private PositionalFlyText? positional;
     private EmoteFollow? emoteFollow;
+    private FoodReminder? food;
+    private NativeFoodReadyCheck? foodReadyCheck;
+    private NativeFoodSettingsAddon? foodSettings;
+    private readonly IToastGui toast;
     private bool toolkitInitialized;
     private bool disposed;
 
@@ -61,9 +66,10 @@ public sealed class Plugin : IAsyncDalamudPlugin
         IUnlockState unlocks, IGameInventory inventory, IClientState client, IPlayerState player,
         ICondition conditions, ITargetManager target, IGameGui gameGui, IFramework framework,
         IPluginLog log, IChatGui chat, IPartyList party, IAddonEventManager events, IAddonLifecycle addonLifecycle, IContextMenu contextMenu,
-        IGameInteropProvider interop, IFlyTextGui flyText, IObjectTable objects, ISigScanner scanner)
+        IGameInteropProvider interop, IFlyTextGui flyText, IObjectTable objects, ISigScanner scanner, IToastGui toast)
     {
         this.scanner = scanner;
+        this.toast = toast;
         this.pluginInterface = pluginInterface; this.commands = commands; this.framework = framework;
         this.client = client; this.log = log; this.gui = gameGui; this.party = party; this.events = events;
         this.addonLifecycle = addonLifecycle;
@@ -107,8 +113,9 @@ public sealed class Plugin : IAsyncDalamudPlugin
                 colors = new NativePositionalColorAddon(config, Save, colorPicker) { InternalName = "DuckbillTweakPositionalColors", Title = "측후·콤보 표시 세부 설정", Size = new Vector2(640, 390) };
                 bubbles = new(framework, client, log, config, code.Pvp);
                 positional = new(interop, framework, flyText, objects, client, data, log, config);
-                settings = new NativeSettingsAddon(config, Save, () => changelog.Open(), () => colors.Open(),
-                    bubbles.Available, code.Exchange.Available, positional.Available) { InternalName = "DuckbillTweakSettings", Title = "DuckbillTweak", Size = new Vector2(580, 510) };
+                foodSettings = new NativeFoodSettingsAddon(config, Save) { InternalName = "DuckbillTweakFoodSettings", Title = "음식 알리미 세부 설정", Size = new Vector2(490, 350) };
+                settings = new NativeSettingsAddon(config, Save, () => changelog.Open(), () => colors.Open(), () => foodSettings.Open(),
+                    bubbles.Available, code.Exchange.Available, positional.Available) { InternalName = "DuckbillTweakSettings", Title = "DuckbillTweak", Size = new Vector2(580, 590) };
                 currency = new NativeCurrencyAddon(merchants) { InternalName = "DuckbillTweakCurrency", Title = "필요 재화", Size = new Vector2(760, 586) };
                 lootPopup = new NativeLootAddon(loot, config) { InternalName = "DuckbillTweakRolls", Title = "입찰 현황", Size = new Vector2(420, 420) };
                 shop = new(merchants, currency, log, addonLifecycle);
@@ -120,6 +127,16 @@ public sealed class Plugin : IAsyncDalamudPlugin
                 lootInteraction = new(events, addonLifecycle, contextMenu, gui, config, lootPopup, log);
                 bubbleOrder = new(framework, client, log);
                 emoteFollow = new(contextMenu, framework, objects, client, targets, conditions, data, chat, log, config, Save);
+                try
+                {
+                    food = new(framework, client, objects, party, conditions, data, chat, toast, log, config);
+                    foodReadyCheck = new(food, log, framework, gui);
+                }
+                catch (Exception exception)
+                {
+                    foodReadyCheck?.Dispose(); food?.Dispose(); foodReadyCheck = null; food = null;
+                    log.Error(exception, "Food reminder initialization failed; other features remain active");
+                }
             });
             foreach (var command in new[] { "/duckbilltweak", "/dbtw" })
             {
@@ -210,7 +227,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
 #if DEBUG
             probe.Dispose(); emoteProbe.Dispose(); emoteSync.Dispose();
 #endif
-            positional?.Dispose(); emoteFollow?.Dispose(); bubbleOrder?.Dispose(); bubbles?.Dispose(); lootInteraction?.Dispose(); shop?.Dispose();
+            positional?.Dispose(); emoteFollow?.Dispose(); foodReadyCheck?.Dispose(); food?.Dispose(); bubbleOrder?.Dispose(); bubbles?.Dispose(); lootInteraction?.Dispose(); shop?.Dispose();
             foreach (var exchange in exchanges) exchange.Dispose();
             merchants.Dispose(); loot.Dispose();
         });
@@ -218,6 +235,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
         if (changelog is not null) await changelog.DisposeAsync();
         if (colors is not null) await colors.DisposeAsync();
         if (colorPicker is not null) await colorPicker.DisposeAsync();
+        if (foodSettings is not null) await foodSettings.DisposeAsync();
         if (currency is not null) await currency.DisposeAsync();
         if (lootPopup is not null) await lootPopup.DisposeAsync();
         if (toolkitInitialized) await KamiToolKitLibrary.DisposeAsync();

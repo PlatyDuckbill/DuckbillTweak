@@ -10,6 +10,10 @@
 
 ## 코드 구조
 
+- 2026-11-15 음식 알리미: `Core/Food/FoodCheck`는 순수 콘텐츠 분류/음식 시간 모델, `Plugin/Food/FoodReminder`는 Framework의 500ms 상태 복사와 초읽기 알림, `NativeFoodReadyCheck`는 네이티브 준비 확인의 200ms 표시 갱신이다. `GameDataProbe <sqpack> food-data`는 실제 식사 Status/콘텐츠 분류와 같은 Core 분류의 지역별 개수를 출력한다. `uld ... details`는 컴포넌트 내부 노드도 출력한다. 외부 구현을 새로 참고하거나 복사하지 않았으며, 기존 고정 Dalamud/FFXIVClientStructs API 메타데이터와 로컬 KR ULD/시트만 조사했다. 코드/데이터 출처는 기존 빌드 참조와 설치 게임 자료이고, 새로운 의존성은 없다.
+- 후속 준비 확인 미표시 조사에서 [FFXIVClientStructs AgentReadyCheck 선언](https://github.com/aers/FFXIVClientStructs/blob/80cb4a7b7e11a6702e2eb8839afd301a918c638e/FFXIVClientStructs/FFXIV/Client/UI/Agent/AgentReadyCheck.cs)을 참고했다. 고정 revision `80cb4a7b7e11a6702e2eb8839afd301a918c638e`, MIT([라이선스](https://github.com/aers/FFXIVClientStructs/blob/80cb4a7b7e11a6702e2eb8839afd301a918c638e/LICENSE)). 구조 선언 확인만 했으며 코드·시그니처·오프셋을 복사하거나 KR에 도입하지 않았다. 창 ID 조건 제거의 근거는 글로벌 선언이 아니라 실제 KR 실행 로그의 Addon134/AgentAddon0 관측이다.
+- 초읽기 조사에서도 같은 고정 revision의 [AgentCountDownSettingDialog 선언](https://github.com/aers/FFXIVClientStructs/blob/80cb4a7b7e11a6702e2eb8839afd301a918c638e/FFXIVClientStructs/FFXIV/Client/UI/Agent/AgentCountDownSettingDialog.cs)(MIT)을 참고하고 설치된 KR 메타데이터의 동일 필드를 대조했다. 복사·의존성·시그니처 추가 없음. Debug `Food countdown`은 감지/콘텐츠 범위/부족 인원/출력 여부만 상태 변화 때 기록한다. `GameDataProbe <sqpack> food-data <지역ID>`는 지역 이름·콘텐츠·분류·음식 경고 종류를 실제 KR 시트와 Core 분류로 조회한다.
+
 - `src/DuckbillTweak.Core`: 보유 상태, 품목 필터, 교환식 선택과 재화 합계, 전리품 관측 기록. 게임 의존성 없음.
 - `src/DuckbillTweak.Plugin`: Dalamud 서비스 수명, 설정/명령, Framework에서 관리 값으로 복사하는 관측기와 네이티브 게임 화면.
 - `tools/GameDataProbe`: 설치된 게임 데이터를 오프라인으로 읽는 도구. 전리품 로그 매크로와 재화 참조를 검사.

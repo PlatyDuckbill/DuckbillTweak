@@ -616,6 +616,31 @@ else if (args[1] == "audit")
     Console.WriteLine($"Resolved prices={resolved}; Unknown prices={unknown.Values.Sum()}");
     foreach (var group in unknown.OrderByDescending(p => p.Value).Take(20)) Console.WriteLine($" {group.Key}; Count={group.Value}");
 }
+else if (args[1] == "food-data")
+{
+    if (args.Length > 2 && uint.TryParse(args[2], out var foodTerritory))
+    {
+        var area = game.GetExcelSheet<TerritoryType>()!.GetRow(foodTerritory);
+        Console.WriteLine($"FoodTerritory={foodTerritory}; Place={area.PlaceName.Value.Name.ExtractText()}; IntendedUse={area.TerritoryIntendedUse.RowId}");
+        foreach (var duty in game.GetExcelSheet<ContentFinderCondition>()!.Where(c => c.TerritoryType.RowId == foodTerritory))
+            Console.WriteLine($"Duty={duty.RowId}; Name={duty.Name.ExtractText()}; Type={duty.ContentType.RowId}; Category={duty.ContentUICategory.RowId}; Food={DuckbillTweak.Core.Food.FoodCheck.Classify(duty.ContentType.RowId, duty.ContentUICategory.RowId, duty.Name.ExtractText())}");
+        return 0;
+    }
+    foreach (var status in game.GetExcelSheet<Status>()!.Where(s => s.RowId == 48))
+        Console.WriteLine($"FoodStatus={status.RowId}; Name={status.Name.ExtractText()}; Description={status.Description.ExtractText()}");
+    foreach (var duty in game.GetExcelSheet<ContentFinderCondition>()!.Where(c => c.HighEndDuty))
+        Console.WriteLine($"Duty={duty.RowId}; Territory={duty.TerritoryType.RowId}; Type={duty.ContentType.RowId}; Category={duty.ContentUICategory.RowId}; Name={duty.Name.ExtractText()}");
+    foreach (var group in game.GetExcelSheet<ContentFinderCondition>()!.Where(c => c.ContentType.RowId is 4 or 5 or 28).GroupBy(c => (c.ContentType.RowId, Category: c.ContentUICategory.RowId)))
+        Console.WriteLine($"Group={group.Key}; Count={group.Count()}; Examples={string.Join(" / ", group.Select(c => c.Name.ExtractText()).Take(4))}");
+    var foodDuties = game.GetExcelSheet<ContentFinderCondition>()!.Where(c => c.TerritoryType.RowId != 0 && !c.PvP)
+        .GroupBy(c => c.TerritoryType.RowId).Select(g => new
+        {
+            Territory = g.Key,
+            Kinds = g.Select(c => DuckbillTweak.Core.Food.FoodCheck.Classify(c.ContentType.RowId, c.ContentUICategory.RowId, c.Name.ExtractText())).Distinct().ToArray(),
+        }).ToArray();
+    foreach (var group in foodDuties.GroupBy(d => d.Kinds.Length == 1 ? d.Kinds[0].ToString() : "Ambiguous"))
+        Console.WriteLine($"FoodTerritories={group.Key}; Count={group.Count()}");
+}
 else if (args[1] == "uld" && args.Length >= 3)
 {
     var uld = game.GetFile<UldFile>(args[2]) ?? throw new InvalidDataException("ULD not found.");
@@ -623,7 +648,12 @@ else if (args[1] == "uld" && args.Length >= 3)
     foreach (var node in uld.WidgetData.Nodes)
         Console.WriteLine($"Node={node.NodeId}; Type={node.NodeType}; Parent={node.ParentId}; X={node.X}; Y={node.Y}; W={node.W}; H={node.H}; Data={node.Node}");
     foreach (var component in uld.Components)
+    {
         Console.WriteLine($"Component={component.Id}; Type={component.Type}; Nodes={component.NodeCount}");
+        if (args.Length > 3 && args[3] == "details")
+            foreach (var node in component.Nodes)
+                Console.WriteLine($"  Node={node.NodeId}; Type={node.NodeType}; Parent={node.ParentId}; X={node.X}; Y={node.Y}; W={node.W}; H={node.H}; Data={node.Node}");
+    }
 }
 else return 1;
 return 0;

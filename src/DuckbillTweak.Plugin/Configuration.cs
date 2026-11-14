@@ -34,6 +34,10 @@ public sealed class Configuration : IPluginConfiguration
     public uint ComboFailColor { get; set; } = 0x8C8C8C;
     /// <summary>Right-click "따라하기" for looping emotes (off by default).</summary>
     public bool EmoteFollow { get; set; }
+    public bool FoodReminder { get; set; }
+    public int FoodExtremeMinutes { get; set; } = 10;
+    public int FoodSavageMinutes { get; set; } = 15;
+    public int FoodUltimateMinutes { get; set; } = 20;
     /// <summary>Measured per-emote lead (ms) from executing to our loop restarting; refined after each sync.</summary>
     public Dictionary<uint, int> EmoteLeadMs { get; set; } = [];
     /// <summary>How much earlier than our own screen to start (ms). 0 = in sync on our screen; ~80 = on other players' screens.</summary>

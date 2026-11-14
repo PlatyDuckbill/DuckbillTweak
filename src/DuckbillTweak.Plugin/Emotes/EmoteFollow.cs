@@ -13,7 +13,7 @@ namespace DuckbillTweak.Plugin.Emotes;
 /// <summary>
 /// "따라하기": right-click a character in a looping emote and execute the same emote so that our loop starts on one of
 /// the target's loop restarts. The phase comes from the Havok animation control (EmoteAnimation); the lead (our start
-/// segment + client delay) is measured per emote on first use by executing once, then the emote is executed again on
+/// segment + client delay) is measured per emote on first use by executing on a target beat, then the emote is executed again on
 /// time. Every execution is a single user-requested emote; nothing repeats on its own after the session ends.
 /// Allowed by AGENTS.md (automation inside a feature the user enabled; no server chat).
 /// </summary>
@@ -58,6 +58,8 @@ internal sealed unsafe class EmoteFollow : IDisposable
     private bool ownEmoteSeen;
     private bool faceTarget;
     private bool refirePending;
+    private nint scheduledControl;
+    private float scheduledPeriod;
 
     /// <summary>User setting: run ahead of our own screen by this much so other players see us on the beat.</summary>
     private double Offset => Math.Clamp(config.EmoteFollowOffsetMs, 0, 500) / 1000.0;
@@ -110,15 +112,12 @@ internal sealed unsafe class EmoteFollow : IDisposable
         leadMeasured = config.EmoteLeadMs.TryGetValue(id, out var ms);
         lead = leadMeasured ? ms / 1000.0 : DefaultLead;
         attempts = 0; samples.Clear(); armed = false; previousDelay = double.NaN; toggleRetried = false; refirePending = false;
+        scheduledControl = 0; scheduledPeriod = 0;
         started = Environment.TickCount64; territory = client.TerritoryType;
         framework.Update += OnUpdate;
-        if (leadMeasured) stage = Stage.Scheduled;
-        else
-        {
-            // First use of this emote: execute now to measure our start segment, then execute again on time.
-            stage = Stage.Priming;
-            if (!Fire()) return;
-        }
+        // First use also waits for a beat. Previously an unknown lead called Fire() here immediately, so first-use
+        // calibration looked like a sync failure. It may still need a second execution after measuring the intro.
+        stage = Stage.Scheduled;
         log.Information("Emote follow start: Emote={Emote}/{Name}; Lead={Lead:F3}; Measured={Measured}; FaceTarget={Face}", emoteId, emoteName, lead, leadMeasured, faceTarget);
     }
 
@@ -141,6 +140,13 @@ internal sealed unsafe class EmoteFollow : IDisposable
         if (targetNative->EmoteController.EmoteId != emoteId || !targetNative->EmoteController.IsInEmoteLoop())
         { Stop("대상이 감정표현을 멈춰 따라하기를 멈췄습니다."); return; }
         if (EmoteAnimation.Dominant(targetNative) is not { } targetLoop) return;
+        // IsInEmoteLoop alone can already be true during a start/blend. Only a control that has actually wrapped
+        // provides an observed repeating phase. Invalid controls must never reach the fire-point calculation.
+        if (!float.IsFinite(targetLoop.Duration) || !float.IsFinite(targetLoop.LocalTime) ||
+            targetLoop.Duration <= 0 || targetLoop.LocalTime < 0 || targetLoop.LocalTime > targetLoop.Duration ||
+            !float.IsFinite(targetLoop.Weight) || !float.IsFinite(targetLoop.Speed) ||
+            targetLoop.Weight < 0.99f || targetLoop.Overflow == 0)
+        { armed = false; previousDelay = double.NaN; return; }
         if (Math.Abs(targetLoop.Speed - 1) > 0.01f) { Stop("대상의 재생 속도가 달라 따라하지 않았습니다."); return; }
 
         switch (stage)
@@ -151,7 +157,8 @@ internal sealed unsafe class EmoteFollow : IDisposable
                 {
                     // The emote just ended; the game refuses a new one until its ending motion is over.
                     var emotes = EmoteManager.Instance();
-                    if (emotes is not null && emotes->CanExecuteEmote(emoteId)) { refirePending = false; Fire(); }
+                    if (emotes is not null && emotes->CanExecuteEmote(emoteId))
+                    { refirePending = false; stage = Stage.Scheduled; armed = false; previousDelay = double.NaN; }
                     else if (now - firedAt > 5000) Stop("지금은 그 감정표현을 실행할 수 없습니다.");
                     return;
                 }
@@ -182,7 +189,10 @@ internal sealed unsafe class EmoteFollow : IDisposable
                 ownEmoteSeen = true;
                 if (EmoteAnimation.Dominant(selfNative) is not { } selfLoop) return;
                 // Our new loop: a different control than before the execution, fully weighted, normal speed.
-                if (selfLoop.Control == previousControl || selfLoop.Weight < 0.99f || Math.Abs(selfLoop.Speed - 1) > 0.01f) return;
+                if (selfLoop.Control == previousControl || !float.IsFinite(selfLoop.Duration) || !float.IsFinite(selfLoop.LocalTime) ||
+                    !float.IsFinite(selfLoop.Weight) || !float.IsFinite(selfLoop.Speed) || selfLoop.Duration <= 0 ||
+                    selfLoop.LocalTime < 0 || selfLoop.LocalTime > selfLoop.Duration ||
+                    selfLoop.Weight < 0.99f || Math.Abs(selfLoop.Speed - 1) > 0.01f) return;
                 // Race-specific animations can differ in length; then only the start can be aligned. A start segment is
                 // also a new fully weighted control of another length, so a different length only counts as our loop
                 // once that control has wrapped and kept playing (a start segment hands over to the loop instead).
@@ -222,6 +232,12 @@ internal sealed unsafe class EmoteFollow : IDisposable
 
             case Stage.Scheduled:
             {
+                // A different target control/period is not a fire point crossed between two frames.
+                if (scheduledControl != targetLoop.Control || Math.Abs(scheduledPeriod - targetLoop.Duration) > 0.01f)
+                {
+                    scheduledControl = targetLoop.Control; scheduledPeriod = targetLoop.Duration;
+                    armed = false; previousDelay = double.NaN;
+                }
                 var delay = EmoteSyncTiming.DelayUntilFire(targetLoop.Remaining, targetLoop.Duration, lead + Offset);
                 // Fire on the approach; a jump upward means the fire point passed between frames, so fire now (<= 1 frame late).
                 var passed = !double.IsNaN(previousDelay) && delay > previousDelay + targetLoop.Duration / 2;
@@ -261,7 +277,7 @@ internal sealed unsafe class EmoteFollow : IDisposable
         attempts++;
         verifyFrom = 0;
         samples.Clear();
-        if (stage == Stage.Scheduled) stage = Stage.Verifying;
+        if (stage == Stage.Scheduled) stage = leadMeasured ? Stage.Verifying : Stage.Priming;
         return true;
     }
 

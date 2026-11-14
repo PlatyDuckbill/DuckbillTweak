@@ -6,7 +6,7 @@ using KamiToolKit.Nodes;
 namespace DuckbillTweak.Plugin.Native;
 
 // Per-feature code contracts resolved in the running game (NativeCode / ClientStructs). A missing one only changes its own text.
-internal sealed unsafe class NativeSettingsAddon(Configuration config, Action save, Action openChangelog, Action openColors,
+internal sealed unsafe class NativeSettingsAddon(Configuration config, Action save, Action openChangelog, Action openColors, Action openFood,
     bool pvpAvailable, bool exchangeCurrencyAvailable, bool positionalAvailable) : NativeAddon
 {
     private const string Unavailable = "현재 게임 버전에서 필요한 게임 코드를 찾지 못해 동작하지 않습니다. 플러그인 업데이트를 기다려 주세요.";
@@ -34,11 +34,14 @@ internal sealed unsafe class NativeSettingsAddon(Configuration config, Action sa
             Unavailable, 322);
         AddToggle("감정표현 따라하기", 372, config.EmoteFollow, value => config.EmoteFollow = value, 250);
         AddText("반복 감정표현 중인 캐릭터를 우클릭 → '따라하기'. 내 화면은 바로 재생되고 다른 사람에게는 내 인터넷 지연만큼 늦게 보이므로, 박자 기준을 고를 수 있습니다.", 400);
+        AddToggle("음식 알리미", 450, config.FoodReminder, value => config.FoodReminder = value, 300);
+        new TextButtonNode { Position = new(400, 448), Size = new(140, 28), String = "세부 설정", OnClick = openFood }.AttachNode(this);
+        AddText("준비 확인에 음식 시간을 표시합니다. 초읽기 경고는 극·영식·절에서만 중앙과 내 채팅창에 표시합니다. 기본 10·15·20분 (변경 가능).", 478);
         var unread = config.LastSeenChangelogVersion != ReleaseHistory.CurrentVersion;
-        changelogButton = new TextButtonNode { Position = new(28, 456), Size = new(190, 28),
+        changelogButton = new TextButtonNode { Position = new(28, 534), Size = new(190, 28),
             String = unread ? "업데이트 내역 · NEW" : "업데이트 내역", OnClick = openChangelog };
         changelogButton.AttachNode(this);
-        new TextNode { Position = new(360, 458), Size = new(190, 24), FontSize = 13,
+        new TextNode { Position = new(360, 536), Size = new(190, 24), FontSize = 13,
             AlignmentType = AlignmentType.Right, String = $"v{ReleaseHistory.CurrentVersion}" }.AttachNode(this);
         // Attached last so the opened list draws above the text below it.
         var timing = new StringDropDownNode { Position = new(290, 370), Size = new(250, 28), Options = [.. FollowTimings.Select(t => t.Label)] };
