@@ -45,14 +45,25 @@ try {
     $duckbillHistory = @(Get-Content -LiteralPath 'data/releases.json' -Raw | ConvertFrom-Json)
     $duckbillNotes = @($duckbillHistory | Where-Object Version -eq $duckbillVersion)
     if ($duckbillNotes.Count -ne 1) { throw 'Expected exactly one release-history entry for this version.' }
-    $duckbillEnglish = (@($duckbillNotes[0].English) | ForEach-Object { "• $_" }) -join "`n"
+    $duckbillNote = $duckbillNotes[0]
+    $duckbillOtherEnglish = @(if ($duckbillNote.PSObject.Properties['OtherEnglish']) { $duckbillNote.OtherEnglish })
+    $duckbillOtherKorean = @(if ($duckbillNote.PSObject.Properties['OtherKorean']) { $duckbillNote.OtherKorean })
+    if ($duckbillOtherEnglish.Count -ne $duckbillOtherKorean.Count) { throw 'Other-improvement translations differ in count.' }
+    $duckbillEnglish = (@(@($duckbillNote.English) + $duckbillOtherEnglish) | ForEach-Object { "• $_" }) -join "`n"
     if ($duckbillManifest.Changelog.Replace("`r`n", "`n").Trim() -cne $duckbillEnglish) { throw 'Installer and embedded release notes differ.' }
-    $duckbillReleaseMarkdown = "# DuckbillTweak $duckbillVersion`n`n$duckbillEnglish`n"
+    if ($duckbillNote.PSObject.Properties['SummaryEnglish'] -and $duckbillNote.SummaryEnglish) {
+        $duckbillMainMarkdown = (@($duckbillNote.English) | ForEach-Object { "- $_" }) -join "`n"
+        $duckbillReleaseMarkdown = "# DuckbillTweak $duckbillVersion — $($duckbillNote.TitleEnglish)`n`n$($duckbillNote.SummaryEnglish)`n`n$duckbillMainMarkdown`n"
+        if ($duckbillOtherEnglish.Count -gt 0) {
+            $duckbillOtherMarkdown = ($duckbillOtherEnglish | ForEach-Object { "- $_" }) -join "`n"
+            $duckbillReleaseMarkdown += "`nOther improvements:`n`n$duckbillOtherMarkdown`n"
+        }
+    } else { $duckbillReleaseMarkdown = "# DuckbillTweak $duckbillVersion`n`n$duckbillEnglish`n" }
     $duckbillCommittedNotes = [IO.File]::ReadAllText((Join-Path $duckbillRoot "docs/releases/$duckbillVersion.md"))
     if ($duckbillCommittedNotes.Replace("`r`n", "`n").Trim() -cne $duckbillReleaseMarkdown.Trim()) { throw 'GitHub release notes differ from embedded English notes.' }
     $duckbillKoreanLog = [IO.File]::ReadAllText((Join-Path $duckbillRoot 'CHANGELOG.md')).Replace("`r`n", "`n")
-    foreach ($duckbillNote in $duckbillNotes[0].Korean) {
-        if (!$duckbillKoreanLog.Contains("- $duckbillNote")) { throw 'Korean changelog differs from embedded notes.' }
+    foreach ($duckbillKoreanNote in @(@($duckbillNote.Korean) + $duckbillOtherKorean)) {
+        if (!$duckbillKoreanLog.Contains("- $duckbillKoreanNote")) { throw 'Korean changelog differs from embedded notes.' }
     }
 
     $duckbillRequired = @(Get-RequiredPluginFiles)
