@@ -1,5 +1,25 @@
 # 배포 확인
 
+## 0.3.0.0 · 공통 디자인과 새 대표 아이콘
+
+사용자가 최종 아이콘으로 세 플러그인 배포를 명시 요청했다. 고정 ZIP의 인게임 확인은 하지 않았으며 InGameVerified=false를 유지한다. 이전 개발판의 음식/측후·춤 확인을 새 ZIP의 실기로 소급하지 않는다.
+
+| 항목 | 값 |
+|---|---|
+| 소스 | `f25c997d40574ab0b4887c3fa8c1cb86d0810330` |
+| 고정 후보 | `artifacts/release/0.3.0.0/context-release-20261115` · SourceDirty=false |
+| ZIP | `DuckbillTweak-0.3.0.0.zip` · 489,680바이트/15파일 |
+| ZIP SHA256 | `fa5803bb67aae14f59b73193f48da9cc2ad1ccb10cb360039d742f24b42ac1ff` |
+| 태그 아이콘 SHA256 | `853f8a8ce08e97332156e4ab5298927f73e135944223c77d766f3863dd103a3d` |
+| [공개 Release](https://github.com/PlatyDuckbill/DuckbillTweak/releases/tag/v0.3.0.0) | ID445983076 · draft=false/prerelease=false |
+| 공개 시각 | 2026-11-15T10:44:13Z / 2026-11-15 19:44:13 KST |
+| 설치 원본 | `f3fe6dc` · repo/release.json |
+| [공용 동기화](https://github.com/PlatyDuckbill/DuckbillRepo/actions/runs/43705600164) | success · 공용 `5cb4a754332c0b3ca7bba19edc4e27ba4a4cc679` |
+
+설정/세부 설정·업데이트 내역의 ImGui 전환, 기능/하위 상세 계층과 스모크/펄·실시간 화면 조절, 제목줄 접기/닫기 겹침 수정 및 새 대표 아이콘을 묶었다. 준비 확인 음식·상점/필요 재화·입찰은 게임 UI를 유지한다. KR 고정 참조 Release 빌드 경고0/오류0·한영86키/ko 위성·실제 내장 자료/원본·API 참조, DLL/manifest/API/ZIP15파일·영문 내장/manifest/GitHub 노트8항목 일치를 확인했다. 포장 스크립트도 대표 기능/기타 개선을 함께 검사하도록 정리했다. 제품 테스트 추가/실행은 하지 않았다.
+
+초안 자산 digest/크기·태그 소스를 확인한 뒤 공개했다. 인증 없는 ZIP·체크섬·태그 아이콘 HTTP200/원본 해시 일치 후 설치 원본을 게시했다. 고정 공용 커밋과 실제 main/pluginmaster.json 모두22필드가 설치 후보와 일치하고 Fisher0.10.0.1/Calendar0.5.0.0을 포함한 세 항목을 유지한다. 실제 Dalamud 업데이트/로드·제목줄 클릭, 세부 설정/팝업/휠·저장·실시간 조절·기존 네이티브 게임 UI 보존 확인은 대기다. 게시 영수증은 Fisher의 `.cache/release-suite-2026-11-15/`에 보존한다.
+
 ## 0.2.3.0 · 음식 알리미와 감정표현 따라하기 대기 개선
 
 사용자가 개발판의 준비 확인 음식 표시, 극 조디아크 초읽기 중앙 경고·내 채팅 요약을 확인하고 춤 싱크도 “잘 되는 것으로 보임”이라고 확인한 뒤 업데이트 노트를 포함한 공개 배포를 명시 요청했다. 고정 후보를 재빌드 없이 게시했으며 고정 Release ZIP 자체를 실기 확인한 것은 아니므로 InGameVerified=false를 유지한다. 영식·절, 타인 시작 초읽기, 취소·재초읽기와 춤별 전수 검증은 별도다. [확인 기록](VERIFICATION.md#2026-11-15-음식-알리미와-춤-즉시-실행-경로-보완).
