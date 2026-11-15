@@ -8,13 +8,13 @@
     "SummaryEnglish": "Manage features and their details together with the shared Duckbill design.",
     "Korean": [
       "전투·상점과 입찰·소셜로 묶은 설정에서 기능을 켜고 끌 수 있습니다.",
-      "음식 기준 시간과 측후·콤보 아이콘·색상을 관련 기능 아래에서 설정할 수 있습니다.",
+      "음식 기준·측후와 콤보 표시·감정표현 박자를 각 기능의 세부 설정에서 관리할 수 있습니다.",
       "대표 기능과 기타 개선으로 정리한 업데이트 내역을 읽고 새 업데이트를 구분할 수 있습니다.",
       "아이콘 선택 목록에서 실제 게임 아이콘을 미리 보고 측후 성공·실패·콤보 실패를 각각 설정할 수 있습니다."
     ],
     "English": [
       "Turn features on or off in grouped combat, shop and loot, and social settings.",
-      "Adjust food thresholds and positional/combo icons and colors beside their feature settings.",
+      "Adjust food thresholds, positional/combo markers and emote timing in each feature's detail panel.",
       "Read updates by their main feature and other improvements, with unread updates marked in settings.",
       "Preview each game icon in the choice list and configure positional hits, misses and broken combos in separate panels."
     ],

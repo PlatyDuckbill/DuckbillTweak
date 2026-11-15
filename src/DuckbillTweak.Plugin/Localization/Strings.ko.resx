@@ -7,7 +7,7 @@
   <data name="SettingsTitle" xml:space="preserve"><value>설정</value></data>
   <data name="SettingsSummary" xml:space="preserve"><value>사용할 편의 기능을 선택하세요.</value></data>
   <data name="UpdatesTitle" xml:space="preserve"><value>업데이트 내역</value></data>
-  <data name="UpdatesOpen" xml:space="preserve"><value>내역 보기</value></data>
+  <data name="UpdatesOpen" xml:space="preserve"><value>업데이트 내역 보기</value></data>
   <data name="UpdatesNew" xml:space="preserve"><value>새 업데이트 보기</value></data>
   <data name="Version" xml:space="preserve"><value>버전 {0}</value></data>
   <data name="Published" xml:space="preserve"><value>배포: {0}</value></data>

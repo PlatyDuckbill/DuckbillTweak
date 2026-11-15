@@ -14,7 +14,7 @@ internal sealed class SettingsWindow : Window
     private readonly Func<bool> unread;
     private readonly Action<uint, Vector2>? drawGameIcon;
     private readonly bool pvpAvailable, exchangeAvailable, positionalAvailable, foodAvailable;
-    private bool showFood, showColors;
+    private bool showFood, showColors, showSocial;
     private Vector3 colorDraft;
     public bool SaveFailed { get; set; }
 
@@ -45,29 +45,22 @@ internal sealed class SettingsWindow : Window
             UiWidgets.Section(T.AppearanceStyle);
             Appearance();
             UiWidgets.Secondary(T.SettingsSummary);
-            UiWidgets.Section(T.Combat);
+            UiWidgets.MajorSection(T.Combat);
             Feature(T.Food, T.FoodDescription, config.FoodReminder, v => change(c => c.FoodReminder = v), () => showFood = !showFood);
             if (!foodAvailable) UiWidgets.Secondary(T.FoodUnavailable);
-            if (showFood) FoodSettings();
+            if (showFood) DetailGroup("FoodDetails", MeasureFoodDetails, FoodSettings);
             Feature(T.Position, T.PositionDescription, config.PositionalFlyText, v => change(c => c.PositionalFlyText = v), () => showColors = !showColors);
             if (!positionalAvailable) UiWidgets.Secondary(T.Unavailable);
-            if (showColors) ColorSettings();
+            if (showColors) DetailGroup("ColorDetails", MeasureColorDetails, ColorSettings);
             Feature(T.Pvp, T.PvpDescription, config.PvpBubbles, v => change(c => c.PvpBubbles = v));
             if (!pvpAvailable) UiWidgets.Secondary(T.Unavailable);
-            UiWidgets.Section(T.Shops);
+            UiWidgets.MajorSection(T.Shops);
             Feature(T.Merchant, T.MerchantDescription, config.MerchantTools, v => change(c => c.MerchantTools = v));
             if (!exchangeAvailable) UiWidgets.Secondary(T.ExchangeUnavailable);
             Feature(T.Loot, T.LootDescription, config.LootRolls, v => change(c => c.LootRolls = v));
-            UiWidgets.Section(T.Social);
-            Feature(T.Emote, T.EmoteDescription, config.EmoteFollow, v => change(c => c.EmoteFollow = v));
-            ImGui.TextUnformatted(UiText.Get(T.Timing));
-            ImGui.SetNextItemWidth(Math.Min(ImGui.GetContentRegionAvail().X, ImGui.GetFontSize() * 17));
-            int[] offsets = [0, 40, 80, 120];
-            var timing = Math.Max(0, Array.IndexOf(offsets, config.EmoteFollowOffsetMs));
-            var timings = new[] { T.TimingOwn, T.TimingMiddle, T.TimingOthers, T.TimingEarly }.Select(k => UiText.Get(k)).ToArray();
-            if (GameThemeChrome.Combo("###EmoteTiming", ref timing, timings, timings.Length))
-            { var ms = offsets[timing]; change(c => c.EmoteFollowOffsetMs = ms); }
-            UiWidgets.Secondary(T.TimingHint);
+            UiWidgets.MajorSection(T.Social);
+            Feature(T.Emote, T.EmoteDescription, config.EmoteFollow, v => change(c => c.EmoteFollow = v), () => showSocial = !showSocial);
+            if (showSocial) DetailGroup("EmoteDetails", MeasureSocialDetails, SocialSettings);
         }
         ImGui.EndChild();
         var version = UiText.Get(T.Version, ReleaseHistory.CurrentVersion);
@@ -130,6 +123,55 @@ internal sealed class SettingsWindow : Window
         UiWidgets.Secondary(T.FoodHint); UiWidgets.Secondary(T.FoodScope);
         ImGui.Spacing(); ImGui.PopID();
     }
+    private static void DetailGroup(string id, Func<float, float> measure, Action drawContent)
+    {
+        var f = ImGui.GetFontSize();
+        var p = GameThemeScope.Current!;
+        var indent = MathF.Round(f * 1.1f);
+        ImGui.Indent(indent);
+        var width = Math.Max(1, ImGui.GetContentRegionAvail().X - f * .4f);
+        var pad = new Vector2(MathF.Round(f * .7f), MathF.Round(f * .65f));
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, pad);
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, p.Inset with { W = .55f });
+        ImGui.PushStyleColor(ImGuiCol.Border, p.Border with { W = .45f });
+        var start = ImGui.GetCursorScreenPos();
+        var height = MathF.Ceiling(measure(Math.Max(1, width - pad.X * 2)) + pad.Y * 2 + 2);
+        try
+        {
+            var visible = ImGui.BeginChild("###" + id, new(width, height), true, ImGuiWindowFlags.NoScrollWithMouse);
+            try { if (visible) drawContent(); }
+            finally { ImGui.EndChild(); }
+        }
+        finally { ImGui.PopStyleColor(2); ImGui.PopStyleVar(); ImGui.Unindent(indent); }
+        var line = start - new Vector2(f * .55f, 0);
+        var color = ImGui.GetColorU32(p.Border with { W = .6f });
+        ImGui.GetWindowDrawList().AddLine(line, line + new Vector2(0, height), color, 2);
+        ImGui.GetWindowDrawList().AddLine(line, start, color, 2);
+        ImGui.Spacing();
+    }
+    private static float WrappedHeight(T text, float width) => ImGui.CalcTextSize(UiText.Get(text), false, width).Y;
+    private static float MeasureFoodDetails(float width) => ImGui.GetFontSize() + ImGui.GetFrameHeight() * 3 +
+        WrappedHeight(T.FoodHint, width) + WrappedHeight(T.FoodScope, width) + ImGui.GetStyle().ItemSpacing.Y * 7;
+    private static float MeasureSocialDetails(float width) => ImGui.GetFontSize() + ImGui.GetFrameHeight() +
+        WrappedHeight(T.TimingHint, width) + ImGui.GetStyle().ItemSpacing.Y * 3;
+    private static float OutcomeHeight(float width)
+    {
+        var wide = width >= ImGui.GetFontSize() * 29;
+        return ImGui.GetFrameHeight() * (wide ? 3 : 5) + ImGui.GetStyle().ItemSpacing.Y * (wide ? 5 : 7) + ImGui.GetStyle().WindowPadding.Y * 2;
+    }
+    private static float MeasureColorDetails(float width) => ImGui.GetFontSize() + ImGui.GetFrameHeight() + OutcomeHeight(width) * 3 +
+        WrappedHeight(T.PositionHint, width) + ImGui.GetStyle().ItemSpacing.Y * 11;
+    private void SocialSettings()
+    {
+        ImGui.TextUnformatted(UiText.Get(T.Timing));
+        ImGui.SetNextItemWidth(Math.Min(ImGui.GetContentRegionAvail().X, ImGui.GetFontSize() * 20));
+        int[] offsets = [0, 40, 80, 120];
+        var timing = Math.Max(0, Array.IndexOf(offsets, config.EmoteFollowOffsetMs));
+        var timings = new[] { T.TimingOwn, T.TimingMiddle, T.TimingOthers, T.TimingEarly }.Select(k => UiText.Get(k)).ToArray();
+        if (GameThemeChrome.Combo("###EmoteTiming", ref timing, timings, timings.Length))
+        { var ms = offsets[timing]; change(c => c.EmoteFollowOffsetMs = ms); }
+        UiWidgets.Secondary(T.TimingHint);
+    }
     private void Minutes(T label, int value, Action<Configuration, int> set)
     {
         ImGui.SetNextItemWidth(ImGui.GetFontSize() * 7);
@@ -182,12 +224,19 @@ internal sealed class SettingsWindow : Window
         ImGui.PushID(slot.ToString());
         var f = ImGui.GetFontSize();
         var wide = ImGui.GetContentRegionAvail().X >= f * 29;
-        var height = ImGui.GetFrameHeight() * (wide ? 3 : 5) + ImGui.GetStyle().ItemSpacing.Y * (wide ? 4 : 6) + ImGui.GetStyle().WindowPadding.Y * 2;
-        ImGui.PushStyleColor(ImGuiCol.ChildBg, (GameThemeScope.Current?.Inset ?? Vector4.Zero) with { W = .42f });
-        if (ImGui.BeginChild("###Outcome", new(0, height), true, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
+        var height = OutcomeHeight(ImGui.GetContentRegionAvail().X);
+        var p = GameThemeScope.Current!;
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, p.Surface with { W = .65f });
+        ImGui.PushStyleColor(ImGuiCol.Border, p.Border with { W = .25f });
+        if (ImGui.BeginChild("###Outcome", new(0, height), true, ImGuiWindowFlags.NoScrollWithMouse))
         {
+            var header = ImGui.GetCursorScreenPos() - new Vector2(f * .2f, f * .1f);
+            ImGui.GetWindowDrawList().AddRectFilled(header,
+                header + new Vector2(ImGui.GetContentRegionAvail().X + f * .4f, ImGui.GetFrameHeight() + f * .2f),
+                ImGui.GetColorU32(p.Field with { W = .6f }), 2);
             if (ImGui.Checkbox(UiText.Get(label) + "###Enabled", ref enabled))
             { var v = enabled; Set(slot, c => c.PositionalHitEnabled = v, c => c.PositionalMissEnabled = v, c => c.ComboFailFlyText = v); }
+            ImGui.Spacing();
             if (ImGui.BeginTable("###Fields", wide ? 2 : 1, ImGuiTableFlags.SizingStretchSame))
             {
                 ImGui.TableNextColumn();
@@ -208,7 +257,7 @@ internal sealed class SettingsWindow : Window
                 ImGui.EndTable();
             }
         }
-        ImGui.EndChild(); ImGui.PopStyleColor();
+        ImGui.EndChild(); ImGui.PopStyleColor(2);
         ImGui.Spacing(); ImGui.PopID();
     }
     private void IconSelector(Slot slot, uint iconId)
@@ -276,5 +325,20 @@ internal static class UiWidgets
     public static void Section(T key)
     {
         GameThemeChrome.SectionLabel(UiText.Get(key));
+    }
+    public static void MajorSection(T key)
+    {
+        ImGui.Spacing();
+        var p = GameThemeScope.Current!;
+        var start = ImGui.GetCursorScreenPos();
+        var size = new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetFrameHeight() * 1.3f);
+        ImGui.Dummy(size);
+        var draw = ImGui.GetWindowDrawList();
+        draw.AddRectFilled(start, start + size, ImGui.GetColorU32(p.Field with { W = .8f }), 3);
+        draw.AddRectFilled(start, start + new Vector2(3, size.Y), ImGui.GetColorU32(p.Accent with { W = .8f }), 2);
+        var text = UiText.Get(key);
+        draw.AddText(Vector2.Round(start + new Vector2(ImGui.GetFontSize() * .7f, (size.Y - ImGui.CalcTextSize(text).Y) / 2)),
+            ImGui.GetColorU32(p.Text), text);
+        ImGui.Spacing();
     }
 }
