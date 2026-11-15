@@ -85,6 +85,8 @@ public sealed class Plugin : IAsyncDalamudPlugin
         config.Version = 3;
         config.LastSeenChangelogVersion ??= "";
         config.Theme = ThemeScope.IsLight(config.Theme) ? "pearl" : "smoke";
+        config.ThemeBrightness = GameThemePalette.NormalizeBrightness(config.ThemeBrightness);
+        config.ThemeDepth = GameThemePalette.NormalizeDepth(config.ThemeDepth);
         config.UiLanguage = config.UiLanguage == "en" ? "en" : "ko";
         if (MigratePositionalDisplay(config)) pluginInterface.SavePluginConfig(config);
         merchants = new(data, unlocks, inventory, client, player, conditions, target, gameGui, framework, log, config, pluginInterface);
@@ -220,7 +222,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
     {
         if (disposed) return;
         UiText.English = config.UiLanguage == "en";
-        using var theme = new ThemeScope(ThemeScope.IsLight(config.Theme));
+        using var theme = new ThemeScope(ThemeScope.IsLight(config.Theme), config.ThemeBrightness, config.ThemeDepth);
         windows.Draw();
     }
     private void OpenSettings() => _ = framework.Run(() => { if (!disposed && settings is not null) settings.IsOpen = true; });

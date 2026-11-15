@@ -2,11 +2,11 @@ using System.Numerics;
 
 namespace DuckbillTweak.Plugin.UI;
 
-internal sealed class ThemeScope(bool light) : IDisposable
+internal sealed class ThemeScope(bool light, int brightness = GameThemePalette.DefaultBrightness, int depth = GameThemePalette.DefaultDepth) : IDisposable
 {
-    private readonly GameThemeScope scope = new(light);
+    private readonly GameThemeScope scope = new(light, brightness, depth);
     public static bool IsLight(string? theme) => theme is "pearl" or "paper" or "cloud" or "light";
-    public static Vector4 Accent(bool light) => GameThemePalette.For(light).Accent;
+    public static Vector4 Accent(bool light) => GameThemeScope.Current is { } p && p.Light == light ? p.Accent : GameThemePalette.For(light).Accent;
     public static Vector4 Hex(uint rgb) => GameThemePalette.Hex(rgb);
     public void Dispose() => scope.Dispose();
 }

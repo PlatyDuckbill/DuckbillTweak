@@ -83,4 +83,10 @@
   <data name="IconBlueStar" xml:space="preserve"><value>Blue star</value></data>
   <data name="IconRedStar" xml:space="preserve"><value>Red star</value></data>
   <data name="IconProhibited" xml:space="preserve"><value>Prohibited</value></data>
+  <data name="AppearanceStyle" xml:space="preserve"><value>Screen style</value></data>
+  <data name="AppearanceBrightness" xml:space="preserve"><value>Screen brightness</value></data>
+  <data name="AppearanceDepth" xml:space="preserve"><value>Surface depth</value></data>
+  <data name="AppearanceHint" xml:space="preserve"><value>Preview below while dragging; release to apply. Brightness does not change transparency. Depth at 0% gives a flat surface.</value></data>
+  <data name="AppearanceReset" xml:space="preserve"><value>Reset brightness and depth</value></data>
+  <data name="AppearancePreview" xml:space="preserve"><value>Surface preview</value></data>
 </root>

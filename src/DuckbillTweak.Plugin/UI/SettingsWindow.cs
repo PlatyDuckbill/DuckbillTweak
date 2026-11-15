@@ -8,6 +8,7 @@ namespace DuckbillTweak.Plugin.UI;
 internal sealed class SettingsWindow : Window
 {
     private readonly Configuration config;
+    private readonly ThemeAdjustmentEditor appearance = new();
     private readonly Action<Action<Configuration>> change;
     private readonly Action showUpdates;
     private readonly Func<bool> unread;
@@ -28,7 +29,8 @@ internal sealed class SettingsWindow : Window
         Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
         BgAlpha = .94f;
     }
-    public override void PreDraw() => BgAlpha = GameThemePalette.For(ThemeScope.IsLight(config.Theme)).Surface.W;
+    public override void PreDraw() => BgAlpha = GameThemeScope.Current?.Surface.W
+        ?? GameThemePalette.For(ThemeScope.IsLight(config.Theme), config.ThemeBrightness, config.ThemeDepth).Surface.W;
     public override void OnOpen() { if (unread()) showUpdates(); }
     public override void Draw()
     {
@@ -113,6 +115,10 @@ internal sealed class SettingsWindow : Window
         if (GameThemeChrome.Combo("###Language", ref language, new[] { "한국어", "English" }, 2))
         { var value = language == 1 ? "en" : "ko"; change(c => c.UiLanguage = value); }
         ImGui.EndTable();
+        if (appearance.Draw(ThemeScope.IsLight(config.Theme), config.ThemeBrightness, config.ThemeDepth,
+            UiText.Get(T.AppearanceBrightness), UiText.Get(T.AppearanceDepth), UiText.Get(T.AppearanceHint),
+            UiText.Get(T.AppearanceReset), UiText.Get(T.AppearancePreview)) is { } adjustment)
+            change(c => { c.ThemeBrightness = adjustment.Brightness; c.ThemeDepth = adjustment.Depth; });
     }
 
     private void FoodSettings()
