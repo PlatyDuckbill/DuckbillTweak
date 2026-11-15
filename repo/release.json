@@ -2,8 +2,8 @@
   "Author": "PlatyDuckbill",
   "Name": "DuckbillTweak",
   "InternalName": "DuckbillTweak",
-  "AssemblyVersion": "0.2.3.0",
-  "Description": "Small conveniences in the game's own UI, for FFXIV Korea.\n\n• Filter owned equipment and collectibles, or focus shop lists on collection items.\n• Calculate the current shop's currency requirements and shortages, with linked storage records.\n• Right-click loot items to view participant choices and publicly received roll results.\n• Enable PvP chat bubbles using your game's chat bubble settings.\n• Mark positional hits/misses and broken combos on your own damage numbers with game icons and colors.\n• Right-click a character in a looping emote to perform the same emote in time with them.\n• Show food time in Ready Check and warn locally during Extreme, Savage and Ultimate countdowns, with adjustable thresholds.\n\nOpen settings: /dbtw or /duckbilltweak. Each feature starts disabled.\nRelease history: Settings → 업데이트 내역, or /dbtw changelog.\n\nKorean client and Dalamud API 15 only. Loot numbers appear when the game publishes results. Stored inventory records may be incomplete or out of date.",
+  "AssemblyVersion": "0.3.0.0",
+  "Description": "Small conveniences in the game's own UI, for FFXIV Korea.\n\n• Filter owned equipment and collectibles, or focus shop lists on collection items.\n• Calculate the current shop's currency requirements and shortages, with linked storage records.\n• Right-click loot items to view participant choices and publicly received roll results.\n• Enable PvP chat bubbles using your game's chat bubble settings.\n• Mark positional hits/misses and broken combos on your own damage numbers with game icons and colors.\n• Right-click a character in a looping emote to perform the same emote in time with them.\n• Show food time in Ready Check and warn locally during Extreme, Savage and Ultimate countdowns, with adjustable thresholds.\n\nOpen settings: /dbtw or /duckbilltweak. Each feature starts disabled.\nRelease history: Settings → View updates, or /dbtw changelog.\n\nKorean client and Dalamud API 15 only. Loot numbers appear when the game publishes results. Stored inventory records may be incomplete or out of date.",
   "ApplicableVersion": "any",
   "RepoUrl": "https://github.com/PlatyDuckbill/DuckbillTweak",
   "Tags": [
@@ -23,13 +23,13 @@
   "LoadSync": false,
   "CanUnloadAsync": true,
   "LoadPriority": 0,
-  "IconUrl": "https://raw.githubusercontent.com/PlatyDuckbill/DuckbillTweak/v0.2.3.0/assets/duckbilltweak-icon.png",
+  "IconUrl": "https://raw.githubusercontent.com/PlatyDuckbill/DuckbillTweak/v0.3.0.0/assets/duckbilltweak-icon.png",
   "Punchline": "Shops, loot, food reminders and emote timing for FFXIV Korea.",
-  "Changelog": "• Enable the new Food Reminder to see party members' remaining food time in Ready Check (off by default).\n• During countdowns in Extreme, Savage and Ultimate duties, warn once with a central alert and a summary in your local chat when party members have too little food time left.\n• Default food-time thresholds are 10 minutes for Extreme, 15 for Savage and 20 for Ultimate; each can be set from 1 to 60 minutes in the detail settings.\n• Unreadable food information is shown as unknown and excluded from the low-food count.\n• Emote follow now waits for the target's beat during first-use calibration and restarts, instead of starting immediately.",
+  "Changelog": "• Turn features on or off in grouped combat, shop and loot, and social settings.\n• Adjust food thresholds, positional/combo markers and emote timing in each feature's detail panel.\n• Read updates by their main feature and other improvements, with unread updates marked in settings.\n• Preview each game icon in the choice list and configure positional hits, misses and broken combos in separate panels.\n• Adjust brightness, depth and transparency directly on the screen, with fine adjustments collapsed by default.\n• Previously read updates stay read after temporarily using an older version.\n• Collapse and close buttons no longer overlap when you click them.\n• Recognize the plugin by its new settings-focused icon.",
   "AcceptsFeedback": true,
-  "DownloadLinkInstall": "https://github.com/PlatyDuckbill/DuckbillTweak/releases/download/v0.2.3.0/DuckbillTweak-0.2.3.0.zip",
-  "DownloadLinkUpdate": "https://github.com/PlatyDuckbill/DuckbillTweak/releases/download/v0.2.3.0/DuckbillTweak-0.2.3.0.zip",
   "IsHide": false,
-  "IsTestingExclusive": false,
-  "LastUpdate": 1794665209
+  "DownloadLinkUpdate": "https://github.com/PlatyDuckbill/DuckbillTweak/releases/download/v0.3.0.0/DuckbillTweak-0.3.0.0.zip",
+  "LastUpdate": 1794739008,
+  "DownloadLinkInstall": "https://github.com/PlatyDuckbill/DuckbillTweak/releases/download/v0.3.0.0/DuckbillTweak-0.3.0.0.zip",
+  "IsTestingExclusive": false
 }
