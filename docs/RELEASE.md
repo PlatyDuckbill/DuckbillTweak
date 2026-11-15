@@ -1,5 +1,26 @@
 # 배포 확인
 
+## 0.3.0.1 · 배포판 한국어 파일 누락 수정
+
+0.3.0.0 설치판이 영어로만 표시된다는 사용자 제보를 확인했다. 언어 선택/저장 로직은 정상이었으나 포장 허용 목록에서 `ko/DuckbillTweak.resources.dll`이 빠져 기본 영어로 돌아갔다. 아래 0.3.0.0의 한영86키/ko 위성 확인은 빌드 폴더 대상이었고, 해당 ZIP에 한국어가 포함됐다는 근거가 아니었다. 당시 패키지 검사가 이 누락을 잡지 못했음을 정정한다.
+
+| 항목 | 값 |
+|---|---|
+| 소스 | `2c9e77b3911ec1297b10fae926e120582d1e8905` |
+| 고정 후보 | `artifacts/release/0.3.0.1/korean-resource-fix` · SourceDirty=false |
+| ZIP | `DuckbillTweak-0.3.0.1.zip` · 495,717바이트/16파일 |
+| ZIP SHA256 | `558167c05e9530355670d67d953c80981dcb39d57b561a0985bd202856b6954b` |
+| [공개 Release](https://github.com/PlatyDuckbill/DuckbillTweak/releases/tag/v0.3.0.1) | ID445993330 · draft=false/prerelease=false |
+| 공개 시각 | 2026-11-15T11:03:05Z / 2026-11-15 20:03:05 KST |
+| 설치 원본 | `32667e1` · repo/release.json |
+| [공용 동기화](https://github.com/PlatyDuckbill/DuckbillRepo/actions/runs/43707060639) | success · 공용 `0b81ed92494a8ca0643caadeb241cc2eb002f052` |
+
+포장 목록은 번역 resx에 대응하는 위성 DLL을 포함한다. 패키지 리소스 검사는 추출본의 위성 존재·어셈블리 이름/문화권/버전·내장 리소스 이름과 한영 각86개 키/값의 원본 일치를 요구한다. 기존 공개0.3.0.0 ZIP은 새 검사에서 한국어 파일 누락으로 실패했고 새 ZIP은 통과했다. 별도→정규 Debug와 고정 Release 빌드는 경고0/오류0이다. 게임을 실행하거나 플러그인을 생성하지 않은 ResourceManager 조회에서 기존 ZIP의 한국어 `Settings` → 새 ZIP의 `설정` 및 한영 각86문구 일치를 확인했다. 설정 초기화·언어 강제 변경·게임 기능 변경·테스트 추가/실행은 없다. 실제 게임 내 설치/언어 전환은 대기이며 InGameVerified=false다.
+
+익명 ZIP·체크섬·태그 아이콘 HTTP200/원본 해시 일치 후 설치 목록을 갱신했다. 공용 고정 커밋과 기존 `main/pluginmaster.json` URL 양쪽에서 Tweak0.3.0.1·Fisher0.10.0.1·Calendar0.5.0.0 세 항목과 각각22필드가 원본과 일치한다. 아이콘은 승인된0.3.0.0과 같은 PNG(SHA256 `853f8a8ce08e97332156e4ab5298927f73e135944223c77d766f3863dd103a3d`)를 새 태그에도 유지한다. 공개 증빙과 실제 공용 URL 대조 결과는 Fisher의 `.cache/tweak-0.3.0.1/`에 보관한다. 기존 태그/자산은 수정하지 않았다.
+
+아이콘 미갱신 제보는 세 플러그인의 공개 PNG가 승인본 해시와 같은 것을 재확인했다. 설치된 Dalamud의 `PluginImageCache`를 읽어 확인한 결과, 일반 설치판은 플러그인 ID(없으면 InternalName)를 키로 메모리에 캐시하며 기존 항목이 있으면 URL이 바뀌어도 재다운로드하지 않는다. 전체 게임 종료/재실행으로 메모리 캐시를 비우면 다시 받는다. 서버 이미지 검사와 실제 사용자 화면의 캐시 갱신 확인은 구분한다.
+
 ## 0.3.0.0 · 공통 디자인과 새 대표 아이콘
 
 사용자가 최종 아이콘으로 세 플러그인 배포를 명시 요청했다. 고정 ZIP의 인게임 확인은 하지 않았으며 InGameVerified=false를 유지한다. 이전 개발판의 음식/측후·춤 확인을 새 ZIP의 실기로 소급하지 않는다.
