@@ -69,6 +69,43 @@ if (args.Length >= 2 && args[0] == "resources")
     if (json.RootElement.GetProperty("schemaVersion").GetInt32() != 1)
         throw new InvalidDataException("Unexpected currency schema.");
     var artifactDirectory = Path.GetDirectoryName(Path.GetFullPath(args[1]))!;
+    // Validate the files beside the supplied DLL, so the same check covers an extracted ZIP.
+    // Missing satellites otherwise silently fall back to English through ResourceManager.
+    foreach (var culture in new[] { "", "ko" })
+    {
+        var catalogPath = culture.Length == 0 ? args[1] : Path.Combine(artifactDirectory, culture, "DuckbillTweak.resources.dll");
+        if (!File.Exists(catalogPath))
+            throw new InvalidDataException($"Localized resource assembly missing: {culture}/DuckbillTweak.resources.dll");
+        using var catalogStream = File.OpenRead(catalogPath);
+        using var catalogPe = new PEReader(catalogStream);
+        var catalogMetadata = catalogPe.GetMetadataReader();
+        var catalogAssembly = catalogMetadata.GetAssemblyDefinition();
+        var expectedName = culture.Length == 0 ? "DuckbillTweak" : "DuckbillTweak.resources";
+        if (catalogMetadata.GetString(catalogAssembly.Name) != expectedName ||
+            catalogMetadata.GetString(catalogAssembly.Culture) != culture ||
+            catalogAssembly.Version != metadata.GetAssemblyDefinition().Version)
+            throw new InvalidDataException($"Localized resource identity/version mismatch: {catalogPath}");
+        var suffix = culture.Length == 0 ? "" : "." + culture;
+        var resourceName = "DuckbillTweak.Plugin.Localization.Strings" + suffix + ".resources";
+        var catalogResource = catalogMetadata.ManifestResources.Select(catalogMetadata.GetManifestResource)
+            .Single(r => catalogMetadata.GetString(r.Name) == resourceName && r.Implementation.IsNil);
+        var catalogRva = checked(catalogPe.PEHeaders.CorHeader!.ResourcesDirectory.RelativeVirtualAddress + (int)catalogResource.Offset);
+        var catalogReader = catalogPe.GetSectionData(catalogRva).GetReader();
+        using var catalogBytes = new MemoryStream(catalogReader.ReadBytes(catalogReader.ReadInt32()));
+        using var compiledCatalog = new System.Resources.ResourceReader(catalogBytes);
+        var resx = System.Xml.Linq.XDocument.Load(Path.Combine("src", "DuckbillTweak.Plugin", "Localization", "Strings" + suffix + ".resx"));
+        var expectedStrings = resx.Root!.Elements("data").ToDictionary(e => (string)e.Attribute("name")!, e => (string)e.Element("value")!, StringComparer.Ordinal);
+        var stringCount = 0;
+        foreach (System.Collections.DictionaryEntry entry in compiledCatalog)
+        {
+            if (!expectedStrings.TryGetValue((string)entry.Key, out var text) || text != (string)entry.Value!)
+                throw new InvalidDataException($"Compiled translation differs from source: {culture}/{entry.Key}");
+            stringCount++;
+        }
+        if (stringCount != expectedStrings.Count)
+            throw new InvalidDataException($"Compiled translation count differs: {culture}");
+        Console.WriteLine($"LocalizedResource={Path.GetFileName(catalogPath)}; Culture={(culture.Length == 0 ? "en-neutral" : culture)}; Keys={stringCount}; SourceMatch=True");
+    }
     foreach (var reference in metadata.AssemblyReferences.Select(metadata.GetAssemblyReference))
     {
         var name = metadata.GetString(reference.Name);
