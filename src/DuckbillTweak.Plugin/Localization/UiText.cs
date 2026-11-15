@@ -43,7 +43,7 @@ internal enum TextKey
     AppearanceTransparency,
     AppearanceHint,
     AppearanceReset,
-    AppearancePreview,
+    AppearanceDetails,
     Appearance,
     Theme,
     Graphite,

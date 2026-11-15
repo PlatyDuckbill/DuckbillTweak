@@ -4,7 +4,7 @@
   <resheader name="version"><value>2.0</value></resheader>
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
-  <data name="SettingsTitle" xml:space="preserve"><value>Feature settings</value></data>
+  <data name="SettingsTitle" xml:space="preserve"><value>Settings</value></data>
   <data name="SettingsSummary" xml:space="preserve"><value>Choose the conveniences you want to use.</value></data>
   <data name="UpdatesTitle" xml:space="preserve"><value>What’s new</value></data>
   <data name="UpdatesOpen" xml:space="preserve"><value>View updates</value></data>
@@ -83,11 +83,11 @@
   <data name="IconBlueStar" xml:space="preserve"><value>Blue star</value></data>
   <data name="IconRedStar" xml:space="preserve"><value>Red star</value></data>
   <data name="IconProhibited" xml:space="preserve"><value>Prohibited</value></data>
-  <data name="AppearanceStyle" xml:space="preserve"><value>Screen style</value></data>
+  <data name="AppearanceStyle" xml:space="preserve"><value>Appearance</value></data>
   <data name="AppearanceBrightness" xml:space="preserve"><value>Screen brightness</value></data>
   <data name="AppearanceDepth" xml:space="preserve"><value>Surface depth</value></data>
-  <data name="AppearanceHint" xml:space="preserve"><value>Preview below while dragging; release to apply. Higher transparency reveals more of the game background. Depth at 0% gives a flat surface.</value></data>
+  <data name="AppearanceHint" xml:space="preserve"><value>Changes appear on the actual screen while dragging; release to save. Higher transparency reveals more of the game background. Depth at 0% gives a flat surface.</value></data>
   <data name="AppearanceReset" xml:space="preserve"><value>Reset brightness, depth and transparency</value></data>
-  <data name="AppearancePreview" xml:space="preserve"><value>Surface preview</value></data>
+  <data name="AppearanceDetails" xml:space="preserve"><value>Fine adjustments</value></data>
   <data name="AppearanceTransparency" xml:space="preserve"><value>Background transparency</value></data>
 </root>

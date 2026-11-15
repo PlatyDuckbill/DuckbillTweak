@@ -223,7 +223,8 @@ public sealed class Plugin : IAsyncDalamudPlugin
     {
         if (disposed) return;
         UiText.English = config.UiLanguage == "en";
-        using var theme = new ThemeScope(ThemeScope.IsLight(config.Theme), config.ThemeBrightness, config.ThemeDepth, config.ThemeTransparency);
+        var appearance = settings?.ResolveAppearance() ?? (Brightness: config.ThemeBrightness, Depth: config.ThemeDepth, Transparency: config.ThemeTransparency);
+        using var theme = new ThemeScope(ThemeScope.IsLight(config.Theme), appearance.Brightness, appearance.Depth, appearance.Transparency);
         windows.Draw();
     }
     private void OpenSettings() => _ = framework.Run(() => { if (!disposed && settings is not null) settings.IsOpen = true; });

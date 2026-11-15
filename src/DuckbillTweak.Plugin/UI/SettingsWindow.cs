@@ -29,19 +29,22 @@ internal sealed class SettingsWindow : Window
         Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
         BgAlpha = .94f;
     }
+    public (int Brightness, int Depth, int Transparency) ResolveAppearance() =>
+        appearance.Resolve(config.ThemeBrightness, config.ThemeDepth, config.ThemeTransparency, IsOpen);
     public override void PreDraw() => BgAlpha = GameThemeScope.Current?.Surface.W
         ?? GameThemePalette.For(ThemeScope.IsLight(config.Theme), config.ThemeBrightness, config.ThemeDepth, config.ThemeTransparency).Surface.W;
     public override void OnOpen() { if (unread()) showUpdates(); }
     public override void Draw()
     {
         GameThemeChrome.WindowSurface();
-        UiWidgets.Heading(T.SettingsTitle);
-        UiWidgets.Secondary(T.SettingsSummary);
-        ImGui.Spacing();
+        if (GameThemeChrome.SettingsHeader(UiText.Get(T.SettingsTitle), UiText.Get(unread() ? T.UpdatesNew : T.UpdatesOpen))) showUpdates();
         var footerHeight = ImGui.GetFrameHeightWithSpacing() + (SaveFailed
             ? ImGui.CalcTextSize(UiText.Get(T.SaveFailed), false, ImGui.GetContentRegionAvail().X).Y + ImGui.GetStyle().ItemSpacing.Y : 0);
         if (ImGui.BeginChild("###SettingsContent", new(0, -footerHeight)))
         {
+            UiWidgets.Section(T.AppearanceStyle);
+            Appearance();
+            UiWidgets.Secondary(T.SettingsSummary);
             UiWidgets.Section(T.Combat);
             Feature(T.Food, T.FoodDescription, config.FoodReminder, v => change(c => c.FoodReminder = v), () => showFood = !showFood);
             if (!foodAvailable) UiWidgets.Secondary(T.FoodUnavailable);
@@ -65,14 +68,10 @@ internal sealed class SettingsWindow : Window
             if (GameThemeChrome.Combo("###EmoteTiming", ref timing, timings, timings.Length))
             { var ms = offsets[timing]; change(c => c.EmoteFollowOffsetMs = ms); }
             UiWidgets.Secondary(T.TimingHint);
-            UiWidgets.Section(T.Appearance);
-            Appearance();
         }
         ImGui.EndChild();
-        if (GameThemeChrome.Button(UiText.Get(unread() ? T.UpdatesNew : T.UpdatesOpen) + "###ShowChangelog")) showUpdates();
         var version = UiText.Get(T.Version, ReleaseHistory.CurrentVersion);
-        if (UiWidgets.FitsOnLine(ImGui.CalcTextSize(version).X))
-        { ImGui.SameLine(); ImGui.TextDisabled(version); }
+        ImGui.TextDisabled(version);
         if (SaveFailed) UiWidgets.Secondary(T.SaveFailed);
     }
 
@@ -103,21 +102,21 @@ internal sealed class SettingsWindow : Window
 
     private void Appearance()
     {
-        if (!ImGui.BeginTable("###Appearance", 2, ImGuiTableFlags.SizingStretchSame)) return;
-        ImGui.TableNextColumn(); ImGui.TextUnformatted(UiText.Get(T.Theme));
-        var theme = ThemeScope.IsLight(config.Theme) ? 1 : 0;
-        var themes = new[] { UiText.Get(T.Graphite), UiText.Get(T.Paper) };
-        ImGui.SetNextItemWidth(-1);
-        if (GameThemeChrome.Combo("###Theme", ref theme, themes, themes.Length)) { var value = theme == 1 ? "pearl" : "smoke"; change(c => c.Theme = value); }
-        ImGui.TableNextColumn(); ImGui.TextUnformatted(UiText.Get(T.Language));
-        var language = config.UiLanguage == "en" ? 1 : 0;
-        ImGui.SetNextItemWidth(-1);
-        if (GameThemeChrome.Combo("###Language", ref language, new[] { "한국어", "English" }, 2))
-        { var value = language == 1 ? "en" : "ko"; change(c => c.UiLanguage = value); }
-        ImGui.EndTable();
+        if (GameThemeChrome.BeginSettingsFields(2))
+        {
+            GameThemeChrome.SettingsField(UiText.Get(T.Theme));
+            var theme = ThemeScope.IsLight(config.Theme) ? 1 : 0;
+            var themes = new[] { UiText.Get(T.Graphite), UiText.Get(T.Paper) };
+            if (GameThemeChrome.Combo("###Theme", ref theme, themes, themes.Length)) { var value = theme == 1 ? "pearl" : "smoke"; change(c => c.Theme = value); }
+            GameThemeChrome.SettingsField(UiText.Get(T.Language));
+            var language = config.UiLanguage == "en" ? 1 : 0;
+            if (GameThemeChrome.Combo("###Language", ref language, new[] { "한국어", "English" }, 2))
+            { var value = language == 1 ? "en" : "ko"; change(c => c.UiLanguage = value); }
+            ImGui.EndTable();
+        }
         if (appearance.Draw(ThemeScope.IsLight(config.Theme), config.ThemeBrightness, config.ThemeDepth, config.ThemeTransparency,
             UiText.Get(T.AppearanceBrightness), UiText.Get(T.AppearanceDepth), UiText.Get(T.AppearanceTransparency), UiText.Get(T.AppearanceHint),
-            UiText.Get(T.AppearanceReset), UiText.Get(T.AppearancePreview)) is { } adjustment)
+            UiText.Get(T.AppearanceReset), UiText.Get(T.AppearanceDetails)) is { } adjustment)
             change(c => { c.ThemeBrightness = adjustment.Brightness; c.ThemeDepth = adjustment.Depth; c.ThemeTransparency = adjustment.Transparency; });
     }
 
@@ -276,7 +275,6 @@ internal static class UiWidgets
     }
     public static void Section(T key)
     {
-        ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
-        ImGui.TextUnformatted(UiText.Get(key)); ImGui.Spacing();
+        GameThemeChrome.SectionLabel(UiText.Get(key));
     }
 }
