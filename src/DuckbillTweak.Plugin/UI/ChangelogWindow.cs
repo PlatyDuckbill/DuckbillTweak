@@ -27,7 +27,11 @@ internal sealed class ChangelogWindow(Configuration config, Action<Action<Config
     {
         if (!contentShown) return;
         acknowledged = true;
-        change(c => c.LastSeenChangelogVersion = ReleaseHistory.CurrentVersion);
+        change(c =>
+        {
+            if (!Version.TryParse(c.LastSeenChangelogVersion, out var seen) || seen < Version.Parse(ReleaseHistory.CurrentVersion))
+                c.LastSeenChangelogVersion = ReleaseHistory.CurrentVersion;
+        });
     }
     public override void Draw()
     {

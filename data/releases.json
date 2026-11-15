@@ -19,10 +19,12 @@
       "Preview each game icon in the choice list and configure positional hits, misses and broken combos in separate panels."
     ],
     "OtherKorean": [
-      "기본 접힌 화면 세부 조정에서 밝기·입체감·투명도를 바꾸면 실제 화면에 바로 반영됩니다."
+      "기본 접힌 화면 세부 조정에서 밝기·입체감·투명도를 바꾸면 실제 화면에 바로 반영됩니다.",
+      "이미 확인한 업데이트는 이전 버전을 사용한 뒤에도 다시 새 항목으로 표시하지 않습니다."
     ],
     "OtherEnglish": [
-      "Adjust brightness, depth and transparency directly on the screen, with fine adjustments collapsed by default."
+      "Adjust brightness, depth and transparency directly on the screen, with fine adjustments collapsed by default.",
+      "Previously read updates stay read after temporarily using an older version."
     ]
   },
   {
