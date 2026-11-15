@@ -2,26 +2,29 @@ using System.Text.Json;
 
 namespace DuckbillTweak.Plugin;
 
-internal sealed record ReleaseNote(string Version, string Date, string[] Korean, string[] English);
+internal sealed record ReleaseNote(string Version, string? Date, string[] Korean, string[] English,
+    string TitleKorean, string TitleEnglish, string SummaryKorean, string SummaryEnglish,
+    string[] OtherKorean, string[] OtherEnglish);
 
 internal static class ReleaseHistory
 {
     public static string CurrentVersion { get; } = typeof(ReleaseHistory).Assembly.GetName().Version!.ToString(4);
     public static IReadOnlyList<ReleaseNote> Entries { get; } = Load();
-
     private static ReleaseNote[] Load()
     {
         using var stream = typeof(ReleaseHistory).Assembly.GetManifestResourceStream("DuckbillTweak.ReleaseHistory")
             ?? throw new InvalidDataException("Missing embedded release history.");
         var entries = JsonSerializer.Deserialize<ReleaseNote[]>(stream)
             ?? throw new InvalidDataException("Empty release history.");
-        var current = Version.Parse(CurrentVersion);
-        if (entries.Length == 0 || entries.Any(entry => !Version.TryParse(entry.Version, out _) ||
-                !DateOnly.TryParseExact(entry.Date, "yyyy-MM-dd", out _) || entry.Korean.Length == 0 ||
-                entry.Korean.Length != entry.English.Length || entry.Korean.Concat(entry.English).Any(string.IsNullOrWhiteSpace)) ||
-            entries.Select(entry => entry.Version).Distinct().Count() != entries.Length)
+        if (entries.Length == 0 || entries.Any(e => !Version.TryParse(e.Version, out _) ||
+                (e.Date is not null && !DateOnly.TryParseExact(e.Date, "yyyy-MM-dd", out _)) ||
+                string.IsNullOrWhiteSpace(e.TitleKorean) || string.IsNullOrWhiteSpace(e.TitleEnglish) ||
+                e.Korean is not { Length: > 0 } || e.English is null || e.Korean.Length != e.English.Length ||
+                e.OtherKorean is null || e.OtherEnglish is null || e.OtherKorean.Length != e.OtherEnglish.Length ||
+                e.Korean.Concat(e.English).Concat(e.OtherKorean).Concat(e.OtherEnglish).Any(string.IsNullOrWhiteSpace)) ||
+            entries.Select(e => e.Version).Distinct().Count() != entries.Length)
             throw new InvalidDataException("Invalid release history.");
-        return entries.Where(entry => Version.Parse(entry.Version) <= current)
-            .OrderByDescending(entry => Version.Parse(entry.Version)).Take(10).ToArray();
+        return entries.Where(e => Version.Parse(e.Version) <= Version.Parse(CurrentVersion))
+            .OrderByDescending(e => Version.Parse(e.Version)).ToArray();
     }
 }

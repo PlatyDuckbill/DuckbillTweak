@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="SettingsTitle" xml:space="preserve"><value>Feature settings</value></data>
+  <data name="SettingsSummary" xml:space="preserve"><value>Choose the conveniences you want to use.</value></data>
+  <data name="UpdatesTitle" xml:space="preserve"><value>What’s new</value></data>
+  <data name="UpdatesOpen" xml:space="preserve"><value>View updates</value></data>
+  <data name="UpdatesNew" xml:space="preserve"><value>View updates · New</value></data>
+  <data name="Version" xml:space="preserve"><value>Version {0}</value></data>
+  <data name="Published" xml:space="preserve"><value>Released: {0}</value></data>
+  <data name="Development" xml:space="preserve"><value>In development</value></data>
+  <data name="Offline" xml:space="preserve"><value>Bundled release notes. Reopen them from settings.</value></data>
+  <data name="Other" xml:space="preserve"><value>Other improvements</value></data>
+  <data name="Confirm" xml:space="preserve"><value>Confirm</value></data>
+  <data name="Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Defaults" xml:space="preserve"><value>Defaults</value></data>
+  <data name="Details" xml:space="preserve"><value>Details</value></data>
+  <data name="SaveFailed" xml:space="preserve"><value>Settings could not be saved. Changes may be lost on reload.</value></data>
+  <data name="Appearance" xml:space="preserve"><value>Appearance</value></data>
+  <data name="Theme" xml:space="preserve"><value>Theme</value></data>
+  <data name="Graphite" xml:space="preserve"><value>Charcoal</value></data>
+  <data name="Paper" xml:space="preserve"><value>Paper</value></data>
+  <data name="Language" xml:space="preserve"><value>Language</value></data>
+  <data name="Combat" xml:space="preserve"><value>Combat</value></data>
+  <data name="Shops" xml:space="preserve"><value>Shops and loot</value></data>
+  <data name="Social" xml:space="preserve"><value>Social</value></data>
+  <data name="Food" xml:space="preserve"><value>Food reminder</value></data>
+  <data name="FoodDescription" xml:space="preserve"><value>Show party food time in Ready Check. Warn locally during Extreme, Savage and Ultimate countdowns.</value></data>
+  <data name="FoodMinutes" xml:space="preserve"><value>Low-food thresholds (minutes)</value></data>
+  <data name="Extreme" xml:space="preserve"><value>Extreme</value></data>
+  <data name="Savage" xml:space="preserve"><value>Savage</value></data>
+  <data name="Ultimate" xml:space="preserve"><value>Ultimate</value></data>
+  <data name="FoodHint" xml:space="preserve"><value>Set each threshold from 1 to 60 minutes. Unreadable food is unknown and excluded from the low-food count.</value></data>
+  <data name="FoodScope" xml:space="preserve"><value>Countdown warnings use a central alert and local chat. Normal, Unreal and Chaotic duties are excluded.</value></data>
+  <data name="Position" xml:space="preserve"><value>Positional and combo markers</value></data>
+  <data name="PositionDescription" xml:space="preserve"><value>Mark positional hits, misses and broken combos on your damage text.</value></data>
+  <data name="PositionHint" xml:space="preserve"><value>Broken combos take priority. Icons follow the skill name; colors apply to damage numbers.</value></data>
+  <data name="Hit" xml:space="preserve"><value>Positional hit</value></data>
+  <data name="Miss" xml:space="preserve"><value>Positional miss</value></data>
+  <data name="Combo" xml:space="preserve"><value>Broken combo</value></data>
+  <data name="Enabled" xml:space="preserve"><value>Enabled</value></data>
+  <data name="Icon" xml:space="preserve"><value>Icon</value></data>
+  <data name="Color" xml:space="preserve"><value>Color</value></data>
+  <data name="ChangeColor" xml:space="preserve"><value>Change color</value></data>
+  <data name="Preset" xml:space="preserve"><value>Color preset</value></data>
+  <data name="PresetDefault" xml:space="preserve"><value>Gold / Violet / Grey</value></data>
+  <data name="PresetVivid" xml:space="preserve"><value>Magenta / Cyan / Grey</value></data>
+  <data name="Custom" xml:space="preserve"><value>Custom</value></data>
+  <data name="Pvp" xml:space="preserve"><value>PvP chat bubbles</value></data>
+  <data name="PvpDescription" xml:space="preserve"><value>Use the channel, color and display rules from your character’s chat bubble settings.</value></data>
+  <data name="Merchant" xml:space="preserve"><value>Shop filters and currencies</value></data>
+  <data name="MerchantDescription" xml:space="preserve"><value>Filter owned collectibles and check currency requirements inside the game’s shop screens.</value></data>
+  <data name="Loot" xml:space="preserve"><value>Loot roll results</value></data>
+  <data name="LootDescription" xml:space="preserve"><value>Right-click an item in the loot list to see choices and publicly received roll results.</value></data>
+  <data name="Emote" xml:space="preserve"><value>Follow looping emotes</value></data>
+  <data name="EmoteDescription" xml:space="preserve"><value>Right-click a character using a looping emote and choose Follow.</value></data>
+  <data name="Timing" xml:space="preserve"><value>Timing</value></data>
+  <data name="TimingOwn" xml:space="preserve"><value>My screen</value></data>
+  <data name="TimingMiddle" xml:space="preserve"><value>Middle (40 ms)</value></data>
+  <data name="TimingOthers" xml:space="preserve"><value>Other players (80 ms)</value></data>
+  <data name="TimingEarly" xml:space="preserve"><value>Earlier (120 ms)</value></data>
+  <data name="TimingHint" xml:space="preserve"><value>Other players see your animation after your network delay. Choose the timing reference that suits you.</value></data>
+  <data name="Unavailable" xml:space="preserve"><value>This feature is unavailable on the current game version. Check for a plugin update.</value></data>
+  <data name="ExchangeUnavailable" xml:space="preserve"><value>Currency-exchange shop support is currently unavailable. Other shop tools remain available.</value></data>
+  <data name="FoodUnavailable" xml:space="preserve"><value>Food observation could not start. Other features remain available.</value></data>
+  <data name="IconChoice" xml:space="preserve"><value>{0} · #{1}</value></data>
+</root>

@@ -1,4 +1,6 @@
 using System.Numerics;
+using Dalamud.Interface.Windowing;
+using DuckbillTweak.Plugin.UI;
 using Dalamud.Game.Command;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
@@ -42,10 +44,9 @@ public sealed class Plugin : IAsyncDalamudPlugin
     private readonly LootService loot;
     private readonly List<string> registeredCommands = [];
     private readonly ISigScanner scanner;
-    private NativeSettingsAddon? settings;
-    private NativeChangelogAddon? changelog;
-    private NativePositionalColorAddon? colors;
-    private NativeColorPickerAddon? colorPicker;
+    private readonly WindowSystem windows = new("DuckbillTweak");
+    private SettingsWindow? settings;
+    private ChangelogWindow? changelog;
     private NativeCurrencyAddon? currency;
     private NativeLootAddon? lootPopup;
     private NativeShopController? shop;
@@ -57,7 +58,6 @@ public sealed class Plugin : IAsyncDalamudPlugin
     private EmoteFollow? emoteFollow;
     private FoodReminder? food;
     private NativeFoodReadyCheck? foodReadyCheck;
-    private NativeFoodSettingsAddon? foodSettings;
     private readonly IToastGui toast;
     private bool toolkitInitialized;
     private bool disposed;
@@ -84,6 +84,8 @@ public sealed class Plugin : IAsyncDalamudPlugin
         if (config.Version is < 1 or > 3) throw new InvalidOperationException("Unsupported configuration version.");
         config.Version = 3;
         config.LastSeenChangelogVersion ??= "";
+        config.Theme = config.Theme == "paper" ? "paper" : "graphite";
+        config.UiLanguage = config.UiLanguage == "en" ? "en" : "ko";
         if (MigratePositionalDisplay(config)) pluginInterface.SavePluginConfig(config);
         merchants = new(data, unlocks, inventory, client, player, conditions, target, gameGui, framework, log, config, pluginInterface);
         try { loot = new(chat, data, client, player, party, framework, config, log); }
@@ -108,14 +110,8 @@ public sealed class Plugin : IAsyncDalamudPlugin
             {
                 merchants.NativeOwnershipEnabled = true;
                 loot.NativeObservationEnabled = true;
-                changelog = new NativeChangelogAddon(config, Save) { InternalName = "DuckbillTweakChangelog", Title = "업데이트 내역", Size = new Vector2(650, 420) };
-                colorPicker = new NativeColorPickerAddon { InternalName = "DuckbillTweakColorPicker", Title = "색 선택", Size = new Vector2(400, 425) };
-                colors = new NativePositionalColorAddon(config, Save, colorPicker) { InternalName = "DuckbillTweakPositionalColors", Title = "측후·콤보 표시 세부 설정", Size = new Vector2(640, 390) };
                 bubbles = new(framework, client, log, config, code.Pvp);
                 positional = new(interop, framework, flyText, objects, client, data, log, config);
-                foodSettings = new NativeFoodSettingsAddon(config, Save) { InternalName = "DuckbillTweakFoodSettings", Title = "음식 알리미 세부 설정", Size = new Vector2(490, 350) };
-                settings = new NativeSettingsAddon(config, Save, () => changelog.Open(), () => colors.Open(), () => foodSettings.Open(),
-                    bubbles.Available, code.Exchange.Available, positional.Available) { InternalName = "DuckbillTweakSettings", Title = "DuckbillTweak", Size = new Vector2(580, 590) };
                 currency = new NativeCurrencyAddon(merchants) { InternalName = "DuckbillTweakCurrency", Title = "필요 재화", Size = new Vector2(760, 586) };
                 lootPopup = new NativeLootAddon(loot, config) { InternalName = "DuckbillTweakRolls", Title = "입찰 현황", Size = new Vector2(420, 420) };
                 shop = new(merchants, currency, log, addonLifecycle);
@@ -138,6 +134,12 @@ public sealed class Plugin : IAsyncDalamudPlugin
                     log.Error(exception, "Food reminder initialization failed; other features remain active");
                 }
             });
+            changelog = new ChangelogWindow(config, ChangeSettings);
+            settings = new SettingsWindow(config, ChangeSettings, () => changelog.Open(), () => changelog.IsUnread,
+                bubbles?.Available == true, code.Exchange.Available, positional?.Available == true, food is not null, DrawGameIcon);
+            windows.AddWindow(settings);
+            windows.AddWindow(changelog);
+            pluginInterface.UiBuilder.Draw += Draw;
             foreach (var command in new[] { "/duckbilltweak", "/dbtw" })
             {
                 if (!commands.AddHandler(command, new CommandInfo(OnCommand) { HelpMessage = "DuckbillTweak 기능 설정" }))
@@ -151,6 +153,15 @@ public sealed class Plugin : IAsyncDalamudPlugin
     }
 
     private void Save() => pluginInterface.SavePluginConfig(config);
+    // Public SeString renderer previews the same BitmapFontIcon used by the native FlyText.
+    private static readonly IReadOnlyDictionary<uint, byte[]> IconPreviews = PositionalDisplaySettings.IconChoices
+        .ToDictionary(icon => icon.Id, icon => new Dalamud.Game.Text.SeStringHandling.SeStringBuilder()
+            .AddIcon((Dalamud.Game.Text.SeStringHandling.BitmapFontIcon)icon.Id).Build().Encode());
+    private static void DrawGameIcon(uint id)
+    {
+        if (IconPreviews.TryGetValue(id, out var encoded))
+            Dalamud.Interface.Utility.ImGuiHelpers.SeStringWrapped(encoded);
+    }
 
     /// <summary>
     /// Moves positional/combo display values that still equal an earlier default or preset to the current ones.
@@ -159,36 +170,56 @@ public sealed class Plugin : IAsyncDalamudPlugin
     private static bool MigratePositionalDisplay(Configuration config)
     {
         var changed = false;
-        if (NativePositionalColorAddon.PreviousDefaults.Contains((config.PositionalHitColor, config.PositionalMissColor)))
+        if (PositionalDisplaySettings.PreviousDefaults.Contains((config.PositionalHitColor, config.PositionalMissColor)))
         {
-            (config.PositionalHitColor, config.PositionalMissColor) = (NativePositionalColorAddon.DefaultHit, NativePositionalColorAddon.DefaultMiss);
+            (config.PositionalHitColor, config.PositionalMissColor) = (PositionalDisplaySettings.DefaultHit, PositionalDisplaySettings.DefaultMiss);
             changed = true;
         }
-        if (config.ComboFailColor == NativePositionalColorAddon.PreviousDefaultCombo)
+        if (config.ComboFailColor == PositionalDisplaySettings.PreviousDefaultCombo)
         {
-            config.ComboFailColor = NativePositionalColorAddon.DefaultCombo;
+            config.ComboFailColor = PositionalDisplaySettings.DefaultCombo;
             changed = true;
         }
         var colors = (config.PositionalHitColor, config.PositionalMissColor, config.ComboFailColor);
-        foreach (var (old, current) in NativePositionalColorAddon.PreviousPresets)
+        foreach (var (old, current) in PositionalDisplaySettings.PreviousPresets)
             if (colors == old)
             {
                 (config.PositionalHitColor, config.PositionalMissColor, config.ComboFailColor) = current;
                 changed = true;
                 break;
             }
-        foreach (var (old, current) in NativePositionalColorAddon.PreviousHitIcons)
+        foreach (var (old, current) in PositionalDisplaySettings.PreviousHitIcons)
             if (config.PositionalHitIcon == old) { config.PositionalHitIcon = current; changed = true; }
-        foreach (var (old, current) in NativePositionalColorAddon.PreviousMissIcons)
+        foreach (var (old, current) in PositionalDisplaySettings.PreviousMissIcons)
             if (config.PositionalMissIcon == old) { config.PositionalMissIcon = current; changed = true; }
         return changed;
     }
-    private void OpenSettings() => _ = framework.Run(() => settings?.Open());
+    // All configuration writes stay on Framework, including saves from ImGui.
+    // Pending callbacks cannot reopen screens or save after unload.
+    private void ChangeSettings(Action<Configuration> change) => _ = framework.Run(() =>
+    {
+        if (disposed) return;
+        change(config);
+        try { Save(); if (settings is not null) settings.SaveFailed = false; }
+        catch (Exception exception)
+        {
+            if (settings is not null) settings.SaveFailed = true;
+            log.Error(exception, "Could not save settings");
+        }
+    });
+    private void Draw()
+    {
+        if (disposed) return;
+        UiText.English = config.UiLanguage == "en";
+        using var theme = new ThemeScope(config.Theme == "paper");
+        windows.Draw();
+    }
+    private void OpenSettings() => _ = framework.Run(() => { if (!disposed && settings is not null) settings.IsOpen = true; });
     private void OnCommand(string command, string arguments)
     {
         var argument = arguments.Trim();
         if (argument.Equals("changelog", StringComparison.OrdinalIgnoreCase))
-            _ = framework.Run(() => changelog?.Open());
+            _ = framework.Run(() => { if (!disposed) changelog?.Open(); });
 #if DEBUG
         else if (argument.Equals("probe", StringComparison.OrdinalIgnoreCase))
             _ = framework.Run(() =>
@@ -219,6 +250,8 @@ public sealed class Plugin : IAsyncDalamudPlugin
     {
         if (disposed) return;
         disposed = true;
+        pluginInterface.UiBuilder.Draw -= Draw;
+        windows.RemoveAllWindows();
         pluginInterface.UiBuilder.OpenConfigUi -= OpenSettings;
         pluginInterface.UiBuilder.OpenMainUi -= OpenSettings;
         foreach (var command in registeredCommands) commands.RemoveHandler(command);
@@ -231,11 +264,6 @@ public sealed class Plugin : IAsyncDalamudPlugin
             foreach (var exchange in exchanges) exchange.Dispose();
             merchants.Dispose(); loot.Dispose();
         });
-        if (settings is not null) await settings.DisposeAsync();
-        if (changelog is not null) await changelog.DisposeAsync();
-        if (colors is not null) await colors.DisposeAsync();
-        if (colorPicker is not null) await colorPicker.DisposeAsync();
-        if (foodSettings is not null) await foodSettings.DisposeAsync();
         if (currency is not null) await currency.DisposeAsync();
         if (lootPopup is not null) await lootPopup.DisposeAsync();
         if (toolkitInitialized) await KamiToolKitLibrary.DisposeAsync();

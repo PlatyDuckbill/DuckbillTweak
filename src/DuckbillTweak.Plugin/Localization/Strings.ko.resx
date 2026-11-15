@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="SettingsTitle" xml:space="preserve"><value>기능 설정</value></data>
+  <data name="SettingsSummary" xml:space="preserve"><value>사용할 편의 기능을 선택하세요.</value></data>
+  <data name="UpdatesTitle" xml:space="preserve"><value>업데이트 내역</value></data>
+  <data name="UpdatesOpen" xml:space="preserve"><value>내역 보기</value></data>
+  <data name="UpdatesNew" xml:space="preserve"><value>새 업데이트 보기</value></data>
+  <data name="Version" xml:space="preserve"><value>버전 {0}</value></data>
+  <data name="Published" xml:space="preserve"><value>배포: {0}</value></data>
+  <data name="Development" xml:space="preserve"><value>개발 중</value></data>
+  <data name="Offline" xml:space="preserve"><value>플러그인에 포함된 업데이트 내역입니다. 설정에서 다시 열 수 있습니다.</value></data>
+  <data name="Other" xml:space="preserve"><value>기타 개선</value></data>
+  <data name="Confirm" xml:space="preserve"><value>확인</value></data>
+  <data name="Cancel" xml:space="preserve"><value>취소</value></data>
+  <data name="Defaults" xml:space="preserve"><value>기본값</value></data>
+  <data name="Details" xml:space="preserve"><value>세부 설정</value></data>
+  <data name="SaveFailed" xml:space="preserve"><value>설정을 저장하지 못했습니다. 다시 로드하면 변경사항이 사라질 수 있습니다.</value></data>
+  <data name="Appearance" xml:space="preserve"><value>화면 설정</value></data>
+  <data name="Theme" xml:space="preserve"><value>테마</value></data>
+  <data name="Graphite" xml:space="preserve"><value>차콜</value></data>
+  <data name="Paper" xml:space="preserve"><value>페이퍼</value></data>
+  <data name="Language" xml:space="preserve"><value>언어</value></data>
+  <data name="Combat" xml:space="preserve"><value>전투</value></data>
+  <data name="Shops" xml:space="preserve"><value>상점 · 입찰</value></data>
+  <data name="Social" xml:space="preserve"><value>소셜</value></data>
+  <data name="Food" xml:space="preserve"><value>음식 알리미</value></data>
+  <data name="FoodDescription" xml:space="preserve"><value>준비 확인에 파티원의 음식 시간을 표시하고 극·영식·절 초읽기 중 부족한 시간을 알려 줍니다.</value></data>
+  <data name="FoodMinutes" xml:space="preserve"><value>음식 부족 기준 · 분</value></data>
+  <data name="Extreme" xml:space="preserve"><value>극 토벌전</value></data>
+  <data name="Savage" xml:space="preserve"><value>영식</value></data>
+  <data name="Ultimate" xml:space="preserve"><value>절</value></data>
+  <data name="FoodHint" xml:space="preserve"><value>각 기준은 1~60분입니다. 읽지 못한 음식 시간은 미확인이며 부족 인원에 포함하지 않습니다.</value></data>
+  <data name="FoodScope" xml:space="preserve"><value>초읽기 경고는 중앙과 내 채팅창에 표시합니다. 일반·환·멸 콘텐츠는 제외합니다.</value></data>
+  <data name="Position" xml:space="preserve"><value>측후·콤보 표시</value></data>
+  <data name="PositionDescription" xml:space="preserve"><value>내 데미지 텍스트에서 측후 성공·실패와 콤보 실패를 아이콘과 색으로 구분합니다.</value></data>
+  <data name="PositionHint" xml:space="preserve"><value>콤보 실패가 측후보다 우선합니다. 아이콘은 기술 이름 뒤에, 색은 데미지 숫자에 적용합니다.</value></data>
+  <data name="Hit" xml:space="preserve"><value>측후 성공</value></data>
+  <data name="Miss" xml:space="preserve"><value>측후 실패</value></data>
+  <data name="Combo" xml:space="preserve"><value>콤보 실패</value></data>
+  <data name="Enabled" xml:space="preserve"><value>활성화</value></data>
+  <data name="Icon" xml:space="preserve"><value>아이콘</value></data>
+  <data name="Color" xml:space="preserve"><value>색</value></data>
+  <data name="ChangeColor" xml:space="preserve"><value>색 변경</value></data>
+  <data name="Preset" xml:space="preserve"><value>색 프리셋</value></data>
+  <data name="PresetDefault" xml:space="preserve"><value>금색 · 보라 · 회색</value></data>
+  <data name="PresetVivid" xml:space="preserve"><value>마젠타 · 청록 · 회색</value></data>
+  <data name="Custom" xml:space="preserve"><value>사용자 지정</value></data>
+  <data name="Pvp" xml:space="preserve"><value>PvP 전장 말풍선</value></data>
+  <data name="PvpDescription" xml:space="preserve"><value>캐릭터 설정의 대화 말풍선 채널·색상·표시 방식을 따릅니다.</value></data>
+  <data name="Merchant" xml:space="preserve"><value>상점 품목 필터와 필요 재화</value></data>
+  <data name="MerchantDescription" xml:space="preserve"><value>게임 상점 안에서 보유 수집품을 제외하고 필요 재화를 확인합니다.</value></data>
+  <data name="Loot" xml:space="preserve"><value>아이템별 입찰 숫자</value></data>
+  <data name="LootDescription" xml:space="preserve"><value>입찰 목록의 아이템을 우클릭해 선택 현황과 공개된 주사위 결과를 확인합니다.</value></data>
+  <data name="Emote" xml:space="preserve"><value>감정표현 따라하기</value></data>
+  <data name="EmoteDescription" xml:space="preserve"><value>반복 감정표현 중인 캐릭터를 우클릭하고 따라하기를 선택합니다.</value></data>
+  <data name="Timing" xml:space="preserve"><value>박자 기준</value></data>
+  <data name="TimingOwn" xml:space="preserve"><value>내 화면 기준</value></data>
+  <data name="TimingMiddle" xml:space="preserve"><value>중간 (40ms)</value></data>
+  <data name="TimingOthers" xml:space="preserve"><value>다른 사람 화면 기준 (80ms)</value></data>
+  <data name="TimingEarly" xml:space="preserve"><value>더 앞당김 (120ms)</value></data>
+  <data name="TimingHint" xml:space="preserve"><value>다른 사람에게는 인터넷 지연만큼 늦게 보이므로 원하는 박자 기준을 선택할 수 있습니다.</value></data>
+  <data name="Unavailable" xml:space="preserve"><value>현재 게임 버전에서 이 기능을 사용할 수 없습니다. 플러그인 업데이트를 확인하세요.</value></data>
+  <data name="ExchangeUnavailable" xml:space="preserve"><value>재화 교환 상점은 현재 사용할 수 없습니다. 다른 상점 도구는 사용할 수 있습니다.</value></data>
+  <data name="FoodUnavailable" xml:space="preserve"><value>음식 관찰을 시작하지 못했습니다. 다른 기능은 사용할 수 있습니다.</value></data>
+  <data name="IconChoice" xml:space="preserve"><value>{0} · #{1}</value></data>
+</root>

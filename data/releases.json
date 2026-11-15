@@ -1,19 +1,51 @@
 [
   {
+    "Version": "0.3.0.0",
+    "Date": null,
+    "TitleKorean": "새 디자인 · 기능 설정",
+    "TitleEnglish": "Redesigned feature settings",
+    "SummaryKorean": "오리부리 공통 디자인에서 기능과 세부 설정을 한곳에서 관리할 수 있습니다.",
+    "SummaryEnglish": "Manage features and their details together with the shared Duckbill design.",
+    "Korean": [
+      "전투·상점과 입찰·소셜로 묶은 설정에서 기능을 켜고 끌 수 있습니다.",
+      "음식 기준 시간과 측후·콤보 아이콘·색상을 관련 기능 아래에서 설정할 수 있습니다.",
+      "대표 기능과 기타 개선으로 정리한 업데이트 내역을 읽고 새 업데이트를 구분할 수 있습니다."
+    ],
+    "English": [
+      "Turn features on or off in grouped combat, shop and loot, and social settings.",
+      "Adjust food thresholds and positional/combo icons and colors beside their feature settings.",
+      "Read updates by their main feature and other improvements, with unread updates marked in settings."
+    ],
+    "OtherKorean": [
+      "차콜·페이퍼 테마와 한국어·영어를 선택할 수 있습니다."
+    ],
+    "OtherEnglish": [
+      "Choose Charcoal or Paper and Korean or English."
+    ]
+  },
+  {
     "Version": "0.2.3.0",
     "Date": "2026-11-15",
     "Korean": [
       "음식 알리미를 켜면 준비 확인 화면에서 파티원의 음식 잔여 시간을 볼 수 있습니다(기본 꺼짐).",
       "극·영식·절 초읽기 중 음식 시간이 부족한 파티원을 중앙 경고와 내 채팅창 요약으로 한 번 알려 줍니다.",
       "음식 기준 시간은 극 10분·영식 15분·절 20분이며, 세부 설정에서 각각 1~60분으로 변경할 수 있습니다.",
-      "음식 정보를 확인할 수 없는 파티원은 '미확인'으로 표시하며 부족 인원에서 제외합니다.",
-      "감정표현 따라하기의 첫 측정과 재시작에서도 즉시 실행하지 않고 상대의 박자를 기다리도록 개선했습니다."
+      "음식 정보를 확인할 수 없는 파티원은 '미확인'으로 표시하며 부족 인원에서 제외합니다."
     ],
     "English": [
       "Enable the new Food Reminder to see party members' remaining food time in Ready Check (off by default).",
       "During countdowns in Extreme, Savage and Ultimate duties, warn once with a central alert and a summary in your local chat when party members have too little food time left.",
       "Default food-time thresholds are 10 minutes for Extreme, 15 for Savage and 20 for Ultimate; each can be set from 1 to 60 minutes in the detail settings.",
-      "Unreadable food information is shown as unknown and excluded from the low-food count.",
+      "Unreadable food information is shown as unknown and excluded from the low-food count."
+    ],
+    "TitleKorean": "음식 알리미",
+    "TitleEnglish": "Food reminder",
+    "SummaryKorean": "준비 확인과 초읽기에서 파티원의 음식 시간을 확인할 수 있습니다.",
+    "SummaryEnglish": "Check party food time during Ready Check and countdowns.",
+    "OtherKorean": [
+      "감정표현 따라하기의 첫 측정과 재시작에서도 즉시 실행하지 않고 상대의 박자를 기다리도록 개선했습니다."
+    ],
+    "OtherEnglish": [
       "Emote follow now waits for the target's beat during first-use calibration and restarts, instead of starting immediately."
     ]
   },
@@ -22,12 +54,20 @@
     "Date": "2026-11-10",
     "Korean": [
       "2026년 11월 3일 게임 업데이트 이후 꺼져 있던 PvP 말풍선·재화 교환 상점 도구·측후·콤보 표시가 다시 동작합니다.",
-      "이제 게임이 업데이트되어도 이 기능들이 매번 멈추지 않습니다. 필요한 게임 코드를 찾지 못한 기능만 꺼지고 설정 화면에서 안내합니다.",
-      "업데이트 내역을 버전마다 고르지 않고 한 화면에서 스크롤해 볼 수 있습니다."
+      "이제 게임이 업데이트되어도 이 기능들이 매번 멈추지 않습니다. 필요한 게임 코드를 찾지 못한 기능만 꺼지고 설정 화면에서 안내합니다."
     ],
     "English": [
       "PvP chat bubbles, currency exchange shop tools and positional/combo markers work again after the 2026.11.03 game update.",
-      "These features no longer stop on every game update. Only a feature whose game code cannot be found turns off, with a notice in settings.",
+      "These features no longer stop on every game update. Only a feature whose game code cannot be found turns off, with a notice in settings."
+    ],
+    "TitleKorean": "게임 업데이트 호환성",
+    "TitleEnglish": "Game-update compatibility",
+    "SummaryKorean": "필요한 게임 동작을 확인한 기능을 다시 사용할 수 있습니다.",
+    "SummaryEnglish": "Use features whose game contracts can be resolved.",
+    "OtherKorean": [
+      "업데이트 내역을 버전마다 고르지 않고 한 화면에서 스크롤해 볼 수 있습니다."
+    ],
+    "OtherEnglish": [
       "Release history now shows every version on one scrolling page."
     ]
   },
@@ -43,19 +83,33 @@
       "Emote follow now asks whether to keep your current facing or face the character.",
       "Fix emote follow stopping early on emotes with an opening motion.",
       "Fix emote follow stopping when an emote that ends on re-execution could not restart right away, or when a long loop needed several attempts."
-    ]
+    ],
+    "TitleKorean": "감정표현 따라하기 개선",
+    "TitleEnglish": "Emote-follow improvements",
+    "SummaryKorean": "바라보는 방향을 선택하고 더 안정적으로 감정표현을 따라할 수 있습니다.",
+    "SummaryEnglish": "Choose your facing and follow looping emotes more reliably.",
+    "OtherKorean": [],
+    "OtherEnglish": []
   },
   {
     "Version": "0.2.2.0",
     "Date": "2026-11-10",
     "Korean": [
       "반복 감정표현 중인 캐릭터를 우클릭해 같은 감정표현을 박자에 맞춰 따라할 수 있습니다. 다른 사람 화면에서 맞게 보이도록 조금 앞당겨 시작하는 박자 기준도 고를 수 있습니다.",
-      "종족마다 동작 길이가 다른 감정표현은 시작만 맞춥니다.",
-      "측후·콤보 세부 설정의 색 선택 창에 엉뚱한 확인 문구가 나오고, 다시 열면 색이 바뀌지 않던 문제를 수정했습니다."
+      "종족마다 동작 길이가 다른 감정표현은 시작만 맞춥니다."
     ],
     "English": [
       "Right-click a character in a looping emote to perform the same emote in time with them. A timing option can start slightly earlier so other players see you on the beat.",
-      "Emotes whose animation length differs by race are aligned at the start only.",
+      "Emotes whose animation length differs by race are aligned at the start only."
+    ],
+    "TitleKorean": "새 기능 · 감정표현 따라하기",
+    "TitleEnglish": "New · Follow looping emotes",
+    "SummaryKorean": "반복 감정표현을 하는 캐릭터를 우클릭해 같은 동작을 따라할 수 있습니다.",
+    "SummaryEnglish": "Right-click a character to follow their looping emote.",
+    "OtherKorean": [
+      "측후·콤보 세부 설정의 색 선택 창에 엉뚱한 확인 문구가 나오고, 다시 열면 색이 바뀌지 않던 문제를 수정했습니다."
+    ],
+    "OtherEnglish": [
       "Fix the color picker in the positional/combo detail settings showing an unrelated confirm label and not changing colors after reopening."
     ]
   },
@@ -64,13 +118,21 @@
     "Date": "2026-11-09",
     "Korean": [
       "측면·후방 스킬의 데미지 숫자에 측후 성공과 실패를 아이콘과 색으로 표시할 수 있습니다.",
-      "콤보가 끊긴 채 사용한 스킬도 따로 표시할 수 있습니다.",
-      "한국 Dalamud 배포판이 다시 빌드되어도 설정과 기능이 차단되지 않습니다.",
-      "게임이 업데이트되면, 플러그인이 새 버전에 맞춰 업데이트될 때까지 PvP 말풍선·재화 교환 상점 도구·측후·콤보 표시는 동작하지 않습니다. 설정 화면에서 안내합니다."
+      "콤보가 끊긴 채 사용한 스킬도 따로 표시할 수 있습니다."
     ],
     "English": [
       "Show positional hits and misses on your damage numbers with an icon and color.",
-      "Optionally mark weaponskills used after a broken combo.",
+      "Optionally mark weaponskills used after a broken combo."
+    ],
+    "TitleKorean": "측후·콤보 표시",
+    "TitleEnglish": "Positional and combo markers",
+    "SummaryKorean": "내 데미지 텍스트에서 측후와 콤보 결과를 구분할 수 있습니다.",
+    "SummaryEnglish": "Distinguish positional and combo outcomes on your damage text.",
+    "OtherKorean": [
+      "한국 Dalamud 배포판이 다시 빌드되어도 설정과 기능이 차단되지 않습니다.",
+      "게임이 업데이트되면, 플러그인이 새 버전에 맞춰 업데이트될 때까지 PvP 말풍선·재화 교환 상점 도구·측후·콤보 표시는 동작하지 않습니다. 설정 화면에서 안내합니다."
+    ],
+    "OtherEnglish": [
       "Settings and features keep working when the Korean Dalamud distribution is rebuilt.",
       "After a game update, PvP chat bubbles, currency exchange shop tools and the positional/combo display do not work until the plugin is updated for the new game version, with a note in settings."
     ]
@@ -83,18 +145,32 @@
     ],
     "English": [
       "Restore settings and features on the updated dal4kr 15.0.3.9 Korean Dalamud distribution."
-    ]
+    ],
+    "TitleKorean": "한국 Dalamud 호환성 수정",
+    "TitleEnglish": "Korean Dalamud compatibility",
+    "SummaryKorean": "",
+    "SummaryEnglish": "",
+    "OtherKorean": [],
+    "OtherEnglish": []
   },
   {
     "Version": "0.2.0.3",
     "Date": "2026-10-28",
     "Korean": [
-      "상점 필터와 탭 전환 후 아이템 설명이나 우클릭 메뉴가 나타나지 않던 문제를 수정했습니다.",
+      "상점 필터와 탭 전환 후 아이템 설명이나 우클릭 메뉴가 나타나지 않던 문제를 수정했습니다."
+    ],
+    "English": [
+      "Fix missing item tooltips and context menus after filtering shop lists or switching tabs."
+    ],
+    "TitleKorean": "상점 필터와 말풍선 개선",
+    "TitleEnglish": "Shop filters and chat bubbles",
+    "SummaryKorean": "상점 필터를 사용한 뒤에도 아이템 설명과 메뉴를 열 수 있습니다.",
+    "SummaryEnglish": "Keep item tooltips and context menus available after filtering a shop.",
+    "OtherKorean": [
       "일반 채팅의 기본 말풍선이 이름표 뒤로 가려지지 않도록 표시 순서를 보정합니다. 별도 설정은 필요하지 않습니다.",
       "말풍선 겹침 문제는 수정 후 인게임 확인이 아직 필요합니다."
     ],
-    "English": [
-      "Fix missing item tooltips and context menus after filtering shop lists or switching tabs.",
+    "OtherEnglish": [
       "Keep native chat bubbles in front of nameplates, including in normal chat, without an additional setting.",
       "The chat-bubble overlap fix still needs in-game verification."
     ]
@@ -107,7 +183,13 @@
     ],
     "English": [
       "Fix loot tracking so opening the status window later shows collected choices, states, and publicly received roll results."
-    ]
+    ],
+    "TitleKorean": "입찰 현황 기록 수정",
+    "TitleEnglish": "Loot tracking fix",
+    "SummaryKorean": "",
+    "SummaryEnglish": "",
+    "OtherKorean": [],
+    "OtherEnglish": []
   },
   {
     "Version": "0.2.0.1",
@@ -117,7 +199,13 @@
     ],
     "English": [
       "Fix settings and features being blocked on the inspected dal4kr Korean Dalamud distribution."
-    ]
+    ],
+    "TitleKorean": "한국 Dalamud 호환성 수정",
+    "TitleEnglish": "Korean Dalamud compatibility",
+    "SummaryKorean": "",
+    "SummaryEnglish": "",
+    "OtherKorean": [],
+    "OtherEnglish": []
   },
   {
     "Version": "0.2.0.0",
@@ -125,14 +213,22 @@
     "Korean": [
       "상점에서 보유한 장비·수집품을 제외하거나 수집할 품목 위주로 볼 수 있습니다.",
       "현재 상점의 필요 재화와 부족분을 계산하고, 연동된 보관 기록도 확인할 수 있습니다.",
-      "입찰 아이템을 우클릭하면 참여자의 선택과 공개된 주사위 결과를 볼 수 있습니다.",
-      "PvP 전장에서 기본 대화 말풍선 설정을 따르는 말풍선을 켤 수 있습니다.",
-      "각 기능은 설정에서 따로 켜고 끌 수 있습니다."
+      "입찰 아이템을 우클릭하면 참여자의 선택과 공개된 주사위 결과를 볼 수 있습니다."
     ],
     "English": [
       "Filter owned equipment and collectibles, or focus shop lists on collection items.",
       "Calculate the current shop's currency requirements and shortages, with linked storage records.",
-      "Right-click loot items to view participant choices and publicly received roll results.",
+      "Right-click loot items to view participant choices and publicly received roll results."
+    ],
+    "TitleKorean": "첫 공개 · 상점과 입찰 편의 기능",
+    "TitleEnglish": "First release · Shops and loot",
+    "SummaryKorean": "상점과 입찰의 편의 기능을 설정에서 골라 사용할 수 있습니다.",
+    "SummaryEnglish": "Choose shop and loot conveniences in settings.",
+    "OtherKorean": [
+      "PvP 전장에서 기본 대화 말풍선 설정을 따르는 말풍선을 켤 수 있습니다.",
+      "각 기능은 설정에서 따로 켜고 끌 수 있습니다."
+    ],
+    "OtherEnglish": [
       "Enable PvP chat bubbles using your game's chat bubble settings.",
       "Turn each feature on or off independently in settings."
     ]
