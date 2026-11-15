@@ -35,6 +35,7 @@ internal sealed class ChangelogWindow(Configuration config, Action<Action<Config
     }
     public override void Draw()
     {
+        using var contentStyle = GameThemeChrome.Content();
         GameThemeChrome.WindowSurface();
         if (ImGui.BeginChild("###ChangelogContent", new(0, -ImGui.GetFrameHeightWithSpacing())))
         {

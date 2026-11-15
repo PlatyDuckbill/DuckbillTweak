@@ -36,6 +36,7 @@ internal sealed class SettingsWindow : Window
     public override void OnOpen() { if (unread()) showUpdates(); }
     public override void Draw()
     {
+        using var contentStyle = GameThemeChrome.Content();
         GameThemeChrome.WindowSurface();
         if (GameThemeChrome.SettingsHeader(UiText.Get(T.SettingsTitle), UiText.Get(unread() ? T.UpdatesNew : T.UpdatesOpen))) showUpdates();
         var footerHeight = ImGui.GetFrameHeightWithSpacing() + (SaveFailed
