@@ -9,6 +9,7 @@ public sealed class Configuration : IPluginConfiguration
     public string Theme { get; set; } = "smoke";
     public int ThemeBrightness { get; set; } = UI.GameThemePalette.DefaultBrightness;
     public int ThemeDepth { get; set; } = UI.GameThemePalette.DefaultDepth;
+    public int ThemeTransparency { get; set; } = UI.GameThemePalette.DefaultTransparency;
     public string UiLanguage { get; set; } = "ko";
     public bool PvpBubbles { get; set; }
     public bool MerchantTools { get; set; }

@@ -2,9 +2,9 @@ using System.Numerics;
 
 namespace DuckbillTweak.Plugin.UI;
 
-internal sealed class ThemeScope(bool light, int brightness = GameThemePalette.DefaultBrightness, int depth = GameThemePalette.DefaultDepth) : IDisposable
+internal sealed class ThemeScope(bool light, int brightness = GameThemePalette.DefaultBrightness, int depth = GameThemePalette.DefaultDepth, int transparency = GameThemePalette.DefaultTransparency) : IDisposable
 {
-    private readonly GameThemeScope scope = new(light, brightness, depth);
+    private readonly GameThemeScope scope = new(light, brightness, depth, transparency);
     public static bool IsLight(string? theme) => theme is "pearl" or "paper" or "cloud" or "light";
     public static Vector4 Accent(bool light) => GameThemeScope.Current is { } p && p.Light == light ? p.Accent : GameThemePalette.For(light).Accent;
     public static Vector4 Hex(uint rgb) => GameThemePalette.Hex(rgb);

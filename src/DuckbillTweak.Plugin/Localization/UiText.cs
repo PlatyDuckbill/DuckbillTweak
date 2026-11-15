@@ -40,6 +40,7 @@ internal enum TextKey
     AppearanceStyle,
     AppearanceBrightness,
     AppearanceDepth,
+    AppearanceTransparency,
     AppearanceHint,
     AppearanceReset,
     AppearancePreview,

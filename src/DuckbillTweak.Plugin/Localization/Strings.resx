@@ -86,7 +86,8 @@
   <data name="AppearanceStyle" xml:space="preserve"><value>Screen style</value></data>
   <data name="AppearanceBrightness" xml:space="preserve"><value>Screen brightness</value></data>
   <data name="AppearanceDepth" xml:space="preserve"><value>Surface depth</value></data>
-  <data name="AppearanceHint" xml:space="preserve"><value>Preview below while dragging; release to apply. Brightness does not change transparency. Depth at 0% gives a flat surface.</value></data>
-  <data name="AppearanceReset" xml:space="preserve"><value>Reset brightness and depth</value></data>
+  <data name="AppearanceHint" xml:space="preserve"><value>Preview below while dragging; release to apply. Higher transparency reveals more of the game background. Depth at 0% gives a flat surface.</value></data>
+  <data name="AppearanceReset" xml:space="preserve"><value>Reset brightness, depth and transparency</value></data>
   <data name="AppearancePreview" xml:space="preserve"><value>Surface preview</value></data>
+  <data name="AppearanceTransparency" xml:space="preserve"><value>Background transparency</value></data>
 </root>

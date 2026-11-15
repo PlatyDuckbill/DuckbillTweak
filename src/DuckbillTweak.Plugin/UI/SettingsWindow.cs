@@ -30,7 +30,7 @@ internal sealed class SettingsWindow : Window
         BgAlpha = .94f;
     }
     public override void PreDraw() => BgAlpha = GameThemeScope.Current?.Surface.W
-        ?? GameThemePalette.For(ThemeScope.IsLight(config.Theme), config.ThemeBrightness, config.ThemeDepth).Surface.W;
+        ?? GameThemePalette.For(ThemeScope.IsLight(config.Theme), config.ThemeBrightness, config.ThemeDepth, config.ThemeTransparency).Surface.W;
     public override void OnOpen() { if (unread()) showUpdates(); }
     public override void Draw()
     {
@@ -115,10 +115,10 @@ internal sealed class SettingsWindow : Window
         if (GameThemeChrome.Combo("###Language", ref language, new[] { "한국어", "English" }, 2))
         { var value = language == 1 ? "en" : "ko"; change(c => c.UiLanguage = value); }
         ImGui.EndTable();
-        if (appearance.Draw(ThemeScope.IsLight(config.Theme), config.ThemeBrightness, config.ThemeDepth,
-            UiText.Get(T.AppearanceBrightness), UiText.Get(T.AppearanceDepth), UiText.Get(T.AppearanceHint),
+        if (appearance.Draw(ThemeScope.IsLight(config.Theme), config.ThemeBrightness, config.ThemeDepth, config.ThemeTransparency,
+            UiText.Get(T.AppearanceBrightness), UiText.Get(T.AppearanceDepth), UiText.Get(T.AppearanceTransparency), UiText.Get(T.AppearanceHint),
             UiText.Get(T.AppearanceReset), UiText.Get(T.AppearancePreview)) is { } adjustment)
-            change(c => { c.ThemeBrightness = adjustment.Brightness; c.ThemeDepth = adjustment.Depth; });
+            change(c => { c.ThemeBrightness = adjustment.Brightness; c.ThemeDepth = adjustment.Depth; c.ThemeTransparency = adjustment.Transparency; });
     }
 
     private void FoodSettings()
