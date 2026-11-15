@@ -1,7 +1,7 @@
 namespace DuckbillTweak.Plugin.UI;
 
 internal sealed record PositionalColorPreset(string Name, uint Hit, uint Miss, uint Combo);
-internal sealed record IconChoice(uint Id, string Name);
+internal sealed record IconChoice(uint Id, TextKey Name);
 
 // Existing display defaults and migrations. Independent of the settings renderer.
 internal static class PositionalDisplaySettings
@@ -37,9 +37,9 @@ internal static class PositionalDisplaySettings
     // (105/106, hard to see), gold/silver stars (rejected in game), damage-type icons (117-119, 185-188), job/role icons.
     internal static readonly IconChoice[] IconChoices =
     [
-        new(99, "반짝임"), new(110, "주황 마름모"), new(63, "경고"), new(78, "왕관"), new(182, "물음표 상자"),
-        new(101, "느낌표 상자"), new(74, "금빛 날개"), new(104, "종"), new(124, "빨강 순환"), new(126, "금빛 고리"),
-        new(65, "에테라이트"), new(70, "초록 점"), new(121, "파랑별"), new(184, "빨강별"), new(76, "금지"),
+        new(99, TextKey.IconSpark), new(110, TextKey.IconDiamond), new(63, TextKey.IconWarning), new(78, TextKey.IconCrown), new(182, TextKey.IconQuestion),
+        new(101, TextKey.IconExclamation), new(74, TextKey.IconWings), new(104, TextKey.IconBell), new(124, TextKey.IconRedCycle), new(126, TextKey.IconGoldRing),
+        new(65, TextKey.IconAetheryte), new(70, TextKey.IconGreenDot), new(121, TextKey.IconBlueStar), new(184, TextKey.IconRedStar), new(76, TextKey.IconProhibited),
     ];
 
 }

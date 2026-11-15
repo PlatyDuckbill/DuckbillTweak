@@ -12,7 +12,7 @@
   <data name="Version" xml:space="preserve"><value>Version {0}</value></data>
   <data name="Published" xml:space="preserve"><value>Released: {0}</value></data>
   <data name="Development" xml:space="preserve"><value>In development</value></data>
-  <data name="Offline" xml:space="preserve"><value>Bundled release notes. Reopen them from settings.</value></data>
+  <data name="Offline" xml:space="preserve"><value>Bundled update history for {0} versions.</value></data>
   <data name="Other" xml:space="preserve"><value>Other improvements</value></data>
   <data name="Confirm" xml:space="preserve"><value>Confirm</value></data>
   <data name="Cancel" xml:space="preserve"><value>Cancel</value></data>
@@ -21,8 +21,8 @@
   <data name="SaveFailed" xml:space="preserve"><value>Settings could not be saved. Changes may be lost on reload.</value></data>
   <data name="Appearance" xml:space="preserve"><value>Appearance</value></data>
   <data name="Theme" xml:space="preserve"><value>Theme</value></data>
-  <data name="Graphite" xml:space="preserve"><value>Charcoal</value></data>
-  <data name="Paper" xml:space="preserve"><value>Paper</value></data>
+  <data name="Graphite" xml:space="preserve"><value>Smoke</value></data>
+  <data name="Paper" xml:space="preserve"><value>Pearl</value></data>
   <data name="Language" xml:space="preserve"><value>Language</value></data>
   <data name="Combat" xml:space="preserve"><value>Combat</value></data>
   <data name="Shops" xml:space="preserve"><value>Shops and loot</value></data>
@@ -42,8 +42,8 @@
   <data name="Miss" xml:space="preserve"><value>Positional miss</value></data>
   <data name="Combo" xml:space="preserve"><value>Broken combo</value></data>
   <data name="Enabled" xml:space="preserve"><value>Enabled</value></data>
-  <data name="Icon" xml:space="preserve"><value>Icon</value></data>
-  <data name="Color" xml:space="preserve"><value>Color</value></data>
+  <data name="Icon" xml:space="preserve"><value>Skill-name icon</value></data>
+  <data name="Color" xml:space="preserve"><value>Damage-number color</value></data>
   <data name="ChangeColor" xml:space="preserve"><value>Change color</value></data>
   <data name="Preset" xml:space="preserve"><value>Color preset</value></data>
   <data name="PresetDefault" xml:space="preserve"><value>Gold / Violet / Grey</value></data>
@@ -67,4 +67,20 @@
   <data name="ExchangeUnavailable" xml:space="preserve"><value>Currency-exchange shop support is currently unavailable. Other shop tools remain available.</value></data>
   <data name="FoodUnavailable" xml:space="preserve"><value>Food observation could not start. Other features remain available.</value></data>
   <data name="IconChoice" xml:space="preserve"><value>{0} · #{1}</value></data>
+  <data name="CurrentVersion" xml:space="preserve"><value>Current version {0}</value></data>
+  <data name="IconSpark" xml:space="preserve"><value>Spark</value></data>
+  <data name="IconDiamond" xml:space="preserve"><value>Orange diamond</value></data>
+  <data name="IconWarning" xml:space="preserve"><value>Warning</value></data>
+  <data name="IconCrown" xml:space="preserve"><value>Crown</value></data>
+  <data name="IconQuestion" xml:space="preserve"><value>Question box</value></data>
+  <data name="IconExclamation" xml:space="preserve"><value>Exclamation box</value></data>
+  <data name="IconWings" xml:space="preserve"><value>Golden wings</value></data>
+  <data name="IconBell" xml:space="preserve"><value>Bell</value></data>
+  <data name="IconRedCycle" xml:space="preserve"><value>Red cycle</value></data>
+  <data name="IconGoldRing" xml:space="preserve"><value>Golden ring</value></data>
+  <data name="IconAetheryte" xml:space="preserve"><value>Aetheryte</value></data>
+  <data name="IconGreenDot" xml:space="preserve"><value>Green dot</value></data>
+  <data name="IconBlueStar" xml:space="preserve"><value>Blue star</value></data>
+  <data name="IconRedStar" xml:space="preserve"><value>Red star</value></data>
+  <data name="IconProhibited" xml:space="preserve"><value>Prohibited</value></data>
 </root>

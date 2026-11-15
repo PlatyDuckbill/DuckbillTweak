@@ -5,6 +5,23 @@ namespace DuckbillTweak.Plugin.UI;
 
 internal enum TextKey
 {
+    CurrentVersion,
+    IconSpark,
+    IconDiamond,
+    IconWarning,
+    IconCrown,
+    IconQuestion,
+    IconExclamation,
+    IconWings,
+    IconBell,
+    IconRedCycle,
+    IconGoldRing,
+    IconAetheryte,
+    IconGreenDot,
+    IconBlueStar,
+    IconRedStar,
+    IconProhibited,
+
     SettingsTitle,
     SettingsSummary,
     UpdatesTitle,

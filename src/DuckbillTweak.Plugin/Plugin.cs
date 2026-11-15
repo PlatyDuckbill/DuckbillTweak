@@ -84,7 +84,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
         if (config.Version is < 1 or > 3) throw new InvalidOperationException("Unsupported configuration version.");
         config.Version = 3;
         config.LastSeenChangelogVersion ??= "";
-        config.Theme = config.Theme == "paper" ? "paper" : "graphite";
+        config.Theme = ThemeScope.IsLight(config.Theme) ? "pearl" : "smoke";
         config.UiLanguage = config.UiLanguage == "en" ? "en" : "ko";
         if (MigratePositionalDisplay(config)) pluginInterface.SavePluginConfig(config);
         merchants = new(data, unlocks, inventory, client, player, conditions, target, gameGui, framework, log, config, pluginInterface);
@@ -157,10 +157,19 @@ public sealed class Plugin : IAsyncDalamudPlugin
     private static readonly IReadOnlyDictionary<uint, byte[]> IconPreviews = PositionalDisplaySettings.IconChoices
         .ToDictionary(icon => icon.Id, icon => new Dalamud.Game.Text.SeStringHandling.SeStringBuilder()
             .AddIcon((Dalamud.Game.Text.SeStringHandling.BitmapFontIcon)icon.Id).Build().Encode());
-    private static void DrawGameIcon(uint id)
+    private static void DrawGameIcon(uint id, Vector2 position)
     {
         if (IconPreviews.TryGetValue(id, out var encoded))
-            Dalamud.Interface.Utility.ImGuiHelpers.SeStringWrapped(encoded);
+        {
+            var parameters = new Dalamud.Interface.ImGuiSeStringRenderer.SeStringDrawParams
+            {
+                TargetDrawList = Dalamud.Bindings.ImGui.ImGui.GetWindowDrawList(),
+                ScreenOffset = position,
+                Font = Dalamud.Bindings.ImGui.ImGui.GetFont(),
+                FontSize = Dalamud.Bindings.ImGui.ImGui.GetFontSize(),
+            };
+            Dalamud.Interface.Utility.ImGuiHelpers.SeStringWrapped(encoded, parameters);
+        }
     }
 
     /// <summary>
@@ -211,7 +220,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
     {
         if (disposed) return;
         UiText.English = config.UiLanguage == "en";
-        using var theme = new ThemeScope(config.Theme == "paper");
+        using var theme = new ThemeScope(ThemeScope.IsLight(config.Theme));
         windows.Draw();
     }
     private void OpenSettings() => _ = framework.Run(() => { if (!disposed && settings is not null) settings.IsOpen = true; });

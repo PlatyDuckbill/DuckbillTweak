@@ -6,7 +6,7 @@ namespace DuckbillTweak.Plugin;
 public sealed class Configuration : IPluginConfiguration
 {
     public int Version { get; set; } = 3;
-    public string Theme { get; set; } = "graphite";
+    public string Theme { get; set; } = "smoke";
     public string UiLanguage { get; set; } = "ko";
     public bool PvpBubbles { get; set; }
     public bool MerchantTools { get; set; }

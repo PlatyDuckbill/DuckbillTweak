@@ -12,7 +12,7 @@
   <data name="Version" xml:space="preserve"><value>버전 {0}</value></data>
   <data name="Published" xml:space="preserve"><value>배포: {0}</value></data>
   <data name="Development" xml:space="preserve"><value>개발 중</value></data>
-  <data name="Offline" xml:space="preserve"><value>플러그인에 포함된 업데이트 내역입니다. 설정에서 다시 열 수 있습니다.</value></data>
+  <data name="Offline" xml:space="preserve"><value>포함된 {0}개 버전의 업데이트 내역입니다.</value></data>
   <data name="Other" xml:space="preserve"><value>기타 개선</value></data>
   <data name="Confirm" xml:space="preserve"><value>확인</value></data>
   <data name="Cancel" xml:space="preserve"><value>취소</value></data>
@@ -21,8 +21,8 @@
   <data name="SaveFailed" xml:space="preserve"><value>설정을 저장하지 못했습니다. 다시 로드하면 변경사항이 사라질 수 있습니다.</value></data>
   <data name="Appearance" xml:space="preserve"><value>화면 설정</value></data>
   <data name="Theme" xml:space="preserve"><value>테마</value></data>
-  <data name="Graphite" xml:space="preserve"><value>차콜</value></data>
-  <data name="Paper" xml:space="preserve"><value>페이퍼</value></data>
+  <data name="Graphite" xml:space="preserve"><value>스모크</value></data>
+  <data name="Paper" xml:space="preserve"><value>펄</value></data>
   <data name="Language" xml:space="preserve"><value>언어</value></data>
   <data name="Combat" xml:space="preserve"><value>전투</value></data>
   <data name="Shops" xml:space="preserve"><value>상점 · 입찰</value></data>
@@ -42,8 +42,8 @@
   <data name="Miss" xml:space="preserve"><value>측후 실패</value></data>
   <data name="Combo" xml:space="preserve"><value>콤보 실패</value></data>
   <data name="Enabled" xml:space="preserve"><value>활성화</value></data>
-  <data name="Icon" xml:space="preserve"><value>아이콘</value></data>
-  <data name="Color" xml:space="preserve"><value>색</value></data>
+  <data name="Icon" xml:space="preserve"><value>기술 이름 아이콘</value></data>
+  <data name="Color" xml:space="preserve"><value>데미지 숫자 색</value></data>
   <data name="ChangeColor" xml:space="preserve"><value>색 변경</value></data>
   <data name="Preset" xml:space="preserve"><value>색 프리셋</value></data>
   <data name="PresetDefault" xml:space="preserve"><value>금색 · 보라 · 회색</value></data>
@@ -67,4 +67,20 @@
   <data name="ExchangeUnavailable" xml:space="preserve"><value>재화 교환 상점은 현재 사용할 수 없습니다. 다른 상점 도구는 사용할 수 있습니다.</value></data>
   <data name="FoodUnavailable" xml:space="preserve"><value>음식 관찰을 시작하지 못했습니다. 다른 기능은 사용할 수 있습니다.</value></data>
   <data name="IconChoice" xml:space="preserve"><value>{0} · #{1}</value></data>
+  <data name="CurrentVersion" xml:space="preserve"><value>현재 버전 {0}</value></data>
+  <data name="IconSpark" xml:space="preserve"><value>반짝임</value></data>
+  <data name="IconDiamond" xml:space="preserve"><value>주황 마름모</value></data>
+  <data name="IconWarning" xml:space="preserve"><value>경고</value></data>
+  <data name="IconCrown" xml:space="preserve"><value>왕관</value></data>
+  <data name="IconQuestion" xml:space="preserve"><value>물음표 상자</value></data>
+  <data name="IconExclamation" xml:space="preserve"><value>느낌표 상자</value></data>
+  <data name="IconWings" xml:space="preserve"><value>금빛 날개</value></data>
+  <data name="IconBell" xml:space="preserve"><value>종</value></data>
+  <data name="IconRedCycle" xml:space="preserve"><value>빨강 순환</value></data>
+  <data name="IconGoldRing" xml:space="preserve"><value>금빛 고리</value></data>
+  <data name="IconAetheryte" xml:space="preserve"><value>에테라이트</value></data>
+  <data name="IconGreenDot" xml:space="preserve"><value>초록 점</value></data>
+  <data name="IconBlueStar" xml:space="preserve"><value>파랑별</value></data>
+  <data name="IconRedStar" xml:space="preserve"><value>빨강별</value></data>
+  <data name="IconProhibited" xml:space="preserve"><value>금지</value></data>
 </root>

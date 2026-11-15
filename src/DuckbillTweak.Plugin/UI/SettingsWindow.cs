@@ -11,14 +11,14 @@ internal sealed class SettingsWindow : Window
     private readonly Action<Action<Configuration>> change;
     private readonly Action showUpdates;
     private readonly Func<bool> unread;
-    private readonly Action<uint>? drawGameIcon;
+    private readonly Action<uint, Vector2>? drawGameIcon;
     private readonly bool pvpAvailable, exchangeAvailable, positionalAvailable, foodAvailable;
     private bool showFood, showColors;
     private Vector3 colorDraft;
     public bool SaveFailed { get; set; }
 
     public SettingsWindow(Configuration config, Action<Action<Configuration>> change, Action showUpdates, Func<bool> unread,
-        bool pvpAvailable, bool exchangeAvailable, bool positionalAvailable, bool foodAvailable, Action<uint>? drawGameIcon = null) : base("DuckbillTweak###DuckbillTweak.Settings")
+        bool pvpAvailable, bool exchangeAvailable, bool positionalAvailable, bool foodAvailable, Action<uint, Vector2>? drawGameIcon = null) : base("DuckbillTweak###DuckbillTweak.Settings")
     {
         this.config = config; this.change = change; this.showUpdates = showUpdates; this.unread = unread; this.drawGameIcon = drawGameIcon;
         this.pvpAvailable = pvpAvailable; this.exchangeAvailable = exchangeAvailable;
@@ -26,11 +26,13 @@ internal sealed class SettingsWindow : Window
         Size = new(720, 720); SizeCondition = ImGuiCond.FirstUseEver;
         SizeConstraints = new() { MinimumSize = new(420, 400), MaximumSize = new(float.MaxValue) };
         Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
-        BgAlpha = 1;
+        BgAlpha = .94f;
     }
+    public override void PreDraw() => BgAlpha = GameThemePalette.For(ThemeScope.IsLight(config.Theme)).Surface.W;
     public override void OnOpen() { if (unread()) showUpdates(); }
     public override void Draw()
     {
+        GameThemeChrome.WindowSurface();
         UiWidgets.Heading(T.SettingsTitle);
         UiWidgets.Secondary(T.SettingsSummary);
         ImGui.Spacing();
@@ -58,14 +60,14 @@ internal sealed class SettingsWindow : Window
             int[] offsets = [0, 40, 80, 120];
             var timing = Math.Max(0, Array.IndexOf(offsets, config.EmoteFollowOffsetMs));
             var timings = new[] { T.TimingOwn, T.TimingMiddle, T.TimingOthers, T.TimingEarly }.Select(k => UiText.Get(k)).ToArray();
-            if (ImGui.Combo("###EmoteTiming", ref timing, timings, timings.Length))
+            if (GameThemeChrome.Combo("###EmoteTiming", ref timing, timings, timings.Length))
             { var ms = offsets[timing]; change(c => c.EmoteFollowOffsetMs = ms); }
             UiWidgets.Secondary(T.TimingHint);
             UiWidgets.Section(T.Appearance);
             Appearance();
         }
         ImGui.EndChild();
-        if (ImGui.Button(UiText.Get(unread() ? T.UpdatesNew : T.UpdatesOpen) + "###ShowChangelog")) showUpdates();
+        if (GameThemeChrome.Button(UiText.Get(unread() ? T.UpdatesNew : T.UpdatesOpen) + "###ShowChangelog")) showUpdates();
         var version = UiText.Get(T.Version, ReleaseHistory.CurrentVersion);
         if (UiWidgets.FitsOnLine(ImGui.CalcTextSize(version).X))
         { ImGui.SameLine(); ImGui.TextDisabled(version); }
@@ -89,7 +91,7 @@ internal sealed class SettingsWindow : Window
             if (details is not null)
             {
                 if (wide) ImGui.TableNextColumn();
-                if (ImGui.Button(UiText.Get(T.Details) + "###Details")) details();
+                if (GameThemeChrome.Button(UiText.Get(T.Details) + "###Details")) details();
             }
             ImGui.EndTable();
         }
@@ -101,14 +103,14 @@ internal sealed class SettingsWindow : Window
     {
         if (!ImGui.BeginTable("###Appearance", 2, ImGuiTableFlags.SizingStretchSame)) return;
         ImGui.TableNextColumn(); ImGui.TextUnformatted(UiText.Get(T.Theme));
-        var theme = config.Theme == "paper" ? 1 : 0;
+        var theme = ThemeScope.IsLight(config.Theme) ? 1 : 0;
         var themes = new[] { UiText.Get(T.Graphite), UiText.Get(T.Paper) };
         ImGui.SetNextItemWidth(-1);
-        if (ImGui.Combo("###Theme", ref theme, themes, themes.Length)) { var value = theme == 1 ? "paper" : "graphite"; change(c => c.Theme = value); }
+        if (GameThemeChrome.Combo("###Theme", ref theme, themes, themes.Length)) { var value = theme == 1 ? "pearl" : "smoke"; change(c => c.Theme = value); }
         ImGui.TableNextColumn(); ImGui.TextUnformatted(UiText.Get(T.Language));
         var language = config.UiLanguage == "en" ? 1 : 0;
         ImGui.SetNextItemWidth(-1);
-        if (ImGui.Combo("###Language", ref language, new[] { "한국어", "English" }, 2))
+        if (GameThemeChrome.Combo("###Language", ref language, new[] { "한국어", "English" }, 2))
         { var value = language == 1 ? "en" : "ko"; change(c => c.UiLanguage = value); }
         ImGui.EndTable();
     }
@@ -138,8 +140,9 @@ internal sealed class SettingsWindow : Window
         var selected = Array.FindIndex(palette, p => p.Hit == config.PositionalHitColor && p.Miss == config.PositionalMissColor && p.Combo == config.ComboFailColor);
         var label = selected >= 0 ? UiText.Get(selected == 0 ? T.PresetDefault : T.PresetVivid) : UiText.Get(T.Custom);
         ImGui.TextUnformatted(UiText.Get(T.Preset));
-        ImGui.SetNextItemWidth(Math.Min(ImGui.GetContentRegionAvail().X, ImGui.GetFontSize() * 22));
-        if (ImGui.BeginCombo("###Preset", label))
+        var resetWidth = ImGui.CalcTextSize(UiText.Get(T.Defaults)).X + ImGui.GetStyle().FramePadding.X * 2;
+        ImGui.SetNextItemWidth(Math.Max(1, Math.Min(ImGui.GetFontSize() * 22, ImGui.GetContentRegionAvail().X - resetWidth - ImGui.GetStyle().ItemSpacing.X)));
+        if (GameThemeChrome.BeginCombo("###Preset", label))
         {
             for (var i = 0; i < palette.Length; i++)
             {
@@ -149,7 +152,8 @@ internal sealed class SettingsWindow : Window
             }
             ImGui.EndCombo();
         }
-        if (ImGui.Button(UiText.Get(T.Defaults) + "###ResetColors")) change(c =>
+        ImGui.SameLine();
+        if (GameThemeChrome.Button(UiText.Get(T.Defaults) + "###ResetColors")) change(c =>
         {
             c.PositionalHitEnabled = c.PositionalMissEnabled = true;
             c.PositionalHitIconEnabled = c.PositionalMissIconEnabled = c.ComboFailIconEnabled = true;
@@ -161,6 +165,7 @@ internal sealed class SettingsWindow : Window
             c.PositionalMissColor = PositionalDisplaySettings.DefaultMiss;
             c.ComboFailColor = PositionalDisplaySettings.DefaultCombo;
         });
+        ImGui.Spacing();
         Outcome(Slot.Hit, T.Hit, config.PositionalHitEnabled, config.PositionalHitIconEnabled, config.PositionalHitIcon, config.PositionalHitColorEnabled, config.PositionalHitColor);
         Outcome(Slot.Miss, T.Miss, config.PositionalMissEnabled, config.PositionalMissIconEnabled, config.PositionalMissIcon, config.PositionalMissColorEnabled, config.PositionalMissColor);
         Outcome(Slot.Combo, T.Combo, config.ComboFailFlyText, config.ComboFailIconEnabled, config.ComboFailIcon, config.ComboFailColorEnabled, config.ComboFailColor);
@@ -170,43 +175,72 @@ internal sealed class SettingsWindow : Window
     private void Outcome(Slot slot, T label, bool enabled, bool iconOn, uint iconId, bool colorOn, uint rgb)
     {
         ImGui.PushID(slot.ToString());
-        ImGui.Separator(); ImGui.TextUnformatted(UiText.Get(label));
-        var inline = ImGui.GetContentRegionAvail().X > new[] { T.Enabled, T.Icon, T.Color }.Sum(k => ImGui.CalcTextSize(UiText.Get(k)).X + ImGui.GetFrameHeight() + ImGui.GetStyle().ItemInnerSpacing.X + ImGui.GetStyle().ItemSpacing.X);
-        if (ImGui.Checkbox(UiText.Get(T.Enabled) + "###Enabled", ref enabled)) { var v = enabled; Set(slot, c => c.PositionalHitEnabled = v, c => c.PositionalMissEnabled = v, c => c.ComboFailFlyText = v); }
-        if (inline) ImGui.SameLine();
-        if (ImGui.Checkbox(UiText.Get(T.Icon) + "###IconOn", ref iconOn)) { var v = iconOn; Set(slot, c => c.PositionalHitIconEnabled = v, c => c.PositionalMissIconEnabled = v, c => c.ComboFailIconEnabled = v); }
-        if (inline) ImGui.SameLine();
-        if (ImGui.Checkbox(UiText.Get(T.Color) + "###ColorOn", ref colorOn)) { var v = colorOn; Set(slot, c => c.PositionalHitColorEnabled = v, c => c.PositionalMissColorEnabled = v, c => c.ComboFailColorEnabled = v); }
-        var rowWidth = ImGui.GetContentRegionAvail().X;
-        var iconWidth = drawGameIcon is null ? 0 : ImGui.GetFrameHeight() + ImGui.GetStyle().ItemSpacing.X;
-        var comboWidth = Math.Min(ImGui.GetFontSize() * 12, Math.Max(1, rowWidth - iconWidth));
-        var colorWidth = ImGui.GetFrameHeight() + ImGui.CalcTextSize(UiText.Get(T.ChangeColor)).X
-            + ImGui.GetStyle().FramePadding.X * 2 + ImGui.GetStyle().ItemSpacing.X * 2;
-        var inlineColor = rowWidth >= comboWidth + iconWidth + colorWidth;
-        ImGui.SetNextItemWidth(comboWidth);
+        var f = ImGui.GetFontSize();
+        var wide = ImGui.GetContentRegionAvail().X >= f * 29;
+        var height = ImGui.GetFrameHeight() * (wide ? 3 : 5) + ImGui.GetStyle().ItemSpacing.Y * (wide ? 4 : 6) + ImGui.GetStyle().WindowPadding.Y * 2;
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, (GameThemeScope.Current?.Inset ?? Vector4.Zero) with { W = .42f });
+        if (ImGui.BeginChild("###Outcome", new(0, height), true, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
+        {
+            if (ImGui.Checkbox(UiText.Get(label) + "###Enabled", ref enabled))
+            { var v = enabled; Set(slot, c => c.PositionalHitEnabled = v, c => c.PositionalMissEnabled = v, c => c.ComboFailFlyText = v); }
+            if (ImGui.BeginTable("###Fields", wide ? 2 : 1, ImGuiTableFlags.SizingStretchSame))
+            {
+                ImGui.TableNextColumn();
+                if (ImGui.Checkbox(UiText.Get(T.Icon) + "###IconOn", ref iconOn))
+                { var v = iconOn; Set(slot, c => c.PositionalHitIconEnabled = v, c => c.PositionalMissIconEnabled = v, c => c.ComboFailIconEnabled = v); }
+                ImGui.SetNextItemWidth(-1);
+                IconSelector(slot, iconId);
+                ImGui.TableNextColumn();
+                if (ImGui.Checkbox(UiText.Get(T.Color) + "###ColorOn", ref colorOn))
+                { var v = colorOn; Set(slot, c => c.PositionalHitColorEnabled = v, c => c.PositionalMissColorEnabled = v, c => c.ComboFailColorEnabled = v); }
+                var color = ThemeScope.Hex(rgb);
+                if (ImGui.ColorButton("###ColorPreview", color, ImGuiColorEditFlags.NoTooltip, new(ImGui.GetFrameHeight())))
+                { colorDraft = new(color.X, color.Y, color.Z); ImGui.OpenPopup("###ColorPicker"); }
+                ImGui.SameLine();
+                if (GameThemeChrome.Button(UiText.Get(T.ChangeColor) + "###ChangeColor"))
+                { colorDraft = new(color.X, color.Y, color.Z); ImGui.OpenPopup("###ColorPicker"); }
+                ColorPicker(slot);
+                ImGui.EndTable();
+            }
+        }
+        ImGui.EndChild(); ImGui.PopStyleColor();
+        ImGui.Spacing(); ImGui.PopID();
+    }
+    private void IconSelector(Slot slot, uint iconId)
+    {
         var choices = PositionalDisplaySettings.IconChoices;
         var choice = Array.FindIndex(choices, x => x.Id == iconId);
-        string IconLabel(IconChoice x) => UiText.English ? UiText.Get(T.IconChoice, UiText.Get(T.Icon), x.Id) : UiText.Get(T.IconChoice, x.Name, x.Id);
-        if (ImGui.BeginCombo("###IconChoice", choice < 0 ? UiText.Get(T.IconChoice, UiText.Get(T.Icon), iconId) : IconLabel(choices[choice])))
+        var name = choice >= 0 ? UiText.Get(choices[choice].Name) : UiText.Get(T.IconChoice, UiText.Get(T.Icon), iconId);
+        var min = ImGui.GetCursorScreenPos(); var width = ImGui.CalcItemWidth(); var height = ImGui.GetFrameHeight();
+        if (GameThemeChrome.BeginCombo("###IconChoice", "", ImGuiComboFlags.HeightRegular))
         {
             foreach (var icon in choices)
-                if (ImGui.Selectable(IconLabel(icon), icon.Id == iconId))
+            {
+                if (ImGui.Selectable("###Icon." + icon.Id, icon.Id == iconId, ImGuiSelectableFlags.None, new(0, ImGui.GetFrameHeight())))
                 { var id = icon.Id; Set(slot, c => c.PositionalHitIcon = id, c => c.PositionalMissIcon = id, c => c.ComboFailIcon = id); }
+                IconLabel(icon.Id, UiText.Get(icon.Name), ImGui.GetItemRectMin(), ImGui.GetItemRectMax());
+                if (ImGui.IsItemHovered()) ImGui.SetTooltip("#" + icon.Id);
+            }
             ImGui.EndCombo();
         }
-        if (drawGameIcon is not null) { ImGui.SameLine(); drawGameIcon(iconId); }
-        var color = ThemeScope.Hex(rgb);
-        if (inlineColor) ImGui.SameLine();
-        if (ImGui.ColorButton("###ColorPreview", color, ImGuiColorEditFlags.NoTooltip, new(ImGui.GetFrameHeight())))
-        { colorDraft = new(color.X, color.Y, color.Z); ImGui.OpenPopup("###ColorPicker"); }
-        ImGui.SameLine();
-        if (ImGui.Button(UiText.Get(T.ChangeColor) + "###ChangeColor"))
-        { colorDraft = new(color.X, color.Y, color.Z); ImGui.OpenPopup("###ColorPicker"); }
+        IconLabel(iconId, name, min, min + new Vector2(Math.Max(1, width - height), height));
+    }
+    private void IconLabel(uint id, string text, Vector2 min, Vector2 max)
+    {
+        var f = ImGui.GetFontSize(); var pad = ImGui.GetStyle().FramePadding.X;
+        var draw = ImGui.GetWindowDrawList();
+        draw.PushClipRect(min, max, true);
+        drawGameIcon?.Invoke(id, Vector2.Round(min + new Vector2(pad, (max.Y - min.Y - f) / 2)));
+        draw.AddText(Vector2.Round(min + new Vector2(pad + f * 1.5f, (max.Y - min.Y - ImGui.CalcTextSize(text).Y) / 2)), ImGui.GetColorU32(ImGuiCol.Text), text);
+        draw.PopClipRect();
+    }
+    private void ColorPicker(Slot slot)
+    {
         if (ImGui.BeginPopup("###ColorPicker"))
         {
             ImGui.SetNextItemWidth(Math.Max(1, Math.Min(ImGui.GetFontSize() * 18, ImGui.GetMainViewport().WorkSize.X - ImGui.GetFontSize() * 3)));
             ImGui.ColorPicker3("###Picker", ref colorDraft, ImGuiColorEditFlags.PickerHueWheel | ImGuiColorEditFlags.DisplayHex);
-            if (ImGui.Button(UiText.Get(T.Confirm) + "###Confirm"))
+            if (GameThemeChrome.Button(UiText.Get(T.Confirm) + "###Confirm"))
             {
                 static uint Channel(float x) => (uint)Math.Clamp((int)MathF.Round(x * 255), 0, 255);
                 var value = Channel(colorDraft.X) << 16 | Channel(colorDraft.Y) << 8 | Channel(colorDraft.Z);
@@ -214,13 +248,12 @@ internal sealed class SettingsWindow : Window
                 ImGui.CloseCurrentPopup();
             }
             if (UiWidgets.FitsOnLine(ImGui.CalcTextSize(UiText.Get(T.Defaults)).X + ImGui.GetStyle().FramePadding.X * 2)) ImGui.SameLine();
-            if (ImGui.Button(UiText.Get(T.Defaults) + "###Defaults"))
+            if (GameThemeChrome.Button(UiText.Get(T.Defaults) + "###Defaults"))
             { var v = ThemeScope.Hex(slot == Slot.Hit ? PositionalDisplaySettings.DefaultHit : slot == Slot.Miss ? PositionalDisplaySettings.DefaultMiss : PositionalDisplaySettings.DefaultCombo); colorDraft = new(v.X, v.Y, v.Z); }
             if (UiWidgets.FitsOnLine(ImGui.CalcTextSize(UiText.Get(T.Cancel)).X + ImGui.GetStyle().FramePadding.X * 2)) ImGui.SameLine();
-            if (ImGui.Button(UiText.Get(T.Cancel) + "###Cancel")) ImGui.CloseCurrentPopup();
+            if (GameThemeChrome.Button(UiText.Get(T.Cancel) + "###Cancel")) ImGui.CloseCurrentPopup();
             ImGui.EndPopup();
         }
-        ImGui.PopID();
     }
     private void Set(Slot slot, Action<Configuration> hit, Action<Configuration> miss, Action<Configuration> combo) => change(slot == Slot.Hit ? hit : slot == Slot.Miss ? miss : combo);
 }
