@@ -1,5 +1,29 @@
 # 배포 확인
 
+## 0.4.0.0 · 감정표현 상태 표시
+
+사용자가 감정표현 상태 아이콘·툴팁/보유 문구 개선 후 공개 배포를 지시했다. 개발판의 사각 아이콘/이름·보유 툴팁 대표 확인과 최종 위쪽 뾰족한 프레임/고정 ZIP의 실기는 구분하며 InGameVerified=false를 유지한다.
+
+| 항목 | 값 |
+|---|---|
+| 소스·태그 | `33a955db4382ea4ab121f45f8562296dbeab59ef` · v0.4.0.0 |
+| 고정 후보 | `artifacts/release/0.4.0.0/emote-status-20261116` · SourceDirty=false |
+| ZIP | `DuckbillTweak-0.4.0.0.zip` · 512,887바이트/16파일 |
+| ZIP SHA256 | `08ffc7413d31eaed59e660dae2eb062268ae9dcae448c3220709be2d8df4d488` |
+| [공개 Release](https://github.com/PlatyDuckbill/DuckbillTweak/releases/tag/v0.4.0.0) | ID446950881 · draft=false/prerelease=false |
+| 공개 시각 | 2026-11-16T11:29:25Z / 2026-11-16 20:29:25 KST |
+| 설치 원본 | `214c65b1f1909917077ba8de928f51d08d3f843e` · repo/release.json |
+| [공용 동기화](https://github.com/PlatyDuckbill/DuckbillRepo/actions/runs/43858274165) | success · 공용 `ff0f4ca9f4668960c26a0af798bde0b1318c25d3` |
+| 고정 확인 DLL | `.cache/release-validation/0.4.0.0/emote-status-20261116/DuckbillTweak.dll` |
+
+- 고정 KR15.0.3.7로 별도→정규 Release 잠금 복원/빌드 경고0/오류0, 필수16파일·추출 해시·한국어 위성 이름/문화권/버전·한영114키/값 원본 일치·재화708바이트/28매핑·업데이트 내역·DLL 의존성과 공용 참조 상한을 확인했다. SDK/의존성은 변경하지 않았고 테스트는 추가/실행하지 않았다.
+- 내장 한영·설치·GitHub 안내는 같은 대표2항목이다. prepare-release.ps1로 SourceDirty=false ZIP을 고정하고 새 태그/초안 자산 크기/digest·소스/본문을 대조한 뒤 공개했다. 기존 태그/ZIP은 수정하지 않았다.
+- 인증 없는 ZIP·체크섬·태그 아이콘 HTTP200/원본 해시 일치 후 설치 원본을 갱신했다. 아이콘은 기존 승인본 SHA256 `853f8a8ce08e97332156e4ab5298927f73e135944223c77d766f3863dd103a3d`를 유지한다.
+- 공용 sync.ps1 -Check가 세 공개 ZIP/매니페스트와 목록 일치를 확인했다. 2026-11-16T11:31:40Z에 공용 고정 커밋과 실제 main/pluginmaster.json에서 Tweak0.4.0.0·Fisher0.10.2.0·Calendar0.6.0.0의 각22필드가 소스와 일치했다. 최초 실제 URL의 이전 버전 응답은 재조회 후 새 버전으로 확인했으며 Relic 첫 배포 대기는 유지한다.
+- 실제 설치/업데이트·새 윤곽/배율·본인/대상 호버/보유·일회성 종료/취소·언어/토글/지역/HUD 재생성/재로드는 확인 대기다. [개발판 근거](VERIFICATION.md#2026-11-16-감정표현-상태-표시-개발본)를 고정 ZIP의 실기로 확대하지 않는다.
+
+게시 영수증·익명 자산·실제 공용 URL 대조는 `.cache/publication-0.4.0.0/`에 보존한다.
+
 ## 0.3.1.0 · 기능별 동작 상태
 
 사용자 지시로 기능별 상태 안내·색 점과 정상 대기의 초록 표시를 공개 배포했다. 개발판 PvP/우클릭 따라하기 사용 가능 보고와 새 고정 ZIP의 실기는 구분하며 InGameVerified=false를 유지한다.
