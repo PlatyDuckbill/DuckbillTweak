@@ -11,12 +11,13 @@
 | 분리한 대상 상태 | _TargetInfoBuffDebuff | targetinfobuffdebuff.uld | 부모2, 칸3~32 | 동일 |
 | 합친 대상 정보 | _TargetInfo | targetinfo.uld | 부모23, 칸24~53 | 동일 |
 
-각 컴포넌트의 자식2는 높이18의 Text, 자식3은24×32 Image다. 새 항목은 설치 바인딩 AtkComponentIconText.Ctor·AtkUldComponentDataIconText의 Nodes2개로 구성한다. 고정 KamiToolKit의 ComponentNode 기반 안에서 동일한 네이티브 타입과 자식 배치를 사용하며 원본 submodule은 변경하지 않는다. 화면 전체를 덮는 ImGui/별도 HUD는 만들지 않는다.
+원본 컴포넌트의 자식2는 높이18의 Text, 자식3은24×32 Image다. 새 항목은 설치 바인딩 AtkComponentIconText.Ctor·AtkUldComponentDataIconText의 Nodes2개로 구성한다. 감정표현 이미지는 정사각형이므로 슬롯24×41은 유지하되 이미지24×24·Y4와 같은 크기의 CollisionNode를 사용한다. 고정 KamiToolKit의 ComponentNode 기반 안에서 동일한 네이티브 타입을 사용하며 원본 submodule은 변경하지 않는다. 화면 전체를 덮는 ImGui/별도 HUD는 만들지 않는다.
 
 - 자료 근거: 설치 KR2026.11.03의 위4개 ULD와 Hud69(기타 상태 정보). tools/GameDataProbe의 emote-status-audit로 Hud·Emote 시트의 실제 이름/아이콘/해금 연결/명령을 읽는다. 이름 있는306행 중 아이콘303·플레이어 명령296행이다. 확인하지 않은 ID/아이콘을 추정하지 않는다.
-- 관찰: Framework에서 유효한 본인/대상의 EmoteController.EmoteId·IsInEmoteLoop를 읽고 관리 값으로 복사한다. 반복 감정표현만 대상이며 일회성은 제외한다. 대상/캐릭터·지역 변경, 로딩·로그아웃·해제는 오래된 표본을 비우며 포인터를 표본에 보관하지 않는다.
+- 관찰: Framework에서 유효한 본인/대상의 EmoteController.EmoteId·IsEmoting을 읽고 관리 값으로 복사한다. 반복 여부로 제한하지 않고 게임이 감정표현을 재생 중이라고 보고하는 동안만 표시한다. 고정 시간/채팅 문구로 종료를 추정하지 않는다. IsEmoting 주소 미해석은 이 표시만 끈다. 대상/캐릭터·지역 변경, 로딩·로그아웃·해제는 오래된 표본을 비우며 포인터를 표본에 보관하지 않는다.
+- IsEmoting 의미는 [FFXIVClientStructs 선언](https://github.com/aers/FFXIVClientStructs/blob/80cb4a7b7e11a6702e2eb8839afd301a918c638e/FFXIVClientStructs/FFXIV/Client/Game/Control/EmoteController.cs)(고정80cb4a7b7e11a6702e2eb8839afd301a918c638e, MIT)과 설치 KR DLL 메타데이터/실행 파일로 대조했다. 선언의 EmoteId 비영 여부와 KR 명령이 일치한다. 구조·시그니처·코드를 새로 복사하지 않았으며 실행 주소는 설치 ClientStructs가 해석한 값만 사용한다.
 - 보유: 공개 IUnlockState.IsEmoteUnlocked를 사용한다. 로그인/PlayerState 준비 전에는 읽지 않고 실패는 Unknown이다. 플레이어 명령이 없는 내부/NPC 동작은 UnlockLink0만으로 보유를 확정하지 않는다. CanExecuteEmote는 보유 판정에 사용하지 않는다.
-- 표시: ctor 주소·부모/칸·컴포넌트 타입·이미지/텍스트·좌표/배율과 부모 일치를 검사한 뒤 붙인다. 원래 상태 칸은 건드리지 않고 숨겨진 칸 자리에 별도 소유 노드를 배치한다. 칸이 모두 차면 원래 상태를 우선해 감정표현을 숨긴다. 표시가 끝나면 자신의 툴팁도 닫는다.
+- 표시: ctor 주소·부모/칸·컴포넌트 타입·이미지/텍스트·좌표/배율과 부모 일치를 검사한 뒤 붙인다. 원래 상태 칸은 건드리지 않고 숨겨진 칸 자리에 별도 소유 노드를 배치한다. 칸이 모두 차면 원래 상태를 우선해 감정표현을 숨긴다. 툴팁과 호버 추적은 바깥 컴포넌트가 아닌 실제 CollisionNode에 연결하고, 표시를 켤 때 Addon 충돌 목록을 갱신한다. 표시가 끝나면 자신의 툴팁과 충돌 영역도 닫는다.
 - 수명: AddonController의 setup/update/refresh와 Framework 재확인, PreFinalize/Dispose로 정리한다. 계약 실패는 해당 Addon 연결만 끄고 다른 표시/기능은 유지한다. 재생성 시 다시 확인한다. UI 위치/배율·HUD 분할을 고정 좌표나 실행 파일 오프셋으로 추정하지 않는다.
 - 언어: 게임 이름은 게임 시트, 툴팁/설정은 한영 TextKey다. 설정 언어가 바뀌면 현재 항목을 재표시하고 상태를 초기화하지 않는다.
 - KR15.0.3.7/설치15.0.3.9의 새 타입/멤버 대조와 잔여 차이는 VERIFICATION을 따른다. 빌드/자료 검사를 실제 HUD 표시·호버·정렬·입력 정상으로 확대하지 않는다.

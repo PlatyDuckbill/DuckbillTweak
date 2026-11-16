@@ -20,7 +20,8 @@ internal sealed unsafe class NativeEmoteStatus : IDisposable
     public bool Available { get; }
     public bool HasFailure => bindings.Any(b => b.Failed);
     public bool WaitingSlot => bindings.Any(b => b.Full);
-    public string Diagnostic => bindings.FirstOrDefault(b => b.Failed)?.Code ?? (Available ? "" : "IconTextCtorUnresolved");
+    public string Diagnostic => bindings.FirstOrDefault(b => b.Failed)?.Code ??
+        (!NativeEmoteReader.Available ? "EmoteActivityUnresolved" : Available ? "" : "IconTextCtorUnresolved");
 
     // KR status/statuscustom/targetinfo/targetinfobuffdebuff ULD contracts, checked before each use.
     private sealed record Shape(string Name, bool Target, uint Parent, uint First, uint Count);
@@ -39,7 +40,7 @@ internal sealed unsafe class NativeEmoteStatus : IDisposable
     public NativeEmoteStatus(IFramework framework, IGameGui gui, EmoteStatusObserver observer, Configuration config, IPluginLog log)
     {
         this.framework = framework; this.gui = gui; this.observer = observer; this.config = config; this.log = log;
-        Available = AtkComponentIconText.Addresses.Ctor.Value != 0;
+        Available = NativeEmoteReader.Available && AtkComponentIconText.Addresses.Ctor.Value != 0;
         if (!Available) return;
         try
         {
@@ -139,7 +140,7 @@ internal sealed unsafe class NativeEmoteStatus : IDisposable
             binding.LastEntry = entry; binding.Language = config.UiLanguage;
             node.RefreshHoveredTooltip();
         }
-        if (node.TextureReady) node.IsVisible = true;
+        if (node.TextureReady) node.ShowStatus(addon);
         else node.HideStatus();
     }
 

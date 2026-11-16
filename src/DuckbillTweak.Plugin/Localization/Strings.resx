@@ -112,7 +112,7 @@
   <data name="StatusStale" xml:space="preserve"><value>Waiting for current runtime status</value></data>
   <data name="StatusDiagnostic" xml:space="preserve"><value>Diagnostic code: {0}</value></data>
   <data name="EmoteStatus" xml:space="preserve"><value>Emote status icons</value></data>
-  <data name="EmoteStatusDescription" xml:space="preserve"><value>Show looping emotes in your Other Status Info and the selected target&apos;s status HUD. Hover over the icon to see its name and whether you own it.</value></data>
+  <data name="EmoteStatusDescription" xml:space="preserve"><value>Show playing emotes in your Other Status Info and the selected target&apos;s status HUD, then hide them when they finish. Hover over the icon to see its name and whether you own it.</value></data>
   <data name="EmoteTooltipOwned" xml:space="preserve"><value>{0}
 Your collection: Owned</value></data>
   <data name="EmoteTooltipMissing" xml:space="preserve"><value>{0}

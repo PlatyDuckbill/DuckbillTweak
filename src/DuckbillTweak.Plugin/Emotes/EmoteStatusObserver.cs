@@ -65,7 +65,7 @@ internal sealed class EmoteStatusObserver : IDisposable
     private EmoteStatusEntry? Read(ICharacter actor)
     {
         if (!actor.IsValid()) return null;
-        var id = NativeEmoteReader.ReadLoop(actor);
+        var id = NativeEmoteReader.ReadActive(actor);
         if (id == 0 || !emotes.TryGetValue(id, out var emote)) return null;
         var ownership = EmoteOwnership.Unknown;
         // Managed service failures cannot prove that an emote is missing. No native read is protected by this catch.

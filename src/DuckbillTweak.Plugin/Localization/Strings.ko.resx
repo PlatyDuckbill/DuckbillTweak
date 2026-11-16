@@ -112,7 +112,7 @@
   <data name="StatusStale" xml:space="preserve"><value>현재 동작 상태 확인 대기</value></data>
   <data name="StatusDiagnostic" xml:space="preserve"><value>진단 코드: {0}</value></data>
   <data name="EmoteStatus" xml:space="preserve"><value>감정표현 상태 표시</value></data>
-  <data name="EmoteStatusDescription" xml:space="preserve"><value>사용 중인 반복 감정표현을 내 기타 상태 정보와 선택 대상의 상태 정보에 표시합니다. 아이콘 툴팁에서 감정표현 이름과 내 보유 여부를 확인합니다.</value></data>
+  <data name="EmoteStatusDescription" xml:space="preserve"><value>재생 중인 감정표현을 내 기타 상태 정보와 선택 대상의 상태 정보에 표시하고 끝나면 숨깁니다. 아이콘에 마우스를 올리면 감정표현 이름과 내 보유 여부를 확인합니다.</value></data>
   <data name="EmoteTooltipOwned" xml:space="preserve"><value>{0}
 내 보유 여부: 보유</value></data>
   <data name="EmoteTooltipMissing" xml:space="preserve"><value>{0}
