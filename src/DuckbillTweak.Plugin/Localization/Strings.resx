@@ -96,7 +96,7 @@
   <data name="StatusLoading" xml:space="preserve"><value>Waiting for area transition</value></data>
   <data name="StatusReady" xml:space="preserve"><value>Ready to use</value></data>
   <data name="StatusObserving" xml:space="preserve"><value>Observing</value></data>
-  <data name="StatusPvp" xml:space="preserve"><value>Waiting to enter PvP</value></data>
+  <data name="StatusPvp" xml:space="preserve"><value>Ready · operates in PvP</value></data>
   <data name="StatusArea" xml:space="preserve"><value>Inactive in this area</value></data>
   <data name="StatusActions" xml:space="preserve"><value>No verified actions for the current job and level</value></data>
   <data name="StatusContract" xml:space="preserve"><value>Runtime contract unavailable · check for plugin updates</value></data>
@@ -105,7 +105,7 @@
   <data name="StatusReadyCheck" xml:space="preserve"><value>Ready-check labels stopped · reopen the ready check</value></data>
   <data name="StatusPatch" xml:space="preserve"><value>Bubble patch failed · toggle off and on; check for updates if it persists</value></data>
   <data name="StatusFood" xml:space="preserve"><value>Waiting for a food observation sample</value></data>
-  <data name="StatusEmote" xml:space="preserve"><value>Waiting for Follow from a character context menu</value></data>
+  <data name="StatusEmote" xml:space="preserve"><value>Ready · choose Follow from a character context menu</value></data>
   <data name="StatusSyncing" xml:space="preserve"><value>Synchronizing the selected emote</value></data>
   <data name="StatusCombat" xml:space="preserve"><value>Waiting for combat to end</value></data>
   <data name="StatusShopPartial" xml:space="preserve"><value>Partial support · currency-exchange contract unavailable; other shop tools remain available</value></data>

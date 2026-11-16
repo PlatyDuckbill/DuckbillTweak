@@ -96,7 +96,7 @@
   <data name="StatusLoading" xml:space="preserve"><value>지역 이동 완료 대기</value></data>
   <data name="StatusReady" xml:space="preserve"><value>사용 준비됨</value></data>
   <data name="StatusObserving" xml:space="preserve"><value>관찰 중</value></data>
-  <data name="StatusPvp" xml:space="preserve"><value>PvP 지역 진입 대기</value></data>
+  <data name="StatusPvp" xml:space="preserve"><value>사용 준비됨 · PvP에서 동작</value></data>
   <data name="StatusArea" xml:space="preserve"><value>현재 지역에서는 동작하지 않음</value></data>
   <data name="StatusActions" xml:space="preserve"><value>현재 직업·레벨에서 검증된 대상 기술 없음</value></data>
   <data name="StatusContract" xml:space="preserve"><value>실행 계약 확인 실패 · 플러그인 업데이트 확인</value></data>
@@ -105,7 +105,7 @@
   <data name="StatusReadyCheck" xml:space="preserve"><value>준비 확인 표시 중단 · 준비 확인 화면을 다시 열어 확인</value></data>
   <data name="StatusPatch" xml:space="preserve"><value>말풍선 적용 실패 · 기능을 껐다 켠 뒤 계속되면 업데이트 확인</value></data>
   <data name="StatusFood" xml:space="preserve"><value>음식 관찰 표본 대기</value></data>
-  <data name="StatusEmote" xml:space="preserve"><value>캐릭터 우클릭으로 따라하기 선택 대기</value></data>
+  <data name="StatusEmote" xml:space="preserve"><value>사용 준비됨 · 캐릭터 우클릭으로 따라하기</value></data>
   <data name="StatusSyncing" xml:space="preserve"><value>선택한 감정표현의 박자 맞추는 중</value></data>
   <data name="StatusCombat" xml:space="preserve"><value>전투 종료 대기</value></data>
   <data name="StatusShopPartial" xml:space="preserve"><value>일부 지원 · 재화 교환 상점 계약 확인 실패, 다른 상점 도구 사용 가능</value></data>

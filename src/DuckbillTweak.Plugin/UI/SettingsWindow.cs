@@ -84,6 +84,23 @@ internal sealed class SettingsWindow : Window
     private static void DrawStatus(FeatureStatus? status)
     {
         if (status is null) return;
+        var light = GameThemeScope.Current?.Light == true;
+        var color = status.State switch
+        {
+            FeatureState.Off => GameThemeScope.Current?.Muted ?? new Vector4(.6f, .6f, .6f, 1),
+            FeatureState.Ready or FeatureState.Observing or FeatureState.Syncing or FeatureState.PvpOnly
+                or FeatureState.WaitingEmote => GameThemePalette.Hex(light ? 0x247147u : 0x79cf9cu),
+            FeatureState.ContractUnavailable or FeatureState.InitializationFailed or FeatureState.ObservationFailed
+                or FeatureState.ReadyCheckFailed or FeatureState.PvpPatchFailed => GameThemePalette.Hex(light ? 0xa42e2eu : 0xf08b83u),
+            _ => GameThemePalette.Hex(light ? 0x8c6318u : 0xe6c36au)
+        };
+        var radius = ImGui.GetFontSize() * .22f;
+        var origin = ImGui.GetCursorScreenPos();
+        var lineHeight = ImGui.GetTextLineHeight();
+        ImGui.GetWindowDrawList().AddCircleFilled(origin + new Vector2(radius, lineHeight * .5f), radius, ImGui.GetColorU32(color), 16);
+        ImGui.Dummy(new Vector2(radius * 2, lineHeight));
+        var dotHovered = ImGui.IsItemHovered();
+        ImGui.SameLine(0, ImGui.GetFontSize() * .35f);
         UiWidgets.Secondary(T.RuntimeStatus, UiText.Get(status.State switch
         {
             FeatureState.Off => T.StatusOff, FeatureState.LoginRequired => T.StatusLogin,
@@ -96,7 +113,7 @@ internal sealed class SettingsWindow : Window
             FeatureState.WaitingEmote => T.StatusEmote, FeatureState.Syncing => T.StatusSyncing,
             FeatureState.CombatBlocked => T.StatusCombat, FeatureState.ShopPartial => T.StatusShopPartial, _ => T.StatusStale
         }));
-        if (status.Diagnostic.Length > 0 && ImGui.IsItemHovered())
+        if (status.Diagnostic.Length > 0 && (dotHovered || ImGui.IsItemHovered()))
             ImGui.SetTooltip(UiText.Get(T.StatusDiagnostic, status.Diagnostic));
     }
 
