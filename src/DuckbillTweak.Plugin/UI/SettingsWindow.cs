@@ -74,6 +74,8 @@ internal sealed class SettingsWindow : Window
             Feature(T.Emote, T.EmoteDescription, config.EmoteFollow, v => change(c => c.EmoteFollow = v), () => showSocial = !showSocial);
             DrawStatus(Current(runtime?.Emote));
             if (showSocial) DetailGroup("EmoteDetails", MeasureSocialDetails, SocialSettings);
+            Feature(T.EmoteStatus, T.EmoteStatusDescription, config.EmoteStatusIcons, v => change(c => c.EmoteStatusIcons = v));
+            DrawStatus(Current(runtime?.EmoteStatus));
         }
         ImGui.EndChild();
         var version = UiText.Get(T.Version, ReleaseHistory.CurrentVersion);
@@ -111,7 +113,8 @@ internal sealed class SettingsWindow : Window
             FeatureState.ObservationFailed => T.StatusObservation, FeatureState.ReadyCheckFailed => T.StatusReadyCheck,
             FeatureState.PvpPatchFailed => T.StatusPatch, FeatureState.WaitingFood => T.StatusFood,
             FeatureState.WaitingEmote => T.StatusEmote, FeatureState.Syncing => T.StatusSyncing,
-            FeatureState.CombatBlocked => T.StatusCombat, FeatureState.ShopPartial => T.StatusShopPartial, _ => T.StatusStale
+            FeatureState.CombatBlocked => T.StatusCombat, FeatureState.ShopPartial => T.StatusShopPartial,
+            FeatureState.HudPartial => T.StatusHudPartial, FeatureState.HudFull => T.StatusHudFull, _ => T.StatusStale
         }));
         if (status.Diagnostic.Length > 0 && (dotHovered || ImGui.IsItemHovered()))
             ImGui.SetTooltip(UiText.Get(T.StatusDiagnostic, status.Diagnostic));

@@ -36,6 +36,8 @@ public sealed class Plugin : IAsyncDalamudPlugin
     private readonly IGameInteropProvider interop;
     private readonly IFlyTextGui flyText;
     private readonly IObjectTable objects;
+    private readonly IPlayerState playerState;
+    private readonly IUnlockState unlocks;
     private readonly IDataManager data;
     private readonly ICondition conditions;
     private readonly ITargetManager targets;
@@ -56,6 +58,8 @@ public sealed class Plugin : IAsyncDalamudPlugin
     private NativeBubbleOrder? bubbleOrder;
     private PositionalFlyText? positional;
     private EmoteFollow? emoteFollow;
+    private EmoteStatusObserver? emoteStatus;
+    private NativeEmoteStatus? nativeEmoteStatus;
     private FoodReminder? food;
     private NativeFoodReadyCheck? foodReadyCheck;
     private readonly IToastGui toast;
@@ -89,7 +93,11 @@ public sealed class Plugin : IAsyncDalamudPlugin
         var emoteStatus = Status(config.EmoteFollow, () => emoteFollow is null ? new(FeatureState.InitializationFailed)
             : conditions[Dalamud.Game.ClientState.Conditions.ConditionFlag.InCombat] ? new(FeatureState.CombatBlocked)
             : new(emoteFollow.SyncInProgress ? FeatureState.Syncing : FeatureState.WaitingEmote));
-        Volatile.Write(ref featureStatuses, new(foodStatus, positionalStatus, pvpStatus, shopStatus, lootStatus, emoteStatus, Environment.TickCount64));
+        var emoteHudStatus = Status(config.EmoteStatusIcons, () => nativeEmoteStatus is null ? new(FeatureState.InitializationFailed)
+            : !nativeEmoteStatus.Available ? new(FeatureState.ContractUnavailable, nativeEmoteStatus.Diagnostic)
+            : nativeEmoteStatus.HasFailure ? new(FeatureState.HudPartial, nativeEmoteStatus.Diagnostic)
+            : new(nativeEmoteStatus.WaitingSlot ? FeatureState.HudFull : FeatureState.Ready));
+        Volatile.Write(ref featureStatuses, new(foodStatus, positionalStatus, pvpStatus, shopStatus, lootStatus, emoteStatus, emoteHudStatus, Environment.TickCount64));
     }
 
     public Plugin(IDalamudPluginInterface pluginInterface, ICommandManager commands, IDataManager data,
@@ -102,6 +110,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
         this.toast = toast;
         this.pluginInterface = pluginInterface; this.commands = commands; this.framework = framework;
         this.client = client; this.log = log; this.gui = gameGui; this.party = party; this.events = events;
+        playerState = player; this.unlocks = unlocks;
         this.addonLifecycle = addonLifecycle;
         this.contextMenu = contextMenu;
         this.chat = chat; this.interop = interop; this.flyText = flyText; this.objects = objects; this.data = data; this.conditions = conditions; this.targets = target;
@@ -158,6 +167,16 @@ public sealed class Plugin : IAsyncDalamudPlugin
                 lootInteraction = new(events, addonLifecycle, contextMenu, gui, config, lootPopup, log);
                 bubbleOrder = new(framework, client, log);
                 emoteFollow = new(contextMenu, framework, objects, client, targets, conditions, data, chat, log, config, Save);
+                try
+                {
+                    emoteStatus = new(framework, client, playerState, objects, targets, unlocks, data, conditions, config);
+                    nativeEmoteStatus = new(framework, gui, emoteStatus, config, log);
+                }
+                catch (Exception exception)
+                {
+                    nativeEmoteStatus?.Dispose(); emoteStatus?.Dispose(); nativeEmoteStatus = null; emoteStatus = null;
+                    log.Error(exception, "Emote status HUD initialization failed; other features remain active");
+                }
                 try
                 {
                     food = new(framework, client, objects, party, conditions, data, chat, toast, log, config);
@@ -308,7 +327,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
 #if DEBUG
             probe.Dispose(); emoteProbe.Dispose(); emoteSync.Dispose();
 #endif
-            positional?.Dispose(); emoteFollow?.Dispose(); foodReadyCheck?.Dispose(); food?.Dispose(); bubbleOrder?.Dispose(); bubbles?.Dispose(); lootInteraction?.Dispose(); shop?.Dispose();
+            positional?.Dispose(); emoteFollow?.Dispose(); nativeEmoteStatus?.Dispose(); emoteStatus?.Dispose(); foodReadyCheck?.Dispose(); food?.Dispose(); bubbleOrder?.Dispose(); bubbles?.Dispose(); lootInteraction?.Dispose(); shop?.Dispose();
             foreach (var exchange in exchanges) exchange.Dispose();
             merchants.Dispose(); loot.Dispose();
         });

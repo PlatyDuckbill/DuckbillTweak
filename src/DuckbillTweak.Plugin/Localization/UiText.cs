@@ -92,6 +92,13 @@ internal enum TextKey
     ExchangeUnavailable,
     FoodUnavailable,
     IconChoice,
+    EmoteStatus,
+    EmoteStatusDescription,
+    EmoteTooltipOwned,
+    EmoteTooltipMissing,
+    EmoteTooltipUnknown,
+    StatusHudPartial,
+    StatusHudFull,
     RuntimeStatus,
     StatusOff,
     StatusLogin,
@@ -119,8 +126,10 @@ internal static class UiText
     private static readonly ResourceManager Resources = new("DuckbillTweak.Plugin.Localization.Strings", typeof(UiText).Assembly);
     public static bool English { get; set; }
     public static string Get(TextKey key, params object[] args)
+        => GetForLanguage(key, English ? "en" : "ko", args);
+    public static string GetForLanguage(TextKey key, string language, params object[] args)
     {
-        var culture = CultureInfo.GetCultureInfo(English ? "en" : "ko");
+        var culture = CultureInfo.GetCultureInfo(language == "en" ? "en" : "ko");
         var text = Resources.GetString(key.ToString(), culture) ?? key.ToString();
         return args.Length == 0 ? text : string.Format(culture, text, args);
     }

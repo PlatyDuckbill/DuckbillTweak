@@ -39,6 +39,7 @@ public sealed class Configuration : IPluginConfiguration
     public uint ComboFailColor { get; set; } = 0x8C8C8C;
     /// <summary>Right-click "따라하기" for looping emotes (off by default).</summary>
     public bool EmoteFollow { get; set; }
+    public bool EmoteStatusIcons { get; set; }
     public bool FoodReminder { get; set; }
     public int FoodExtremeMinutes { get; set; } = 10;
     public int FoodSavageMinutes { get; set; } = 15;

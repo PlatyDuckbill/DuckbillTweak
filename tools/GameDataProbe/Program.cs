@@ -456,6 +456,19 @@ else if (args[1] == "gfd-icons" && args.Length >= 4)
     File.WriteAllBytes(args[2], EncodePng(sheet, sheetWidth, sheetHeight));
     Console.WriteLine($"Sheet={args[2]}; Size={sheetWidth}x{sheetHeight}; Texture={texture.Header.Width}x{texture.Header.Height}");
 }
+else if (args[1] == "emote-status-audit")
+{
+    foreach (var hud in game.GetExcelSheet<Hud>()!)
+    {
+        var values = new[] { hud.Unknown0.ExtractText(), hud.Unknown1.ExtractText(), hud.Unknown2.ExtractText() };
+        if (values.Any(value => value.Contains("Status", StringComparison.OrdinalIgnoreCase) || value.Contains("상태", StringComparison.Ordinal)))
+            Console.WriteLine($"Hud={hud.RowId}; Values={string.Join('|', values)}");
+    }
+    var emotes = game.GetExcelSheet<Emote>()!.Where(e => !e.Name.IsEmpty).ToArray();
+    Console.WriteLine($"EmoteRows={emotes.Length}; WithIcon={emotes.Count(e => e.Icon != 0)}; WithPlayerCommand={emotes.Count(e => e.TextCommand.ValueNullable is { } command && !command.Command.IsEmpty)}");
+    foreach (var emote in emotes.Where(e => e.RowId is 1 or 2 or 307))
+        Console.WriteLine($"Emote={emote.RowId}; Name={emote.Name.ExtractText()}; Icon={emote.Icon}; UnlockLink={emote.UnlockLink}; Command={emote.TextCommand.ValueNullable?.Command.ExtractText()}");
+}
 else if (args[1] == "emotes")
 {
     // Offline research for emote sync: each emote's ActionTimeline slots (key, slot, loop flag) and emote mode.
