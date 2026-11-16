@@ -114,11 +114,11 @@
   <data name="EmoteStatus" xml:space="preserve"><value>Emote status icons</value></data>
   <data name="EmoteStatusDescription" xml:space="preserve"><value>Show playing emotes in your Other Status Info and the selected target&apos;s status HUD, then hide them when they finish. Hover over the icon to see its name and whether you own it.</value></data>
   <data name="EmoteTooltipOwned" xml:space="preserve"><value>{0}
-Your collection: Owned</value></data>
+Owned</value></data>
   <data name="EmoteTooltipMissing" xml:space="preserve"><value>{0}
-Your collection: Not owned</value></data>
+Not owned</value></data>
   <data name="EmoteTooltipUnknown" xml:space="preserve"><value>{0}
-Your collection: Unknown</value></data>
+Ownership unknown</value></data>
   <data name="StatusHudPartial" xml:space="preserve"><value>A HUD contract is unavailable · other supported status displays remain active</value></data>
   <data name="StatusHudFull" xml:space="preserve"><value>Waiting for a free status icon slot</value></data>
 </root>
