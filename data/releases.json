@@ -1,5 +1,27 @@
 [
   {
+    "Version": "0.3.1.0",
+    "Date": "2026-11-16",
+    "TitleKorean": "기능별 동작 상태",
+    "TitleEnglish": "Feature runtime status",
+    "SummaryKorean": "기능별 사용 준비와 동작하지 않는 이유를 설정에서 확인할 수 있습니다.",
+    "SummaryEnglish": "Check which features are ready and why a feature is unavailable from settings.",
+    "Korean": [
+      "각 기능의 사용 준비·대기·실패 상태를 색 점과 안내 문구로 확인할 수 있습니다.",
+      "동작하지 않는 기능의 이유와 재시도 방법을 설정에서 확인할 수 있습니다."
+    ],
+    "English": [
+      "See whether each feature is ready, waiting or unavailable through colored status dots and clear labels.",
+      "Check why a feature stopped and how to retry directly in settings."
+    ],
+    "OtherKorean": [
+      "PvP와 감정표현 따라하기는 사용 가능한 대기 상태도 초록색으로 표시합니다."
+    ],
+    "OtherEnglish": [
+      "PvP bubbles and emote following show green when ready, including normal idle states."
+    ]
+  },
+  {
     "Version": "0.3.0.1",
     "Date": "2026-11-15",
     "TitleKorean": "한국어 표시 수정",
