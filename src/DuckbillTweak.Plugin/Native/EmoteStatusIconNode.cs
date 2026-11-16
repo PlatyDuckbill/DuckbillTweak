@@ -1,7 +1,8 @@
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using KamiToolKit.BaseTypes.ComponentNode;
+using KamiToolKit.Classes;
+using KamiToolKit.Enums;
 using KamiToolKit.Nodes;
-using KamiToolKit.Nodes.Simplified;
 using Lumina.Text.ReadOnly;
 
 namespace DuckbillTweak.Plugin.Native;
@@ -10,7 +11,7 @@ namespace DuckbillTweak.Plugin.Native;
 internal sealed unsafe class EmoteStatusIconNode : ComponentNode<AtkComponentIconText, AtkUldComponentDataIconText>
 {
     private readonly IconImageNode image;
-    private readonly SimpleImageNode hoverFrame;
+    private readonly ImageNode hoverFrame;
     private bool hovered;
 
     public uint IconId { get => image.IconId; set => image.IconId = value; }
@@ -49,25 +50,29 @@ internal sealed unsafe class EmoteStatusIconNode : ComponentNode<AtkComponentIco
         // Status ULDs reserve node 4 for the top marker; this display has neither stacks nor a timer.
         var marker = new IconImageNode { NodeId = 4, Position = new(-4, -4), Size = new(32, 12), IsVisible = false };
         text.AttachNode(this); image.AttachNode(this); marker.AttachNode(this);
-        var frame = new SimpleImageNode
+        // Atlas parts must retain their native dimensions and sampling mode. AutoFit is for standalone icons;
+        // using it on IconA_Frame can sample the other cells of the atlas instead of the requested frame.
+        var frame = new ImageNode
         {
-            NodeId = 5, Position = new(0, 4), Size = new(24, 24), FitTexture = true,
-            TexturePath = "ui/uld/IconA_Frame.tex", TextureSize = new(48, 48)
+            NodeId = 5, Position = new(0, 4), Size = new(48, 48), Scale = new(.5f, .5f),
+            WrapMode = WrapMode.Tile, PartId = 0
         };
+        IconNodeTextureHelper.LoadIconAFrameTexture(frame);
         frame.AttachNode(this);
         // The same 72px hover halo used by native IconA, scaled with the 48px frame.
-        hoverFrame = new SimpleImageNode
+        hoverFrame = new ImageNode
         {
-            NodeId = 6, Position = new(-6, -2), Size = new(36, 36), FitTexture = true,
-            TexturePath = "ui/uld/IconA_Frame.tex", TextureCoordinates = new(240, 0), TextureSize = new(72, 72),
+            NodeId = 6, Position = new(-6, -2), Size = new(72, 72), Scale = new(.5f, .5f),
+            WrapMode = WrapMode.Tile, PartId = 16,
             Alpha = .65f, IsVisible = false
         };
+        IconNodeTextureHelper.LoadIconAFrameTexture(hoverFrame);
         hoverFrame.AttachNode(this);
         Data->Nodes[0] = text.NodeId;
         Data->Nodes[1] = image.NodeId;
         InitializeComponentEvents();
         CollisionNode.Position = frame.Position;
-        CollisionNode.Size = frame.Size;
+        CollisionNode.Size = new(24, 24);
         CollisionNode.AddEvent(AtkEventType.MouseOver, () => { hovered = true; hoverFrame.IsVisible = true; });
         CollisionNode.AddEvent(AtkEventType.MouseOut, () => { hovered = false; hoverFrame.IsVisible = false; });
         HideStatus();
