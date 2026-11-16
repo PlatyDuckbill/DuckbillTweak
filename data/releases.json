@@ -1,5 +1,23 @@
 [
   {
+    "Version": "0.4.0.1",
+    "Date": "2026-11-16",
+    "TitleKorean": "일반 상점 필터 수정",
+    "TitleEnglish": "Ordinary shop filter fix",
+    "SummaryKorean": "잡화상인과 도구상인에서도 원래 상점 모양으로 필터를 사용할 수 있습니다.",
+    "SummaryEnglish": "Use filters at general goods and tool vendors while keeping the original shop appearance.",
+    "Korean": [
+      "잡화상인·도구상인 등 일반 상점에서 아이템 정보·클릭과 필터가 동작하지 않던 문제를 수정했습니다.",
+      "필터를 켜도 원래 분류 아이콘·크기·열 위치를 유지합니다."
+    ],
+    "English": [
+      "Fixed item hover, click and filtering issues in ordinary shops, including general goods and tool vendors.",
+      "Filtered shop rows now retain the original category icons, sizing and column positions."
+    ],
+    "OtherKorean": [],
+    "OtherEnglish": []
+  },
+  {
     "Version": "0.4.0.0",
     "Date": "2026-11-16",
     "TitleKorean": "감정표현 상태 표시",

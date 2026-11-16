@@ -153,6 +153,28 @@ dal4kr의 Lumina는AssemblyVersion1.0.0.0/MVID43c52c26-69c9-4a75-9af8-5a520f3ad2
 
 ## 상점
 
+### 일반 길 상점의 실제 데이터 경로 (2026-11-16 개발본)
+
+22:07~22:08 실기 로그에서 일반 Shop의 화면 행은36/20/11/12개인데 AgentShop.ItemReceive/ItemCost는 null·개수0인 것을 확인했다. 기존 코드가 교환 상점 배열을 일반 길 상점에도 요구한 탓에 필터 계산 전에 항상 중단됐다. 일반 상점에는 이 배열 계약을 사용하지 않는다.
+
+설치 ClientStructs의 ShopEventHandler.AgentProxy.Instance가 현재 AgentShop.EventReceiver와 같고 양쪽 AddonId가 현재 Shop과 일치할 때만 Handler를 읽는다. 설치 바인딩의 Handler vtable·Shop 이벤트 종류·일반 모드·매입 탭 아님을 확인한다. Items/VisibleItems span의 실제 길이·개수와 BuyList 행 수, 맵 범위/중복을 검사한다. 표시 행은 VisibleItems로 Items에 연결하며 ItemId/IsHQ·PriceBuy·NumOwned를 관리 값으로 복사한다. NumOwned 음수는 미확인이고 가격이 양수가 아니면 계산/대체 목록을 적용하지 않는다. 길 가격은 낱개 단위이며 StackSize를 보상 묶음 수량으로 사용하지 않는다. 길 보유량은 기존 지갑/관리 인벤토리 경로를 사용한다.
+
+후속 실기22:17~22:19의 mode1/buybackFalse/sortingTrue와 체크된 만물상 화면에서 NeedSorting을 로딩 중으로 취급한 차단이 남아 있음을 확인했다. 이 필드는 로딩 완료 판정에 사용하지 않는다. 현재 KR 코드에서 GilShopItem 로드 시 조건부1 설정, 아이템 자료 로드 후 정렬 호출, 실제 구매 요청의 Items.SubRowId 선택 분기에 계속 사용하며 정렬 뒤0으로 지우지 않는다. 따라서 플래그를 바꾸지 않고 원래 정렬/구매 동작에 맡긴다. 제품은 기존 span·원본 매핑·아이템/가격 검사를 유지한다. 오프라인 조사 위치는 RVA175D79D/175CDB9~175CE18/175F873~175F8A5이며 제품 주소/가드로 사용하지 않는다.
+
+필터 행 외형 후속: 사용자 지느이힐 화면에서 보유 톱은 정상 제외됐으나 분류 아이콘이 실제 아이템 그림으로 바뀌고 배치가 달라졌다. 필터 행의 아이콘 소스를 Item.Icon에서 Handler.Items의 CategoryIcon으로 바꿨다. 로컬 shop.uld component1016과 대조해 행25px, 아이콘X0/Y2·20×20, 이름X27/Y0·250×25, 가격X345/Y0·95×24, 보유X492/Y0·40×24로 맞췄다. 글꼴은 원본과 같은 Axis14px·세로 가운데, 줄 간격0이며 이름의 Ellipsis/Emboss를 유지한다. 실제 아이템ID는 툴팁/검증에 계속 사용하며 표시용 분류 아이콘과 혼동하지 않는다. 게임 파일/ULD 원본은 변경하거나 제품에 복제하지 않았다.
+
+클릭은 필터 행 번호가 아니라 원본 BuyList 행 번호로 전달한다. 클릭 직전에 같은 상점 이벤트ID·VisibleItems 원본 매핑·Items 인덱스·SubRowId·품질 포함 아이템ID·현재 길 가격·원본 비활성 상태를 대조한다. 기존 게임 구매/수량 이벤트로 전달하며 ExecuteBuy 직접 호출은 하지 않는다. 원본 callback 도중 refresh/닫힘으로 입력이 복원되면 finally에서 다시 차단하지 않는다. 컨텍스트 전환/계약 실패/해제 때 이전 표시와 계산 스냅샷을 비운다.
+
+출처: [ShopEventHandler](https://github.com/aers/FFXIVClientStructs/blob/479ea936b7ecbf6436c16941ece9c9ee83cba494/FFXIVClientStructs/FFXIV/Client/Game/Event/ShopEventHandler.cs)·[AgentShop](https://github.com/aers/FFXIVClientStructs/blob/479ea936b7ecbf6436c16941ece9c9ee83cba494/FFXIVClientStructs/FFXIV/Client/UI/Agent/AgentShop.cs), 고정479ea936(MIT). 구조 설명을 참고했고 구현/구조 선언/글로벌 시그니처를 제품에 복사하지 않았다. 세 새 구조의 공개 멤버를 고정 컴파일 참조/현재 설치 DLL과 대조했다. 설치 바인딩의 기존 singleton/vtable 패턴은 현재 KR 실행 파일에서 각각1곳이며 singleton의 AddonId 저장·일반 모드 설정과 handler ctor 형태를 오프라인 대조했다. 런타임은 설치 바인딩이 해석한 주소만 사용하고 고정 RVA/필드 오프셋을 추가하지 않는다. 실제 필터 표시/클릭 확인은 별도다.
+
+### 일반 길 상점의 비사용 필터 목록 분리 (2026-11-16 개발본)
+
+사용자 화면에서 필터가 모두 꺼진 일반 잡화/도구 상점의 아이템 호버·클릭 무반응이 다시 보고됐다. 소장품 접수원은 정상이라는 보고와 구분한다. 일반 Shop만 사용하는 대체 ListNode는 기존에 빈 상태부터 Addon에 연결하고 루트의 IsVisible만 껐다. 목록 크기의 MouseWheel 충돌 노드와 하위 노드가 원본 행 위의 게임 노드/충돌 목록에 남을 수 있는 경로다. 실제 런타임 충돌 목록을 수집해 원인을 확정한 것은 아니다.
+
+이제 실제 제외 행이 있을 때만 렌더를 마친 대체 목록을 연결한다. 전체 표시/제외 행 없음/refresh/계약 실패에서는 원본 입력·투명도를 먼저 복원하고 대체 목록 전체를 DetachNode로 분리한다. 루트 숨김이나 이전 프레임의 표시 상태에만 의존하지 않는다. 최초 컨트롤 배치와 연결/분리 뒤에는 기존 즉시·PostDraw 충돌 갱신을 요청한다. 분리한 노드는 같은 열린 상점 안에서 재사용하고 상점 종료/해제 때 Dispose한다. 원본 배열/품목·가격·수량/원본 구매 인덱스 검증은 유지한다.
+
+고정 KamiToolKit revision1eaccb5c6d6fcc697f7e1b98b5528580f5edd201(MIT)의 BaseTypes/NodeBase/NodeBase.Linking.cs·Extensions/AtkUldManagerExtensions.cs에서 DetachNode의 트리·자식 object list·충돌 목록 제거와 재연결 동작을 확인해 공개 API를 사용했다. 원본 수정이나 구현 복사는 없다. 빌드·자료 검사와 실제 게임 호버/클릭 확인은 구분한다.
+
 ### 0.1.1.8 원본 렌더러 풀 대응
 
 0.1.1.6/7의 렌더러 중복 금지 검사는 잘못된 계약이었다. KR SetupItem RVA6A1FF0은 CategoryItemRendererList의 템플릿과 NodeList를 NodeCount+1로 순환 배정한다. 행 수가 화면 행 수보다 많으면 서로 다른 품목이 같은 렌더러를 공유한다. 이를 비정상으로 거부하면 필터가 비활성화되고, 검증만 제거한 채 OwnerNode를 숨기면 표시할 다른 품목도 사라진다.
@@ -204,7 +226,7 @@ InclusionShop/ShopExchangeItem의 단순화한 대체 ListNode는 제거된 상�
 
 0.1.1.4는 투명도와 IsItemInteractionEnabled 외에 원본 목록/렌더러/하위 컴포넌트의 HasCollision/RespondToMouse를 저장·차단한다. 매 update에서 살아 있는 현재 트리만 대조하고, 해제 시 현재 트리에 여전히 속한 노드의 두 비트만 복원한다. 목록 표시/숨김/행 변경과 입력 복구 뒤에는 UpdateCollisionNodeList를 호출한다. 숨긴 대체 목록의 캐시된 충돌 영역이 원본 스크롤을 가로채지 않도록 하는 처리다. 데이터 갱신만으로 스크롤을 초기화하지 않으며 행 정체성/필터가 바뀔 때만 맨 위로 돌린다. 교환 목록은52px 대신26px 한 줄/22px 아이콘을 사용한다.
 
-Shop/ShopExchangeItem은 AgentShop의 addon ID와 수신 품목/비용 배열 크기를 대조한다. 비용 배열은 수신 품목당3개 구조가 일치할 때만 사용한다. 일반 길 상점은 실제 비용 항목이 Item1인지 확인한다. 가격을 추측해 다른 품목의 값을 표시하지 않는다.
+ShopExchangeItem은 AgentShop의 addon ID와 수신 품목/비용 배열 크기를 대조한다. 비용 배열은 수신 품목당3개 구조가 일치할 때만 사용한다. 일반 길 Shop의 이 배열 의존은2026-11-16에 위 ShopEventHandler 계약으로 수정했다. 가격을 추측해 다른 품목의 값을 표시하지 않는다.
 
 InclusionShop은 CategoryIndexMap으로 화면 선택→실제 Category를 매핑한다. SelectedSubCategoryIndex는 실제 subcategory이고, ItemIndexMap으로 원본 UI 행→원본 품목을 연결한다. map 범위와 중복을 검사한다. 카테고리/품목 배열을 재정렬하거나 자동 카테고리 선택을 호출하지 않는다.
 

@@ -60,14 +60,19 @@ internal sealed class CalculationRowNode : ListItemNode<CalculationRow>, IListIt
 }
 
 internal sealed record NativeShopRow(int OriginalIndex, uint RawItemId, uint IconId, string Name,
-    string Price, string Owned, uint CategoryId, bool Enabled, bool OwnedAlready, uint UnitPrice, uint Quantity);
+    string Price, string Owned, uint CategoryId, bool Enabled, bool OwnedAlready, uint UnitPrice,
+    uint ShopId, int SourceIndex, uint SubRowId);
 internal sealed unsafe class NativeShopRowNode : ListItemNode<NativeShopRow>, IListItemNode
 {
-    public static float ItemHeight => 26;
-    private readonly IconImageNode icon = new() { Position = new(6, 2), Size = new(22, 22), FitTexture = true };
-    private readonly TextNode name = new() { Position = new(32, 1), Size = new(268, 24), FontSize = 14, TextFlags = TextFlags.Ellipsis };
-    private readonly TextNode price = new() { Position = new(325, 1), Size = new(98, 24), FontSize = 14, AlignmentType = AlignmentType.Right };
-    private readonly TextNode owned = new() { Position = new(435, 1), Size = new(74, 24), FontSize = 14, AlignmentType = AlignmentType.Right };
+    // KR shop.uld component1016: keep the native row's category icon and text geometry.
+    public static float ItemHeight => 25;
+    private readonly IconImageNode icon = new() { Position = new(0, 2), Size = new(20, 20), FitTexture = true };
+    private readonly TextNode name = new() { Position = new(27, 0), Size = new(250, 25), FontSize = 14,
+        LineSpacing = 0, TextFlags = TextFlags.Ellipsis | TextFlags.Emboss };
+    private readonly TextNode price = new() { Position = new(345, 0), Size = new(95, 24), FontSize = 14,
+        LineSpacing = 0, AlignmentType = AlignmentType.Right };
+    private readonly TextNode owned = new() { Position = new(492, 0), Size = new(40, 24), FontSize = 14,
+        LineSpacing = 0, AlignmentType = AlignmentType.Right };
     public NativeShopRowNode()
     {
         icon.AttachNode(this); name.AttachNode(this); price.AttachNode(this); owned.AttachNode(this);

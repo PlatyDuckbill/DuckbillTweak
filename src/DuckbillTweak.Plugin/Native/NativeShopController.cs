@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Dalamud.Plugin.Services;
 using DuckbillTweak.Core.Shops;
 using DuckbillTweak.Plugin.Shops;
+using FFXIVClientStructs.FFXIV.Client.Game.Event;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
@@ -11,7 +12,7 @@ using KamiToolKit.Nodes;
 
 namespace DuckbillTweak.Plugin.Native;
 
-/// <summary>Native controls in the inspected KR Shop ULD. The agent's item array is never reordered.</summary>
+/// <summary>Native controls in the inspected KR Shop ULD. The handler's items and visible-row map are never reordered.</summary>
 internal sealed unsafe class NativeShopController : IDisposable
 {
     private readonly MerchantService merchants;
@@ -35,8 +36,10 @@ internal sealed unsafe class NativeShopController : IDisposable
     private byte originalAlpha;
     private bool originalInteraction;
     private bool usingFilteredList;
+    private bool filteredListAttached;
     private bool syncing;
     private bool renderFailed;
+    private string? lastReadFailure;
     private (int Total, int Visible)? lastApplied;
 
     public NativeShopController(MerchantService merchants, NativeCurrencyAddon currency, IPluginLog log, IAddonLifecycle lifecycle)
@@ -95,34 +98,33 @@ internal sealed unsafe class NativeShopController : IDisposable
         }
         if (lastRead != 0 && Stopwatch.GetElapsedTime(lastRead).TotalMilliseconds < 300) return;
         lastRead = Stopwatch.GetTimestamp();
-        var agent = AgentShop.Instance();
-        if (agent is null || agent->AddonId != addon->Id || agent->ItemReceive is null ||
-            agent->ItemReceiveCount is < 0 or > 1000 || agent->ItemReceiveCount != list->ListLength ||
-            agent->ItemCost is null || agent->ItemCostCount != agent->ItemReceiveCount * 3)
-        { RestoreList(addon); merchants.ClearDisplayedShop(addon->Id); return; }
+        if (!TrySource(addon, out var handler, out var failure)) { ReadFailed(addon, failure); return; }
         var view = merchants.View;
         var next = new List<NativeShopRow>();
         var offers = new List<Offer>();
         var balances = new Dictionary<CurrencyKey, long>();
         var itemInfo = view.Offers.SelectMany(o => o.Rewards).Select(r => r.Item).DistinctBy(i => i.Id).ToDictionary(i => i.Id);
-        for (var index = 0; index < agent->ItemReceiveCount; index++)
+        for (var index = 0; index < handler->VisibleItemsCount; index++)
         {
-            ref var item = ref agent->ItemReceive[index];
-            var baseId = item.ItemId >= 1_000_000 ? item.ItemId - 1_000_000 : item.ItemId;
+            var sourceIndex = handler->VisibleItems[index];
+            ref var item = ref handler->Items[sourceIndex];
+            var baseId = item.ItemId;
+            var rawId = baseId + (item.IsHQ ? 1_000_000u : 0u);
             var detail = itemInfo.GetValueOrDefault(baseId) ?? merchants.ItemDetails(baseId);
-            if (baseId == 0 || detail is null) { RestoreList(addon); merchants.ClearDisplayedShop(addon->Id); return; }
+            if (baseId is 0 or >= 1_000_000 || detail is null) { ReadFailed(addon, $"item unavailable: row={index}; item={baseId}"); return; }
+            if (item.PriceBuy <= 0) { ReadFailed(addon, $"gil price unavailable: row={index}"); return; }
             itemInfo[baseId] = detail;
-            ref var cost = ref agent->ItemCost[index * 3];
-            if (cost.ItemId != 1) { RestoreList(addon); merchants.ClearDisplayedShop(addon->Id); return; }
-            next.Add(new(index, item.ItemId, item.ItemIconId, merchants.ItemDisplayName(item.ItemId), cost.ItemCount.ToString("N0"),
-                item.OwnedItemCount.ToString("N0"), detail.CategoryId, !list->GetItemDisabledState(index),
-                merchants.ItemOwnership(item.ItemId, item.OwnedItemCount) == Ownership.Owned, cost.ItemCount, item.ItemCount));
-            var price = merchants.NativePrice(0, cost.ItemId, cost.ItemCount);
-            balances[price.Key] = cost.OwnedItemCount;
-            if (merchants.NativeReward(item.ItemId, item.ItemCount, [price]) is { } reward)
+            next.Add(new(index, rawId, item.CategoryIcon, merchants.ItemDisplayName(rawId), item.PriceBuy.ToString("N0"),
+                item.NumOwned >= 0 ? item.NumOwned.ToString("N0") : "미확인", detail.CategoryId, !list->GetItemDisabledState(index),
+                merchants.ItemOwnership(rawId, item.NumOwned > 0 ? (uint)item.NumOwned : 0) == Ownership.Owned,
+                (uint)item.PriceBuy, handler->Info.EventId.Id, sourceIndex, item.SubRowId));
+            // A gil shop price is per item. StackSize is its inventory capacity, not a reward bundle.
+            var price = merchants.NativePrice(0, 1, (uint)item.PriceBuy);
+            if (merchants.NativeReward(rawId, 1, [price]) is { } reward)
                 offers.Add(merchants.DisplayedOffer($"gil:{addon->Id}:{index}", [reward], [price], !list->GetItemDisabledState(index)));
         }
-        merchants.PublishDisplayedShop(addon->Id, $"gil:{merchants.View.NpcId}", offers, balances, next.Where(r => r.OwnedAlready)
+        lastReadFailure = null;
+        merchants.PublishDisplayedShop(addon->Id, $"gil:{handler->Info.EventId.Id}", offers, balances, next.Where(r => r.OwnedAlready)
             .Select(r => r.RawItemId >= 1_000_000 ? r.RawItemId - 1_000_000 : r.RawItemId).ToHashSet(), next.Count);
         var options = new[] { new CategoryOption(0, "모든 종류") }.Concat(next.Select(r =>
             new CategoryOption(r.CategoryId, itemInfo[r.RawItemId >= 1_000_000 ? r.RawItemId - 1_000_000 : r.RawItemId].Category))
@@ -150,6 +152,11 @@ internal sealed unsafe class NativeShopController : IDisposable
         var changed = !usingFilteredList || !filteredList.IsVisible || dataChanged;
         // Commit the replacement only after every visible row has rendered successfully.
         if (!usingFilteredList) { originalAlpha = list->OwnerNode->Color.A; originalInteraction = list->IsItemInteractionEnabled; }
+        if (!filteredListAttached)
+        {
+            filteredList.AttachNode(&addon->AtkUnitBase);
+            filteredListAttached = true;
+        }
         if (!originalInput.Suppress(list, out var inputChanged)) { RestoreList(addon); return; }
         filteredList.IsVisible = true;
         usingFilteredList = true;
@@ -204,22 +211,23 @@ internal sealed unsafe class NativeShopController : IDisposable
         filteredList = new ListNode<NativeShopRow, NativeShopRowNode> { Position = new(list->OwnerNode->X, listY + 28),
             Size = new(list->OwnerNode->Width, listHeight - 28), OptionsList = [], IsVisible = false, AutoResetScroll = false, OnItemSelected = Select };
         filteredList.NoResultsTextNode.String = "해당하는 품목이 없습니다.";
-        filteredList.AttachNode(&addon->AtkUnitBase);
+        // Keep the entire unused subtree out of the addon's draw/collision lists.
+        // Hiding its root alone can leave a list-sized mouse target over native rows.
         rows = []; lastRead = 0;
+        collisions.Request(&addon->AtkUnitBase);
     }
 
     private void Select(NativeShopRow? row)
     {
         if (row is null || !merchants.SessionReady || boundAddon == 0 || !usingFilteredList || !rows.Contains(row)) return;
         var addon = (AddonShop*)boundAddon;
-        var agent = AgentShop.Instance();
-        if (!addon->IsVisible || !Shape(addon) || agent is null || agent->AddonId != addon->Id || agent->ItemReceive is null ||
-            agent->ItemCost is null || agent->ItemReceiveCount is < 0 or > 1000 || agent->ItemCostCount != agent->ItemReceiveCount * 3 ||
+        if (!addon->IsVisible || !Shape(addon) || !TrySource(addon, out var handler, out _) ||
             (addon->BuyList->OwnerNode->NodeFlags & NodeFlags.Visible) == 0 ||
-            row.OriginalIndex < 0 || row.OriginalIndex >= agent->ItemReceiveCount ||
-            row.OriginalIndex >= addon->BuyList->ListLength || agent->ItemReceive[row.OriginalIndex].ItemId != row.RawItemId ||
-            agent->ItemReceive[row.OriginalIndex].ItemCount != row.Quantity ||
-            agent->ItemCost[row.OriginalIndex * 3].ItemId != 1 || agent->ItemCost[row.OriginalIndex * 3].ItemCount != row.UnitPrice) return;
+            handler->Info.EventId.Id != row.ShopId || row.OriginalIndex < 0 || row.OriginalIndex >= handler->VisibleItemsCount ||
+            handler->VisibleItems[row.OriginalIndex] != row.SourceIndex) return;
+        ref var item = ref handler->Items[row.SourceIndex];
+        if (item.ItemId + (item.IsHQ ? 1_000_000u : 0u) != row.RawItemId || item.SubRowId != row.SubRowId ||
+            item.PriceBuy <= 0 || (uint)item.PriceBuy != row.UnitPrice) return;
         // Only a real left-click reaches here. Forward its original index, never a filtered row number.
         var list = addon->BuyList;
         if (list->GetItemDisabledState(row.OriginalIndex)) return;
@@ -229,20 +237,72 @@ internal sealed unsafe class NativeShopController : IDisposable
             list->SelectItem(row.OriginalIndex, false);
             list->DispatchItemEvent(row.OriginalIndex, AtkEventType.ListItemClick);
         }
-        finally { list->IsItemInteractionEnabled = false; }
+        finally
+        {
+            // The dispatched native callback can refresh/close the shop and restore input.
+            if (boundAddon == (nint)addon && usingFilteredList && addon->BuyList == list)
+                list->IsItemInteractionEnabled = false;
+        }
+    }
+
+    private static bool TrySource(AddonShop* addon, out ShopEventHandler* handler, out string reason)
+    {
+        handler = null;
+        reason = "gil shop binding unavailable";
+        if (ShopEventHandler.AgentProxy.Addresses.Instance.Value == 0 || ShopEventHandler.StaticVirtualTablePointer is null) return false;
+        var proxy = ShopEventHandler.AgentProxy.Instance();
+        var agent = AgentShop.Instance();
+        reason = "gil shop receiver unavailable";
+        if (proxy is null || agent is null || agent->AddonId != addon->Id || proxy->AddonId != addon->Id ||
+            agent->EventReceiver != &proxy->AtkEventInterface || proxy->Handler is null) return false;
+        var source = proxy->Handler;
+        reason = "gil shop handler type mismatch";
+        if (source->VirtualTable != ShopEventHandler.StaticVirtualTablePointer ||
+            source->Info.EventId.ContentId != EventHandlerContent.Shop) return false;
+        // NeedSorting stays set for sorted shops and is also used when buying.
+        // It is not a loading flag; validate the live row map and item data below.
+        reason = $"gil shop not ready: mode={source->CurrentMode}; buyback={source->BuybackTabActive}";
+        if (source->CurrentMode != 1 || source->BuybackTabActive) return false;
+        reason = $"gil rows: list={addon->BuyList->ListLength}; visible={source->VisibleItemsCount}; items={source->ItemsCount}";
+        if (source->ItemsCount < 0 || source->ItemsCount > source->Items.Length ||
+            source->VisibleItemsCount < 0 || source->VisibleItemsCount > source->VisibleItems.Length ||
+            source->VisibleItemsCount > source->ItemsCount || source->VisibleItemsCount != addon->BuyList->ListLength) return false;
+        var seen = new HashSet<int>();
+        for (var index = 0; index < source->VisibleItemsCount; index++)
+        {
+            var itemIndex = source->VisibleItems[index];
+            if (itemIndex < 0 || itemIndex >= source->ItemsCount || !seen.Add(itemIndex))
+            { reason = $"gil row mapping unavailable: row={index}"; return false; }
+        }
+        handler = source;
+        reason = "";
+        return true;
     }
 
     private void RestoreList(AddonShop* addon)
     {
         // Restore native input before touching any custom node.
-        var changed = usingFilteredList || filteredList is { IsVisible: true };
+        var changed = usingFilteredList || filteredListAttached;
         originalInput.Restore(addon->BuyList);
         if (usingFilteredList && addon->BuyList is not null && addon->BuyList->OwnerNode is not null)
         { addon->BuyList->OwnerNode->SetAlpha(originalAlpha); addon->BuyList->IsItemInteractionEnabled = originalInteraction; }
         usingFilteredList = false;
         lastApplied = null;
-        if (filteredList is not null) filteredList.IsVisible = false;
+        if (filteredList is not null)
+        {
+            filteredList.IsVisible = false;
+            if (filteredListAttached) filteredList.DetachNode();
+        }
+        filteredListAttached = false;
         if (changed) collisions.Request(&addon->AtkUnitBase);
+    }
+
+    private void ReadFailed(AddonShop* addon, string reason)
+    {
+        RestoreList(addon);
+        merchants.ClearDisplayedShop(addon->Id);
+        if (lastReadFailure != reason) log.Information("Shop snapshot waiting: {Reason}", reason);
+        lastReadFailure = reason;
     }
 
     private void Detach(AddonShop* addon)
@@ -260,7 +320,7 @@ internal sealed unsafe class NativeShopController : IDisposable
         { addon->BuyList->OwnerNode->SetYFloat(listY); addon->BuyList->SetSize(addon->BuyList->OwnerNode->Width, listHeight); }
         collisions.Request(&addon->AtkUnitBase);
         collisions.Clear();
-        boundAddon = 0; rows = []; lastRead = 0; renderFailed = false;
+        boundAddon = 0; rows = []; lastRead = 0; renderFailed = false; lastReadFailure = null;
     }
 
     public void Dispose() { controller.Dispose(); if (boundAddon != 0) Detach((AddonShop*)boundAddon); collisions.Dispose(); }
