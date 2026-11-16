@@ -33,6 +33,7 @@ internal sealed unsafe class FoodReminder : IDisposable
 #endif
     public IReadOnlyList<FoodMember> Members { get; private set; } = [];
     public int? MinimumMinutes { get; private set; }
+    public bool ObservationFailed => failed;
     public bool Ready => config.FoodReminder && !failed && client.IsLoggedIn && objects.LocalPlayer is { } self &&
         self.GameObjectId == character && client.TerritoryType == territory && Environment.TickCount64 - lastRead < 1500;
     public string ObservationState => $"Enabled={config.FoodReminder}; Failed={failed}; LoggedIn={client.IsLoggedIn}; Members={Members.Count}; AgeMs={(lastRead == 0 ? -1 : Environment.TickCount64 - lastRead)}; Ready={Ready}";

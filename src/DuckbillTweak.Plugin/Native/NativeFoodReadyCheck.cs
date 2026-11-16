@@ -20,6 +20,7 @@ internal sealed unsafe class NativeFoodReadyCheck : IDisposable
     private readonly Dictionary<uint, Label> labels = [];
     private nint bound;
     private bool failed;
+    public bool ObservationFailed => failed;
     private long lastUpdate;
     private long lastPoll;
 #if DEBUG

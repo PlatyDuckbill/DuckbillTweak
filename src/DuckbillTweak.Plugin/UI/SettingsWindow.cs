@@ -14,16 +14,19 @@ internal sealed class SettingsWindow : Window
     private readonly Func<bool> unread;
     private readonly Action<uint, Vector2>? drawGameIcon;
     private readonly bool pvpAvailable, exchangeAvailable, positionalAvailable, foodAvailable;
+    private readonly Func<FeatureStatuses?>? runtimeStatus;
     private bool showFood, showColors, showSocial;
     private Vector3 colorDraft;
     public bool SaveFailed { get; set; }
 
     public SettingsWindow(Configuration config, Action<Action<Configuration>> change, Action showUpdates, Func<bool> unread,
-        bool pvpAvailable, bool exchangeAvailable, bool positionalAvailable, bool foodAvailable, Action<uint, Vector2>? drawGameIcon = null) : base("DuckbillTweak###DuckbillTweak.Settings")
+        bool pvpAvailable, bool exchangeAvailable, bool positionalAvailable, bool foodAvailable, Action<uint, Vector2>? drawGameIcon = null,
+        Func<FeatureStatuses?>? runtimeStatus = null) : base("DuckbillTweak###DuckbillTweak.Settings")
     {
         this.config = config; this.change = change; this.showUpdates = showUpdates; this.unread = unread; this.drawGameIcon = drawGameIcon;
         this.pvpAvailable = pvpAvailable; this.exchangeAvailable = exchangeAvailable;
         this.positionalAvailable = positionalAvailable; this.foodAvailable = foodAvailable;
+        this.runtimeStatus = runtimeStatus;
         Size = new(720, 720); SizeCondition = ImGuiCond.FirstUseEver;
         SizeConstraints = new() { MinimumSize = new(420, 400), MaximumSize = new(float.MaxValue) };
         Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
@@ -36,6 +39,9 @@ internal sealed class SettingsWindow : Window
     public override void OnOpen() { if (unread()) showUpdates(); }
     public override void Draw()
     {
+        var runtime = runtimeStatus?.Invoke();
+        var fresh = runtime is not null && Environment.TickCount64 - runtime.Tick < 2000;
+        FeatureStatus? Current(FeatureStatus? status) => runtimeStatus is null ? null : fresh ? status : new(FeatureState.Stale);
         using var contentStyle = GameThemeChrome.Content();
         GameThemeChrome.WindowSurface();
         if (GameThemeChrome.SettingsHeader(UiText.Get(T.SettingsTitle), UiText.Get(unread() ? T.UpdatesNew : T.UpdatesOpen))) showUpdates();
@@ -48,25 +54,50 @@ internal sealed class SettingsWindow : Window
             UiWidgets.Secondary(T.SettingsSummary);
             UiWidgets.MajorSection(T.Combat);
             Feature(T.Food, T.FoodDescription, config.FoodReminder, v => change(c => c.FoodReminder = v), () => showFood = !showFood);
-            if (!foodAvailable) UiWidgets.Secondary(T.FoodUnavailable);
+            DrawStatus(Current(runtime?.Food));
+            if (runtimeStatus is null && !foodAvailable) UiWidgets.Secondary(T.FoodUnavailable);
             if (showFood) DetailGroup("FoodDetails", MeasureFoodDetails, FoodSettings);
             Feature(T.Position, T.PositionDescription, config.PositionalFlyText, v => change(c => c.PositionalFlyText = v), () => showColors = !showColors);
-            if (!positionalAvailable) UiWidgets.Secondary(T.Unavailable);
+            DrawStatus(Current(runtime?.Positional));
+            if (runtimeStatus is null && !positionalAvailable) UiWidgets.Secondary(T.Unavailable);
             if (showColors) DetailGroup("ColorDetails", MeasureColorDetails, ColorSettings);
             Feature(T.Pvp, T.PvpDescription, config.PvpBubbles, v => change(c => c.PvpBubbles = v));
-            if (!pvpAvailable) UiWidgets.Secondary(T.Unavailable);
+            DrawStatus(Current(runtime?.Pvp));
+            if (runtimeStatus is null && !pvpAvailable) UiWidgets.Secondary(T.Unavailable);
             UiWidgets.MajorSection(T.Shops);
             Feature(T.Merchant, T.MerchantDescription, config.MerchantTools, v => change(c => c.MerchantTools = v));
-            if (!exchangeAvailable) UiWidgets.Secondary(T.ExchangeUnavailable);
+            DrawStatus(Current(runtime?.Merchant));
+            if (runtimeStatus is null && !exchangeAvailable) UiWidgets.Secondary(T.ExchangeUnavailable);
             Feature(T.Loot, T.LootDescription, config.LootRolls, v => change(c => c.LootRolls = v));
+            DrawStatus(Current(runtime?.Loot));
             UiWidgets.MajorSection(T.Social);
             Feature(T.Emote, T.EmoteDescription, config.EmoteFollow, v => change(c => c.EmoteFollow = v), () => showSocial = !showSocial);
+            DrawStatus(Current(runtime?.Emote));
             if (showSocial) DetailGroup("EmoteDetails", MeasureSocialDetails, SocialSettings);
         }
         ImGui.EndChild();
         var version = UiText.Get(T.Version, ReleaseHistory.CurrentVersion);
         ImGui.TextDisabled(version);
         if (SaveFailed) UiWidgets.Secondary(T.SaveFailed);
+    }
+
+    private static void DrawStatus(FeatureStatus? status)
+    {
+        if (status is null) return;
+        UiWidgets.Secondary(T.RuntimeStatus, UiText.Get(status.State switch
+        {
+            FeatureState.Off => T.StatusOff, FeatureState.LoginRequired => T.StatusLogin,
+            FeatureState.Loading => T.StatusLoading, FeatureState.Ready => T.StatusReady,
+            FeatureState.Observing => T.StatusObserving, FeatureState.PvpOnly => T.StatusPvp,
+            FeatureState.ExcludedArea => T.StatusArea, FeatureState.NoActions => T.StatusActions,
+            FeatureState.ContractUnavailable => T.StatusContract, FeatureState.InitializationFailed => T.StatusInitialization,
+            FeatureState.ObservationFailed => T.StatusObservation, FeatureState.ReadyCheckFailed => T.StatusReadyCheck,
+            FeatureState.PvpPatchFailed => T.StatusPatch, FeatureState.WaitingFood => T.StatusFood,
+            FeatureState.WaitingEmote => T.StatusEmote, FeatureState.Syncing => T.StatusSyncing,
+            FeatureState.CombatBlocked => T.StatusCombat, FeatureState.ShopPartial => T.StatusShopPartial, _ => T.StatusStale
+        }));
+        if (status.Diagnostic.Length > 0 && ImGui.IsItemHovered())
+            ImGui.SetTooltip(UiText.Get(T.StatusDiagnostic, status.Diagnostic));
     }
 
     private static void Feature(T title, T description, bool enabled, Action<bool> set, Action? details = null)
@@ -318,10 +349,10 @@ internal static class UiWidgets
     public static bool FitsOnLine(float width) => ImGui.GetItemRectMax().X + ImGui.GetStyle().ItemSpacing.X + width
         <= ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X;
     public static void Heading(T key) { ImGui.TextUnformatted(UiText.Get(key)); }
-    public static void Secondary(T key)
+    public static void Secondary(T key, params object[] args)
     {
         ImGui.PushStyleColor(ImGuiCol.Text, ImGui.GetStyle().Colors[(int)ImGuiCol.TextDisabled]);
-        ImGui.TextWrapped(UiText.Get(key)); ImGui.PopStyleColor();
+        ImGui.TextWrapped(UiText.Get(key, args)); ImGui.PopStyleColor();
     }
     public static void Section(T key)
     {

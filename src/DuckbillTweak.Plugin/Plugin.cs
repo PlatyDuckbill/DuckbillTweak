@@ -61,6 +61,36 @@ public sealed class Plugin : IAsyncDalamudPlugin
     private readonly IToastGui toast;
     private bool toolkitInitialized;
     private bool disposed;
+    private FeatureStatuses? featureStatuses;
+    private string pvpContractReason = "", exchangeContractReason = "";
+    private bool exchangeContractAvailable;
+
+    // Framework copies current runtime facts. Draw only reads this immutable managed snapshot.
+    private void UpdateFeatureStatuses(IFramework _)
+    {
+        if (disposed) return;
+        FeatureStatus Status(bool enabled, Func<FeatureStatus> current) => !enabled ? new(FeatureState.Off)
+            : !client.IsLoggedIn ? new(FeatureState.LoginRequired)
+            : conditions[Dalamud.Game.ClientState.Conditions.ConditionFlag.BetweenAreas] || conditions[Dalamud.Game.ClientState.Conditions.ConditionFlag.BetweenAreas51]
+                ? new(FeatureState.Loading) : current();
+        var foodStatus = Status(config.FoodReminder, () => food is null ? new(FeatureState.InitializationFailed)
+            : food.ObservationFailed ? new(FeatureState.ObservationFailed)
+            : foodReadyCheck?.ObservationFailed == true ? new(FeatureState.ReadyCheckFailed)
+            : client.IsPvP ? new(FeatureState.ExcludedArea)
+            : food.Ready ? new(FeatureState.Observing) : new(FeatureState.WaitingFood));
+        var positionalStatus = Status(config.PositionalFlyText, () => positional?.Available != true ? new(FeatureState.ContractUnavailable, positional?.UnavailableReason ?? "NotInitialized")
+            : client.IsPvP || !positional.AreaAllowed ? new(FeatureState.ExcludedArea)
+            : positional.IsActive ? new(FeatureState.Observing) : new(FeatureState.NoActions));
+        var pvpStatus = Status(config.PvpBubbles, () => bubbles?.Available != true ? new(FeatureState.ContractUnavailable, pvpContractReason)
+            : bubbles.PatchFailed ? new(FeatureState.PvpPatchFailed)
+            : bubbles.IsActive ? new(FeatureState.Observing) : new(FeatureState.PvpOnly));
+        var shopStatus = Status(config.MerchantTools, () => !exchangeContractAvailable ? new(FeatureState.ShopPartial, exchangeContractReason) : new(FeatureState.Ready));
+        var lootStatus = Status(config.LootRolls, () => new(FeatureState.Ready));
+        var emoteStatus = Status(config.EmoteFollow, () => emoteFollow is null ? new(FeatureState.InitializationFailed)
+            : conditions[Dalamud.Game.ClientState.Conditions.ConditionFlag.InCombat] ? new(FeatureState.CombatBlocked)
+            : new(emoteFollow.SyncInProgress ? FeatureState.Syncing : FeatureState.WaitingEmote));
+        Volatile.Write(ref featureStatuses, new(foodStatus, positionalStatus, pvpStatus, shopStatus, lootStatus, emoteStatus, Environment.TickCount64));
+    }
 
     public Plugin(IDalamudPluginInterface pluginInterface, ICommandManager commands, IDataManager data,
         IUnlockState unlocks, IGameInventory inventory, IClientState client, IPlayerState player,
@@ -105,6 +135,8 @@ public sealed class Plugin : IAsyncDalamudPlugin
             var environment = await Task.Run(NativeEnvironment.Inspect, cancellationToken);
             log.Information("{Environment}", environment.Diagnostic);
             var code = await Task.Run(() => NativeRuntimeCode.Inspect(scanner), cancellationToken);
+            pvpContractReason = code.Pvp.Reason; exchangeContractReason = code.Exchange.Reason;
+            exchangeContractAvailable = code.Exchange.Available;
             log.Information("Native code contract: PvpBubbles={Pvp} ({PvpReason}); ShopExchangeCurrency={Exchange} ({ExchangeReason})",
                 code.Pvp.Available, code.Pvp.Reason, code.Exchange.Available, code.Exchange.Reason);
             toolkitInitialized = true;
@@ -139,7 +171,9 @@ public sealed class Plugin : IAsyncDalamudPlugin
             });
             changelog = new ChangelogWindow(config, ChangeSettings);
             settings = new SettingsWindow(config, ChangeSettings, () => changelog.Open(), () => changelog.IsUnread,
-                bubbles?.Available == true, code.Exchange.Available, positional?.Available == true, food is not null, DrawGameIcon);
+                bubbles?.Available == true, code.Exchange.Available, positional?.Available == true, food is not null, DrawGameIcon,
+                () => Volatile.Read(ref featureStatuses));
+            await framework.Run(() => { UpdateFeatureStatuses(framework); framework.Update += UpdateFeatureStatuses; });
             windows.AddWindow(settings);
             windows.AddWindow(changelog);
             pluginInterface.UiBuilder.Draw += Draw;
@@ -263,6 +297,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
     {
         if (disposed) return;
         disposed = true;
+        framework.Update -= UpdateFeatureStatuses;
         pluginInterface.UiBuilder.Draw -= Draw;
         windows.RemoveAllWindows();
         pluginInterface.UiBuilder.OpenConfigUi -= OpenSettings;

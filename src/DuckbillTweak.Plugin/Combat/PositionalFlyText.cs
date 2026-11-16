@@ -49,6 +49,9 @@ internal sealed unsafe class PositionalFlyText : IDisposable
     private readonly List<Pending> pending = [];
     private readonly Hook<ReceiveDelegate>? hook;
     public bool Available => hook is not null;
+    public bool IsActive => active;
+    public bool AreaAllowed => territoryAllowed;
+    public string UnavailableReason { get; private set; } = "";
     private (uint Job, int Level) tableKey;
     private uint territory;
     private bool territoryAllowed;
@@ -70,8 +73,8 @@ internal sealed unsafe class PositionalFlyText : IDisposable
         // No game build gate (2026-11-10): potencies come from the running client's KR tooltips, and BonusTooltip rejects
         // any tooltip outside the verified model, so only actions that still fit it are judged.
         var address = ActionEffectHandler.Addresses.Receive.Value;
-        if (address == 0) log.Warning("Positional FlyText disabled: ActionEffectHandler.Receive was not resolved.");
-        else if (macros.Count != BonusTooltip.Candidates.Count) log.Warning("Positional FlyText disabled: action rows missing.");
+        if (address == 0) { UnavailableReason = "ActionEffectUnresolved"; log.Warning("Positional FlyText disabled: ActionEffectHandler.Receive was not resolved."); }
+        else if (macros.Count != BonusTooltip.Candidates.Count) { UnavailableReason = "ActionRowsMissing"; log.Warning("Positional FlyText disabled: action rows missing."); }
         else hook = interop.HookFromAddress<ReceiveDelegate>(address, Detour);
         framework.Update += Update;
         flyText.FlyTextCreated += OnFlyText;

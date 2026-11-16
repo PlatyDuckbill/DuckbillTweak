@@ -39,6 +39,7 @@ internal sealed unsafe class EmoteFollow : IDisposable
     private readonly Action save;
 
     private Stage stage;
+    public bool SyncInProgress => stage != Stage.Idle;
     private ulong targetId;
     private ushort emoteId;
     private string emoteName = "";

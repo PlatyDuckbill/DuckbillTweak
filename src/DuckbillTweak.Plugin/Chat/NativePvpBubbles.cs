@@ -26,6 +26,8 @@ internal sealed class NativePvpBubbles : IDisposable
     }
 
     public bool Available => patches.Length != 0;
+    public bool IsActive => !failed && applied.Count == patches.Length && patches.Length != 0;
+    public bool PatchFailed => failed;
 
     private void Update(IFramework _)
     {

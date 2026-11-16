@@ -85,3 +85,11 @@ KR LogMessage1231은 lnum1=아이템, lstr2=입찰 종류, lnum3=숫자다. Dala
 0.1.2.8 참고: [FFCS CurrencyManager](https://github.com/aers/FFXIVClientStructs/blob/b72bc1f73e5f2b09ba460a9238fbf3b9a5bbeb3c/FFXIVClientStructs/FFXIV/Client/Game/CurrencyManager.cs), 위 고정b72bc1f73e5f2b09ba460a9238fbf3b9a5bbeb3c/MIT. ItemBucket의 예시와 공개 읽기 함수 의미를 참고했고 설치된 KR DLL/실행 코드와 별도로 대조했다. 구현 복사/새 native address/새 런타임 종속성은 없다. NativeCurrencyReader는 이미 존재하는 설치 바인딩을 기존 한국 프로필 가드 뒤에서 읽기 전용으로 호출한다. Core ExchangeCatalog는 SpecialShop에서 복사한 관리 값만 다루며 현재 페이지 전체를 연결한다. 게임/화폐 이름별 예외가 아니라 구조·ID·가격/수량을 기준으로 한다. 미래의 다른 addon/패킷/가격 인코딩을 추측 지원하거나 게임 업데이트 가드를 건너뛰지는 않는다.
 
 2026-11-09 KamiToolKit `ColorPickerAddon` 대체: 고정 KamiToolKit의 색상 선택 창은 확인 버튼 글자를 Addon 시트 572번에서 가져온다. 글로벌에서는 "Confirm"이지만 KR 클라이언트에서는 "받은 의뢰 확인"이라, 사용자가 확인 방법을 알 수 없었다(0.2.1.0 사용자 보고). KamiToolKit 원본은 수정하지 않았다. 대신 `Native/NativeColorPickerAddon.cs`가 같은 `ColorPickerNode`(색상 링·사각형·알파·HEX 입력)에 한국어 확인/기본값/취소 버튼을 붙인 창을 제공한다. 확인 없이 닫히면 취소로 처리하며, 원본 창의 재사용 시 취소 신호 누락 문제도 함께 피한다. 0.2.1.0의 "변경이 안 됨" 보고의 실제 원인은 닫힌 창에 `NativeAddon.Title`을 설정할 때 WindowNode 컴포넌트가 이미 해제되어 NullReferenceException이 난 것이었다(dalamud.log, 첫 열기 이후 매번). 제목은 창 설정 시점(`OnSetup`)에만 적용한다.
+
+## 기능별 동작 상태 안내 (2026-11-16)
+
+Plugin.UpdateFeatureStatuses가 Framework에서 기능 설정·로그인/지역 상태와 각 서비스의 기존 관리 상태를 FeatureState/FeatureStatus로 복사한다. SettingsWindow는 불변 FeatureStatuses 표본만 읽고 한영 TextKey로 표시한다. 표본이2초 이상 오래됐으면 확인 대기로 표시한다. 종료 시 구독을 해제하고 캐릭터/지역 조건을 매번 다시 평가한다.
+
+음식은 초기화 실패/관찰 실패/준비 확인 표시 실패/표본 대기를 구분한다. 측후는 기존 계약 유효성·제외 지역·현재 직업/레벨의 활성 여부를 표시한다. PvP 말풍선은 적용된 패치와 기존 실패 플래그를 사용하며, 재화 교환 계약 실패는 다른 상점 도구와 구분한다. 입찰·상점의 사용 준비됨은 개별 상점/전리품의 성공을 보장하는 표시가 아니다. 소셜은 명시적으로 선택한 따라하기의 박자 대기 중 상태를 보여준다.
+
+실행 계약을 재검사하거나 게임 동작을 추가하지 않는다. 실패 진단은 기존 코드 또는 주소 해석/자료 누락 코드만 호버로 표시하고 예외 전문·플레이어 정보는 노출하지 않는다. UI는 상태 코드로 판단하며 번역 문구로 상태를 판정하지 않는다.
