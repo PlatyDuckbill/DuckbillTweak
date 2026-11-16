@@ -1,5 +1,23 @@
 [
   {
+    "Version": "0.4.0.0",
+    "Date": "2026-11-16",
+    "TitleKorean": "감정표현 상태 표시",
+    "TitleEnglish": "Emote status icons",
+    "SummaryKorean": "내 캐릭터와 선택한 대상이 쓰는 감정표현과 내 보유 여부를 확인할 수 있습니다.",
+    "SummaryEnglish": "See which emotes you and your selected target are using and whether you own them.",
+    "Korean": [
+      "본인과 선택한 대상의 감정표현을 재생 중 상태 아이콘으로 확인할 수 있습니다.",
+      "아이콘에 마우스를 올려 감정표현 이름과 내 보유 여부를 확인할 수 있습니다."
+    ],
+    "English": [
+      "See the emotes you and your selected target are playing as status icons.",
+      "Hover over an icon to check the emote's name and whether you own it."
+    ],
+    "OtherKorean": [],
+    "OtherEnglish": []
+  },
+  {
     "Version": "0.3.1.0",
     "Date": "2026-11-16",
     "TitleKorean": "기능별 동작 상태",
