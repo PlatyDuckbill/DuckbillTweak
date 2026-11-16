@@ -1,4 +1,6 @@
 using System.Numerics;
+using Dalamud.Interface.Textures;
+using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin.Services;
 using DuckbillTweak.Plugin.Emotes;
 using DuckbillTweak.Plugin.UI;
@@ -15,6 +17,7 @@ internal sealed unsafe class NativeEmoteStatus : IDisposable
     private readonly EmoteStatusObserver observer;
     private readonly Configuration config;
     private readonly IPluginLog log;
+    private readonly ITextureProvider textures;
     private readonly List<Binding> bindings = [];
     private bool disposed;
     public bool Available { get; }
@@ -37,9 +40,10 @@ internal sealed unsafe class NativeEmoteStatus : IDisposable
         public string Language = "";
     }
 
-    public NativeEmoteStatus(IFramework framework, IGameGui gui, EmoteStatusObserver observer, Configuration config, IPluginLog log)
+    public NativeEmoteStatus(IFramework framework, IGameGui gui, EmoteStatusObserver observer, Configuration config, IPluginLog log, ITextureProvider textures)
     {
         this.framework = framework; this.gui = gui; this.observer = observer; this.config = config; this.log = log;
+        this.textures = textures;
         Available = NativeEmoteReader.Available && AtkComponentIconText.Addresses.Ctor.Value != 0;
         if (!Available) return;
         try
@@ -123,6 +127,21 @@ internal sealed unsafe class NativeEmoteStatus : IDisposable
         if (binding.Icon is null)
         {
             binding.Icon = new EmoteStatusIconNode();
+            IDalamudTextureWrap? texture = null;
+            try
+            {
+                texture = textures.CreateFromRaw(RawImageSpecification.Rgba32(EmoteStatusFrame.Width, EmoteStatusFrame.Height),
+                    EmoteStatusFrame.Rgba, "DuckbillTweak.EmoteStatusFrame");
+                binding.Icon.LoadFrame(texture); // The native image node takes ownership on success.
+                texture = null;
+            }
+            catch (Exception exception)
+            {
+                texture?.Dispose();
+                binding.Icon.Dispose(); binding.Icon = null;
+                log.Error(exception, "Emote status frame texture initialization failed");
+                Fail(binding, "FrameTextureUnavailable"); return;
+            }
             binding.Icon.AttachNode(parent);
         }
         var node = binding.Icon;

@@ -38,6 +38,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
     private readonly IObjectTable objects;
     private readonly IPlayerState playerState;
     private readonly IUnlockState unlocks;
+    private readonly ITextureProvider textures;
     private readonly IDataManager data;
     private readonly ICondition conditions;
     private readonly ITargetManager targets;
@@ -104,13 +105,14 @@ public sealed class Plugin : IAsyncDalamudPlugin
         IUnlockState unlocks, IGameInventory inventory, IClientState client, IPlayerState player,
         ICondition conditions, ITargetManager target, IGameGui gameGui, IFramework framework,
         IPluginLog log, IChatGui chat, IPartyList party, IAddonEventManager events, IAddonLifecycle addonLifecycle, IContextMenu contextMenu,
-        IGameInteropProvider interop, IFlyTextGui flyText, IObjectTable objects, ISigScanner scanner, IToastGui toast)
+        IGameInteropProvider interop, IFlyTextGui flyText, IObjectTable objects, ISigScanner scanner, IToastGui toast, ITextureProvider textures)
     {
         this.scanner = scanner;
         this.toast = toast;
         this.pluginInterface = pluginInterface; this.commands = commands; this.framework = framework;
         this.client = client; this.log = log; this.gui = gameGui; this.party = party; this.events = events;
         playerState = player; this.unlocks = unlocks;
+        this.textures = textures;
         this.addonLifecycle = addonLifecycle;
         this.contextMenu = contextMenu;
         this.chat = chat; this.interop = interop; this.flyText = flyText; this.objects = objects; this.data = data; this.conditions = conditions; this.targets = target;
@@ -170,7 +172,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
                 try
                 {
                     emoteStatus = new(framework, client, playerState, objects, targets, unlocks, data, conditions, config);
-                    nativeEmoteStatus = new(framework, gui, emoteStatus, config, log);
+                    nativeEmoteStatus = new(framework, gui, emoteStatus, config, log, textures);
                 }
                 catch (Exception exception)
                 {
