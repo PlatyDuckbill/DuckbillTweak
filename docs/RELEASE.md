@@ -1,5 +1,29 @@
 # 배포 확인
 
+## 0.3.1.0 · 기능별 동작 상태
+
+사용자 지시로 기능별 상태 안내·색 점과 정상 대기의 초록 표시를 공개 배포했다. 개발판 PvP/우클릭 따라하기 사용 가능 보고와 새 고정 ZIP의 실기는 구분하며 InGameVerified=false를 유지한다.
+
+| 항목 | 값 |
+|---|---|
+| 소스·태그 | `7a90c48c5ce23a607f120a4626fb5afa39506338` · v0.3.1.0 |
+| 고정 후보 | `artifacts/release/0.3.1.0/status-release-20261116` · SourceDirty=false |
+| ZIP | `DuckbillTweak-0.3.1.0.zip` · 501,438바이트/16파일 |
+| ZIP SHA256 | `7ee907de389a9d74b544273fcc06458f7805f45fd627bdf77a843dc9d450d590` |
+| [공개 Release](https://github.com/PlatyDuckbill/DuckbillTweak/releases/tag/v0.3.1.0) | ID446792018 · draft=false/prerelease=false |
+| 공개 시각 | 2026-11-16T08:52:46Z / 2026-11-16 17:52:46 KST |
+| 설치 원본 | `cfcec81` · repo/release.json |
+| [공용 동기화](https://github.com/PlatyDuckbill/DuckbillRepo/actions/runs/43835152193) | success · 공용 `43e9069c5eabf3f0d2a8f90637716d5e4532d9e3` |
+| 고정 확인 DLL | `.cache/release-validation/0.3.1.0/status-release-20261116/DuckbillTweak.dll` |
+
+- 고정 KR15.0.3.7 Release 잠금 복원·빌드 경고0/오류0, 필수16파일/추출 해시·한국어 위성 이름/문화권/버전·한영107키/값 원본 일치, 재화708바이트/28매핑·업데이트 내역·DLL 의존성과 공용 참조 상한을 확인했다. SDK/의존성/계약 판정·게임 동작은 변경하지 않았다.
+- 내장 한영/설치/GitHub 안내는 대표2·기타1의 같은3항목이다. prepare-release.ps1로 SourceDirty=false 후보를 고정했으며 테스트 추가/실행은 없다.
+- 새 태그/초안 자산 digest·크기를 대조한 뒤 공개했다. 인증 없는 ZIP·체크섬·태그 아이콘 HTTP200/원본 해시 일치 후 설치 원본을 갱신했다. 아이콘은 기존 승인본 SHA256 `853f8a8ce08e97332156e4ab5298927f73e135944223c77d766f3863dd103a3d`를 유지한다.
+- 고정 공용 커밋과 실제 main/pluginmaster.json에서 Tweak0.3.1.0·Calendar0.6.0.0·Fisher0.10.2.0의 각22필드가 설치 원본과 일치하고 sync.ps1 -Check도 통과했다. 기존 다른 항목을 유지했다.
+- 실제 설치/업데이트·색 대비/상태·한영·호버/스크롤/배율·기능 토글·저장/재로드와 기존 게임 UI의 확인 대기는 유지한다. 패키지/다운로드 검사를 실기로 확대하지 않는다.
+
+게시 영수증·익명 자산·실제 공용 URL 검사는 Fisher의 `.cache/release-20261116/`에 보존한다. 기존 태그·공개 ZIP은 수정하지 않았다.
+
 ## 0.3.0.1 · 배포판 한국어 파일 누락 수정
 
 0.3.0.0 설치판이 영어로만 표시된다는 사용자 제보를 확인했다. 언어 선택/저장 로직은 정상이었으나 포장 허용 목록에서 `ko/DuckbillTweak.resources.dll`이 빠져 기본 영어로 돌아갔다. 아래 0.3.0.0의 한영86키/ko 위성 확인은 빌드 폴더 대상이었고, 해당 ZIP에 한국어가 포함됐다는 근거가 아니었다. 당시 패키지 검사가 이 누락을 잡지 못했음을 정정한다.
