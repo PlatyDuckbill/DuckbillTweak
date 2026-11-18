@@ -70,6 +70,8 @@ https://raw.githubusercontent.com/PlatyDuckbill/DuckbillRepo/main/pluginmaster.j
 
 ## 개발
 
+파티 상태 타임라인·전투 복기 기능은 [DuckbillBattleTrace](https://github.com/PlatyDuckbill/DuckbillBattleTrace)로 분리했습니다. 이 저장소에는 관련 기록기·화면·설정·명령을 포함하지 않습니다.
+
 Windows, PowerShell 7, .NET SDK **10.0.402**, Dalamud.NET.Sdk **15.0.0**을 사용합니다. SDK와 의존성은 고정되어 있습니다.
 
 ```powershell
